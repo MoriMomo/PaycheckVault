@@ -6,9 +6,8 @@ async function main() {
   console.log("Deploying contracts with account:", deployer.address);
   console.log("Account balance:", (await deployer.provider.getBalance(deployer.address)).toString());
 
-  // Reactive Network official Callback Proxy on Sepolia / Destination testnets
-  // Default fallback address for Sepolia testnet reactive relayer
-  const REACTIVE_CALLBACK_SENDER = process.env.REACTIVE_CALLBACK_SENDER || "0x0000000000000000000000000000000000fffFfF";
+  // Official Reactive Callback Proxy on Sepolia (Chain ID: 11155111)
+  const REACTIVE_CALLBACK_SENDER = process.env.REACTIVE_CALLBACK_SENDER || "0xc9f36411C9897e7F959D99ffca2a0Ba7ee0D7bDA";
 
   // 1. Deploy Mocks
   console.log("\n--- Deploying Mocks ---");
@@ -59,3 +58,4 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
