@@ -1,7 +1,7 @@
 {
   "_format": "hh-sol-artifact-1",
   "contractName": "IMockDEX",
-  "sourceName": "contracts/InflowVault.sol",
+  "sourceName": "contracts/PaycheckVault.sol",
   "abi": [
     {
       "inputs": [

@@ -15,31 +15,32 @@ interface IMockDEX {
 }
 
 /**
- * @title InflowVault
- * @notice Holds user funds, allows direct ERC-20 transfers or deposit calls,
- *         and executes swaps upon verified Reactive callbacks from Lasna.
+ * @title PaycheckVault
+ * @notice Recipient-side autonomous vault deployed on Base Sepolia.
+ *         Receives authenticated cross-chain callbacks from Reactive Network (Lasna)
+ *         when paycheck/inflows are detected on Sepolia, executing automatic portfolio allocation.
  */
-contract InflowVault is AbstractCallback {
+contract PaycheckVault is AbstractCallback {
     using SafeERC20 for IERC20;
 
     address public owner;
     address public dexRouter;
-    address public inputToken;       // e.g. USDC (inflow token)
-    address public outputToken;      // e.g. WETH (accumulated asset)
-    uint256 public dcaPercentageBps; // basis points (e.g., 5000 = 50%, 10000 = 100%)
+    address public inputToken;          // e.g. USDC (holding token)
+    address public targetToken;         // e.g. WETH (accumulated asset)
+    uint256 public allocationBps;       // basis points (e.g., 5000 = 50%, 10000 = 100%)
 
-    event InflowReceived(
-        address indexed sender,
-        address indexed token,
-        uint256 amount,
-        uint256 timestamp
-    );
-
-    event DCASwapped(
+    event PaycheckAllocated(
         address indexed caller,
         uint256 amountIn,
         uint256 amountOut,
         uint256 timestamp
+    );
+
+    event ConfigUpdated(
+        address indexed dexRouter,
+        address indexed inputToken,
+        address indexed targetToken,
+        uint256 allocationBps
     );
 
     modifier onlyOwner() {
@@ -51,32 +52,25 @@ contract InflowVault is AbstractCallback {
         address _callbackSender,
         address _dexRouter,
         address _inputToken,
-        address _outputToken,
-        uint256 _dcaPercentageBps
+        address _targetToken,
+        uint256 _allocationBps
     ) AbstractCallback(_callbackSender) payable {
         owner = msg.sender;
         dexRouter = _dexRouter;
         inputToken = _inputToken;
-        outputToken = _outputToken;
-        dcaPercentageBps = _dcaPercentageBps;
+        targetToken = _targetToken;
+        allocationBps = _allocationBps;
     }
 
     /**
-     * @notice Deposit helper for UI and tests. Standard ERC-20 transfers directly to this address
-     *         are also caught by the Reactive contract via ERC-20 Transfer event subscription.
-     */
-    function deposit(uint256 amount) external {
-        require(amount > 0, "Zero deposit");
-        IERC20(inputToken).safeTransferFrom(msg.sender, address(this), amount);
-        emit InflowReceived(msg.sender, inputToken, amount, block.timestamp);
-    }
-
-    /**
-     * @notice Callback invoked by Reactive Network relayer upon catching an inflow event.
+     * @notice Callback invoked exclusively by the Reactive Network relayer.
+     *         Authentication is enforced by:
+     *         1. authorizedSenderOnly (must be the Base Sepolia Callback Proxy)
+     *         2. rvmIdOnly(sender) (must match the authorized deployer wallet RVM ID)
      * @param sender The address of the authorized reactive deployer wallet (RVM ID).
-     * @param inflowAmount The amount of token received in the detected inflow.
+     * @param inflowAmount The amount of token transferred into the user's Sepolia account.
      */
-    function executeInflowDCA(address sender, uint256 inflowAmount)
+    function executePaycheckAllocation(address sender, uint256 inflowAmount)
         external
         authorizedSenderOnly
         rvmIdOnly(sender)
@@ -85,7 +79,7 @@ contract InflowVault is AbstractCallback {
         if (balance == 0 || inflowAmount == 0) return;
 
         // Calculate amount to swap based on inflow and configured percentage
-        uint256 swapAmount = (inflowAmount * dcaPercentageBps) / 10000;
+        uint256 swapAmount = (inflowAmount * allocationBps) / 10000;
         if (swapAmount > balance) {
             swapAmount = balance;
         }
@@ -94,25 +88,34 @@ contract InflowVault is AbstractCallback {
             IERC20(inputToken).forceApprove(dexRouter, swapAmount);
             uint256 amountOut = IMockDEX(dexRouter).swap(
                 inputToken,
-                outputToken,
+                targetToken,
                 swapAmount,
                 address(this)
             );
 
-            emit DCASwapped(sender, swapAmount, amountOut, block.timestamp);
+            emit PaycheckAllocated(sender, swapAmount, amountOut, block.timestamp);
         }
+    }
+
+    /**
+     * @notice Allows user or employer to deposit funds directly on Base Sepolia.
+     */
+    function deposit(uint256 amount) external {
+        require(amount > 0, "Zero deposit");
+        IERC20(inputToken).safeTransferFrom(msg.sender, address(this), amount);
     }
 
     function setConfig(
         address _dexRouter,
         address _inputToken,
-        address _outputToken,
-        uint256 _dcaPercentageBps
+        address _targetToken,
+        uint256 _allocationBps
     ) external onlyOwner {
         dexRouter = _dexRouter;
         inputToken = _inputToken;
-        outputToken = _outputToken;
-        dcaPercentageBps = _dcaPercentageBps;
+        targetToken = _targetToken;
+        allocationBps = _allocationBps;
+        emit ConfigUpdated(_dexRouter, _inputToken, _targetToken, _allocationBps);
     }
 
     function withdraw(address token, uint256 amount) external onlyOwner {

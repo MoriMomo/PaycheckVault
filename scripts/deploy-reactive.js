@@ -3,32 +3,30 @@ const { ethers } = hardhat;
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  console.log("Deploying Reactive contract on Lasna with account:", deployer.address);
+  console.log("========================================================");
+  console.log("Deploying PaycheckReactive on Lasna (Chain ID: 2611)");
+  console.log("Deployer Address:", deployer.address);
 
-  const ORIGIN_CHAIN_ID = process.env.ORIGIN_CHAIN_ID || 11155111; // Sepolia
-  const DESTINATION_CHAIN_ID = process.env.DESTINATION_CHAIN_ID || 11155111; // Sepolia or Base Sepolia
-  const ORIGIN_TOKEN = process.env.ORIGIN_TOKEN_ADDRESS;
-  const ORIGIN_VAULT = process.env.ORIGIN_VAULT_ADDRESS;
-  const DESTINATION_VAULT = process.env.DESTINATION_VAULT_ADDRESS || ORIGIN_VAULT;
-  const MIN_THRESHOLD = process.env.MIN_INFLOW_THRESHOLD || ethers.parseUnits("10", 18); // Default 10 tokens
+  const SEPOLIA_TOKEN_ADDRESS = process.env.SEPOLIA_TOKEN_ADDRESS;
+  const SEPOLIA_MONITORED_RECIPIENT = process.env.SEPOLIA_MONITORED_RECIPIENT || deployer.address;
+  const BASE_VAULT_ADDRESS = process.env.BASE_VAULT_ADDRESS;
+  const MIN_THRESHOLD = process.env.MIN_INFLOW_THRESHOLD || ethers.parseUnits("10", 18); // 10 tokens
 
-  if (!ORIGIN_VAULT || !ORIGIN_TOKEN) {
-    throw new Error("Missing ORIGIN_VAULT_ADDRESS or ORIGIN_TOKEN_ADDRESS in environment variables");
+  if (!SEPOLIA_TOKEN_ADDRESS || !BASE_VAULT_ADDRESS) {
+    throw new Error("Missing SEPOLIA_TOKEN_ADDRESS or BASE_VAULT_ADDRESS in .env");
   }
 
-  console.log(`- Subscribing to ERC20: ${ORIGIN_TOKEN}`);
-  console.log(`- Monitored Vault:      ${ORIGIN_VAULT} on Chain ${ORIGIN_CHAIN_ID}`);
-  console.log(`- Target Vault:         ${DESTINATION_VAULT} on Chain ${DESTINATION_CHAIN_ID}`);
-  console.log(`- Min Inflow Threshold: ${MIN_THRESHOLD.toString()}`);
+  console.log(`- Monitored Token on Sepolia:     ${SEPOLIA_TOKEN_ADDRESS}`);
+  console.log(`- Monitored Recipient on Sepolia: ${SEPOLIA_MONITORED_RECIPIENT}`);
+  console.log(`- Target Vault on Base Sepolia:   ${BASE_VAULT_ADDRESS}`);
+  console.log(`- Min Inflow Threshold:           ${MIN_THRESHOLD.toString()}`);
 
-  const InflowDCAReactive = await ethers.getContractFactory("InflowDCAReactive");
+  const PaycheckReactive = await ethers.getContractFactory("PaycheckReactive");
   // Funding with 0.1 lREACT for subscription and relayer callbacks
-  const reactiveContract = await InflowDCAReactive.deploy(
-    ORIGIN_CHAIN_ID,
-    DESTINATION_CHAIN_ID,
-    ORIGIN_TOKEN,
-    ORIGIN_VAULT,
-    DESTINATION_VAULT,
+  const reactiveContract = await PaycheckReactive.deploy(
+    SEPOLIA_TOKEN_ADDRESS,
+    SEPOLIA_MONITORED_RECIPIENT,
+    BASE_VAULT_ADDRESS,
     MIN_THRESHOLD,
     { value: ethers.parseEther("0.1") }
   );
@@ -36,9 +34,8 @@ async function main() {
   await reactiveContract.waitForDeployment();
   const reactiveAddress = await reactiveContract.getAddress();
   console.log("\n========================================================");
-  console.log("InflowDCAReactive successfully deployed to Lasna at:", reactiveAddress);
-  console.log("Both InflowVault and InflowDCAReactive share the same deployer wallet address (rvm_id).");
-  console.log("No extra authorization transaction needed — the reactive loop is live!");
+  console.log("PaycheckReactive deployed to Lasna at:", reactiveAddress);
+  console.log("Cross-chain reactive subscription is live!");
   console.log("========================================================");
 }
 

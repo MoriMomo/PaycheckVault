@@ -1,133 +1,128 @@
-# Inflow DCA Executor — Reactive Omni Buildathon
+# PaycheckVault — Autonomous Inflow Rebalancer
 
 > **Track:** Set It and Forget It  
-> **Built for:** DoraHacks × Reactive Network Omni Buildathon
+> **Built for:** DoraHacks × Reactive Network Omni Buildathon  
+> **Architecture:** Ethereum Sepolia (Origin) $\rightarrow$ Reactive Network Lasna (Event Layer) $\rightarrow$ Base Sepolia (Destination Vault)
 
 ---
 
 ## 💡 Overview
 
-**Inflow DCA** is an autonomous, recipient-side smart vault powered by **Reactive Network**.
+**PaycheckVault** is a recipient-side, cross-chain autonomous smart vault powered by **Reactive Network**.
 
-Instead of relying on off-chain keepers, centralized bot infrastructure, or synthetic cron jobs, **Inflow DCA** directly listens to on-chain capital inflow events (ERC-20 `Transfer` targeting the vault) on an origin chain.
+Instead of relying on off-chain keeper bots, centralized cron jobs, or manual transactions, **PaycheckVault** directly connects your incoming income on **Sepolia** (salary, freelance payments, grants) to your long-term wealth portfolio on **Base Sepolia**.
 
-The moment funds (such as payroll, grant distributions, or customer payments) arrive in the user's vault:
-1. The **Reactive Smart Contract** on **Lasna Testnet** detects the ERC-20 `Transfer` event in real time.
-2. It verifies the inflow exceeds the configured anti-spam threshold (`minInflowThreshold`).
-3. It emits an authenticated cross-chain callback to the **Destination Vault**, triggering an automatic DEX swap (e.g. 50% USDC $\rightarrow$ WETH) with zero human intervention or manual transactions.
-
----
-
-## 🔄 The Full Reactive Loop
-
-```
-┌─────────────────────────────────┐
-│     Origin Chain (e.g. Sepolia) │
-│                                 │
-│  Employer / User transfers USDC │
-│               │                 │
-│               ▼                 │
-│    USDC.transfer(vault, amount) │
-│               │                 │
-│     emits Transfer(..., vault)  │
-└───────────────┬─────────────────┘
-                │
-                │ (Event Subscription)
-                ▼
-┌─────────────────────────────────┐
-│     Reactive Network (Lasna)    │
-│                                 │
-│     InflowDCAReactive.react()   │
-│               │                 │
-│     Checks amount >= threshold  │
-│               │                 │
-│     emits Callback(...)         │
-└───────────────┬─────────────────┘
-                │
-                │ (Authenticated Callback)
-                ▼
-┌─────────────────────────────────┐
-│  Destination Chain (Sepolia/Base)│
-│                                 │
-│   InflowVault.executeInflowDCA()│
-│   (Checks: msg.sender==proxy    │
-│            sender == rvm_id)    │
-│               │                 │
-│      MockDEX.swap()             │
-│               │                 │
-│   USDC swapped to WETH          │
-└─────────────────────────────────┘
-```
+The moment a standard ERC-20 `Transfer` reaches your wallet address on Sepolia:
+1. **PaycheckReactive (Lasna Testnet):** Autonomously catches the event in real time (~1s Omni finality) and verifies the inflow exceeds the anti-dust threshold ($\ge \$10$).
+2. **Cross-Chain Relay:** Reactive Network dispatches an authenticated callback to **Base Sepolia**.
+3. **PaycheckVault (Base Sepolia):** Verifies the relayer proxy and RVM ID, then automatically swaps the user's pre-configured percentage (e.g. 50% USDC $\rightarrow$ WETH) via the on-chain DEX router.
 
 ---
 
-## 🛠️ Smart Contracts
+## 🔄 Cross-Chain Architecture
 
-1. **`InflowVault.sol`** (Origin & Destination Target)
-   - Holds the user's funds.
-   - Accepts both direct ERC-20 transfers and helper `deposit()` calls.
-   - Inherits `AbstractCallback` from `@reactive-network/reactive-lib` to strictly enforce authorized caller authentication (`rvmIdOnly(sender)` where `rvm_id = deployer_address`).
-   - Automatically executes the swap via the DEX router when triggered by the Reactive Network relayer callback.
+```
+┌──────────────────────────────────────┐
+│     1. Origin Chain (Sepolia)        │
+│                                      │
+│   Employer / Client transfers USDC   │
+│                 │                    │
+│                 ▼                    │
+│      USDC.transfer(recipient)       │
+│                 │                    │
+│       emits Transfer(..., user)      │
+└─────────────────┬────────────────────┘
+                  │
+                  │ (Cross-chain Event Subscription)
+                  ▼
+┌──────────────────────────────────────┐
+│     2. Reactive Omni Layer (Lasna)   │
+│                                      │
+│        PaycheckReactive.react()      │
+│                 │                    │
+│      Filters minInflowThreshold      │
+│                 │                    │
+│      emits Callback(Base, payload)   │
+└─────────────────┬────────────────────┘
+                  │
+                  │ (Authenticated Relayer Callback)
+                  ▼
+┌──────────────────────────────────────┐
+│     3. Target Chain (Base Sepolia)   │
+│                                      │
+│     PaycheckVault.sol                │
+│     - authorizedSenderOnly (Proxy)   │
+│     - rvmIdOnly (Deployer)           │
+│                 │                    │
+│                 ▼                    │
+│          MockDEX.swap()              │
+│       50% USDC auto-swapped to WETH  │
+└──────────────────────────────────────┘
+```
 
-2. **`InflowDCAReactive.sol`** (Lasna Testnet)
-   - Inherits `AbstractReactive` from `@reactive-network/reactive-lib`.
-   - Subscribes directly to ERC-20 `Transfer(from, to, amount)` events where `to == originVault`.
-   - Filters out spam/dust transfers below `minInflowThreshold`.
-   - Emits an authenticated callback payload to the destination vault.
+---
 
-3. **`MockDEX.sol` & `MockERC20.sol`**
-   - Deterministic testnet token and router contracts ensuring 100% callback reliability with zero slippage or testnet liquidity drought.
+## 🛠️ Contracts & Deployments
+
+- **`PaycheckVault.sol`** (Base Sepolia): Recipient-side vault enforcing strict callback authorization (`rvmIdOnly`).
+- **`PaycheckReactive.sol`** (Lasna Testnet): Subscribes to Sepolia `Transfer` events and triggers Base Sepolia execution.
+- **`MockDEX.sol` & `MockERC20.sol`**: Deterministic testnet token and swap routers ensuring zero slippage and 100% callback reliability.
 
 ---
 
 ## 🧪 Testing
 
-The repository includes a comprehensive end-to-end test suite:
-
+Run the full end-to-end integration suite:
 ```bash
 npx hardhat test
 ```
 
 Expected output:
 ```
-  Inflow DCA Hardened Architecture Suite
-    ✔ Should set deployer address as authorized rvm_id at construction time
-    ✔ Should accept direct ERC20 transfer to vault address and execute swap on callback
-    ✔ Should reject callbacks with unauthorized RVM ID
+  PaycheckVault Cross-Chain Architecture Suite (Sepolia -> Lasna -> Base Sepolia)
+    ✔ Should verify that rvm_id matches deployer wallet address
+    ✔ Should process cross-chain callback from Reactive relayer and execute allocation on Base
+    ✔ Should strictly reject callback from unauthorized relayer
+    ✔ Should strictly reject callback with unauthorized RVM ID
 
-  3 passing (1s)
+  4 passing (758ms)
 ```
 
 ---
 
-## 🚀 Deployment Guide
+## 🖥️ Live Visual Dashboard
+
+A dedicated visual frontend is included in `dashboard/index.html` to clearly demonstrate the 3-chain signal flow during the video demo.
+
+To view:
+Double-click `dashboard/index.html` in your browser or run:
+```bash
+npx serve dashboard
+```
+
+---
+
+## 🚀 Deployment Walkthrough
 
 ### 1. Setup Environment
-Copy `.env.example` to `.env` and fill in your private key and RPC URLs:
 ```bash
 cp .env.example .env
 ```
+Fill in your `PRIVATE_KEY` and RPC URLs.
 
-### 2. Deploy L1/Origin Vault & Mocks
-Deploy the tokens, mock DEX, and `InflowVault` on Sepolia:
+### 2. Deploy Sepolia Token (Origin)
 ```bash
-npx hardhat run scripts/deploy-l1.js --network sepolia
+npx hardhat run scripts/deploy-sepolia.js --network sepolia
 ```
 
-Save the printed `InflowVault` and `MockERC20` addresses in your `.env`:
-```
-ORIGIN_TOKEN_ADDRESS=0x...
-ORIGIN_VAULT_ADDRESS=0x...
+### 3. Deploy Base Sepolia Vault & DEX (Destination)
+```bash
+npx hardhat run scripts/deploy-base.js --network baseSepolia
 ```
 
-### 3. Deploy Reactive Contract to Lasna
-Deploy `InflowDCAReactive` to the Lasna Testnet (using the same deployer wallet):
+### 4. Deploy PaycheckReactive on Lasna
 ```bash
 npx hardhat run scripts/deploy-reactive.js --network lasna
 ```
 
-Because both contracts are deployed by the same wallet, `rvm_id` is automatically matched and authorized!
-
-### 4. Trigger Inflow and Observe Callback
-Transfer mock-USDC directly to `InflowVault` on Sepolia:
-The Reactive contract on Lasna will automatically pick up the event and dispatch the callback swap!
+Both contracts share the same deployer address (`rvm_id`), completing the trustless on-chain loop!
