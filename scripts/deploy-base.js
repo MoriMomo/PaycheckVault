@@ -36,7 +36,7 @@ async function main() {
   await fundTx.wait();
   console.log("Funded DEX with 1,000,000 WETH liquidity");
 
-  // 2. Deploy PaycheckVault
+  // 2. Deploy PaycheckVault (funded with 0.02 ETH to cover Reactive callback proxy gas)
   console.log("\n--- Deploying PaycheckVault ---");
   const PaycheckVault = await ethers.getContractFactory("PaycheckVault");
   const vault = await PaycheckVault.deploy(
@@ -44,7 +44,8 @@ async function main() {
     dexAddress,
     usdcAddress,
     wethAddress,
-    5000 // 50% automatic allocation
+    5000, // 50% automatic allocation
+    { value: ethers.parseEther("0.02") }
   );
   await vault.waitForDeployment();
   const vaultAddress = await vault.getAddress();
@@ -67,3 +68,4 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+

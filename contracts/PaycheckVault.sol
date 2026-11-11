@@ -55,6 +55,7 @@ contract PaycheckVault is AbstractCallback {
         address _targetToken,
         uint256 _allocationBps
     ) AbstractCallback(_callbackSender) payable {
+        require(_allocationBps <= 10000, "Invalid bps");
         owner = msg.sender;
         dexRouter = _dexRouter;
         inputToken = _inputToken;
@@ -111,6 +112,7 @@ contract PaycheckVault is AbstractCallback {
         address _targetToken,
         uint256 _allocationBps
     ) external onlyOwner {
+        require(_allocationBps <= 10000, "Invalid bps");
         dexRouter = _dexRouter;
         inputToken = _inputToken;
         targetToken = _targetToken;
@@ -126,3 +128,4 @@ contract PaycheckVault is AbstractCallback {
         return rvm_id;
     }
 }
+

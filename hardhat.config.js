@@ -20,9 +20,9 @@ const config = {
       chainId: 11155111,
     },
     lasna: {
-      url: process.env.LASNA_RPC_URL || "https://lasna-rpc.rnk.dev",
+      url: process.env.LASNA_RPC_URL || "https://lasna-rpc.rnk.dev/",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
-      chainId: 2611,
+      chainId: 5318007,
     },
     baseSepolia: {
       url: process.env.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org",

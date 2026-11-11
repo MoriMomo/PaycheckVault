@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-app: #080B11;
+  --bg-surface: #0E131F;
+  --bg-surface-elevated: #161D2E;
+  --bg-surface-glass: rgba(14, 19, 31, 0.78);
+  --border-subtle: #1E293B;
+  --border-focus: #38BDF8;
+  --accent-cyan: #06B6D4;
+  --accent-cyan-glow: #22D3EE;
+  --accent-indigo: #6366F1;
+  --accent-base-blue: #0052FF;
+  --status-success: #10B981;
+  --status-pending: #F59E0B;
+  --status-error: #EF4444;
+}
+
+body {
+  background-color: var(--bg-app);
+  color: #F8FAFC;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-image: 
+    radial-gradient(circle at 15% 10%, rgba(99, 102, 241, 0.08), transparent 35%),
+    radial-gradient(circle at 50% 25%, rgba(6, 182, 212, 0.08), transparent 40%),
+    radial-gradient(circle at 85% 15%, rgba(0, 82, 255, 0.09), transparent 35%);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes streamWave {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+.stream-active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, #22D3EE, #0052FF, transparent);
+  animation: streamWave 1.1s infinite ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stream-active::after, .animate-ping, .animate-pulse, .animate-spin {
+    animation: none !important;
+  }
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  background: #22D3EE;
+  border: 3px solid #080B11;
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.65);
+  cursor: grab;
+  transition: transform 150ms ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.12);
+}

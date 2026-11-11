@@ -1,19 +1,21 @@
 {
   "name": "reactive",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "PaycheckVault - Autonomous Inflow Rebalancer for Reactive Omni Buildathon",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "hardhat test",
+    "compile": "hardhat compile",
+    "dev": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "@openzeppelin/contracts": "^5.6.1",
-    "dotenv": "^18.0.10",
-    "hardhat": "^2.29.1"
+    "@openzeppelin/contracts": "^5.4.0",
+    "dotenv": "^17.4.3",
+    "hardhat": "^2.22.19"
   }
 }

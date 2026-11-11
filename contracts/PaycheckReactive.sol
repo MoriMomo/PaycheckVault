@@ -7,7 +7,7 @@ import "./reactive-lib/interfaces/ISystemContract.sol";
 
 /**
  * @title PaycheckReactive
- * @notice Deployed on Lasna testnet (Chain ID 2611).
+ * @notice Deployed on Lasna testnet (Chain ID 5318007).
  *         Subscribes to ERC-20 Transfer events on Sepolia (Chain ID 11155111) targeting user's wallet
  *         and fires an authenticated cross-chain callback to PaycheckVault on Base Sepolia (Chain ID 84532).
  */
@@ -91,3 +91,4 @@ contract PaycheckReactive is IReactive, AbstractReactive {
         }
     }
 }
+

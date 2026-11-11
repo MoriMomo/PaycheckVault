@@ -4,7 +4,7 @@ const { ethers } = hardhat;
 async function main() {
   const [deployer] = await ethers.getSigners();
   console.log("========================================================");
-  console.log("Deploying PaycheckReactive on Lasna (Chain ID: 2611)");
+  console.log("Deploying PaycheckReactive on Lasna (Chain ID: 5318007)");
   console.log("Deployer Address:", deployer.address);
 
   const SEPOLIA_TOKEN_ADDRESS = process.env.SEPOLIA_TOKEN_ADDRESS;

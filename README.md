@@ -81,11 +81,15 @@ Expected output:
 ```
   PaycheckVault Cross-Chain Architecture Suite (Sepolia -> Lasna -> Base Sepolia)
     ✔ Should verify that rvm_id matches deployer wallet address
+    ✔ Should emit Callback in PaycheckReactive.react() when valid Sepolia Transfer log arrives
+    ✔ Should ignore dust transfers below minInflowThreshold in PaycheckReactive.react()
     ✔ Should process cross-chain callback from Reactive relayer and execute allocation on Base
+    ✔ Should reimburse callback proxy gas via pay() from PaycheckVault ETH reserve
+    ✔ Should reject invalid allocationBps > 10000 in setConfig
     ✔ Should strictly reject callback from unauthorized relayer
     ✔ Should strictly reject callback with unauthorized RVM ID
 
-  4 passing (758ms)
+  8 passing (880ms)
 ```
 
 ---
