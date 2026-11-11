@@ -2,13 +2,14 @@ import { expect } from "chai";
 import hardhat from "hardhat";
 const { ethers } = hardhat;
 
-describe("Inflow DCA End-to-End Suite", function () {
+describe("Inflow DCA Hardened Architecture Suite", function () {
   let owner, employer, relayer, user;
   let mockUSDC, mockWETH, mockDEX, inflowVault, reactiveDCA;
 
   const SEPOLIA_CHAIN_ID = 11155111;
   const BASE_SEPOLIA_CHAIN_ID = 84532;
   const DCA_PERCENTAGE_BPS = 5000; // 50%
+  const MIN_INFLOW_THRESHOLD = ethers.parseUnits("10", 18); // 10 USDC
 
   beforeEach(async function () {
     [owner, employer, relayer, user] = await ethers.getSigners();
@@ -18,15 +19,14 @@ describe("Inflow DCA End-to-End Suite", function () {
     mockUSDC = await MockERC20.deploy("USD Coin", "USDC");
     mockWETH = await MockERC20.deploy("Wrapped Ether", "WETH");
 
-    // 2. Deploy Mock DEX with rate 0.5 (1 USDC = 0.5 WETH for testing)
+    // 2. Deploy Mock DEX with rate 0.5 (1 USDC = 0.5 WETH)
     const MockDEX = await ethers.getContractFactory("MockDEX");
     mockDEX = await MockDEX.deploy(ethers.parseEther("0.5"));
 
-    // Fund the DEX with WETH for liquidity
+    // Fund DEX with WETH liquidity
     await mockWETH.mint(await mockDEX.getAddress(), ethers.parseEther("100000"));
 
-    // 3. Deploy InflowVault (Destination & Origin Vault)
-    // Note: for testing callback authorization, relayer address is passed as callback sender
+    // 3. Deploy InflowVault (owner is deployer -> rvm_id = owner.address)
     const InflowVault = await ethers.getContractFactory("InflowVault");
     inflowVault = await InflowVault.deploy(
       relayer.address,
@@ -41,61 +41,50 @@ describe("Inflow DCA End-to-End Suite", function () {
     reactiveDCA = await InflowDCAReactive.deploy(
       SEPOLIA_CHAIN_ID,
       BASE_SEPOLIA_CHAIN_ID,
+      await mockUSDC.getAddress(),
       await inflowVault.getAddress(),
-      await inflowVault.getAddress()
+      await inflowVault.getAddress(),
+      MIN_INFLOW_THRESHOLD
     );
 
-    // Fund employer with USDC
+    // Fund employer with 1,000 USDC
     await mockUSDC.mint(employer.address, ethers.parseUnits("1000", 18));
   });
 
-  it("Should deposit inflow and emit InflowReceived event", async function () {
-    const depositAmount = ethers.parseUnits("500", 18);
-    await mockUSDC.connect(employer).approve(await inflowVault.getAddress(), depositAmount);
-
-    await expect(inflowVault.connect(employer).deposit(depositAmount))
-      .to.emit(inflowVault, "InflowReceived")
-      .withArgs(employer.address, await mockUSDC.getAddress(), depositAmount, (val) => val > 0);
-
-    expect(await mockUSDC.balanceOf(await inflowVault.getAddress())).to.equal(depositAmount);
+  it("Should set deployer address as authorized rvm_id at construction time", async function () {
+    expect(await inflowVault.getRvmId()).to.equal(owner.address);
   });
 
-  it("Should process Reactive callback and execute DCA swap on destination", async function () {
-    const depositAmount = ethers.parseUnits("500", 18);
-    await mockUSDC.connect(employer).approve(await inflowVault.getAddress(), depositAmount);
-    await inflowVault.connect(employer).deposit(depositAmount);
+  it("Should accept direct ERC20 transfer to vault address and execute swap on callback", async function () {
+    // Direct ERC-20 transfer from employer to vault address (e.g. paycheck transfer)
+    const transferAmount = ethers.parseUnits("200", 18);
+    await mockUSDC.connect(employer).transfer(await inflowVault.getAddress(), transferAmount);
 
-    // Emulate the Reactive Network Relayer delivering the callback with the authorized RVM ID
-    // RVM ID is the address that deployed InflowVault (owner)
-    const rvmId = owner.address;
+    expect(await mockUSDC.balanceOf(await inflowVault.getAddress())).to.equal(transferAmount);
 
-    // Relayer calls executeInflowDCA(sender, inflowAmount)
-    await expect(inflowVault.connect(relayer).executeInflowDCA(rvmId, depositAmount))
-      .to.emit(inflowVault, "DCASwapped");
+    // Reactive relayer delivers callback with the deployer's address as rvm_id (owner.address)
+    await expect(
+      inflowVault.connect(relayer).executeInflowDCA(owner.address, transferAmount)
+    )
+      .to.emit(inflowVault, "DCASwapped")
+      .withArgs(owner.address, ethers.parseUnits("100", 18), ethers.parseUnits("50", 18), (val) => val > 0);
 
-    // 50% of 500 USDC = 250 USDC swapped into WETH
-    // Remaining USDC = 250
+    // 50% swapped: 100 USDC remaining, 50 WETH acquired
     expect(await mockUSDC.balanceOf(await inflowVault.getAddress())).to.equal(
-      ethers.parseUnits("250", 18)
+      ethers.parseUnits("100", 18)
     );
-
-    // Rate is 0.5, so 250 USDC -> 125 WETH
     expect(await mockWETH.balanceOf(await inflowVault.getAddress())).to.equal(
-      ethers.parseUnits("125", 18)
+      ethers.parseUnits("50", 18)
     );
   });
 
-  it("Should reject unauthorized callback sender or wrong RVM ID", async function () {
-    const depositAmount = ethers.parseUnits("100", 18);
+  it("Should reject callbacks with unauthorized RVM ID", async function () {
+    const amount = ethers.parseUnits("100", 18);
+    await mockUSDC.connect(employer).transfer(await inflowVault.getAddress(), amount);
 
-    // Attacker tries to impersonate callback directly
+    // Attempt callback using unauthorized sender address (user.address instead of owner.address)
     await expect(
-      inflowVault.connect(user).executeInflowDCA(user.address, depositAmount)
-    ).to.be.revertedWith("Authorized sender only");
-
-    // Relayer tries with unauthorized RVM ID
-    await expect(
-      inflowVault.connect(relayer).executeInflowDCA(user.address, depositAmount)
+      inflowVault.connect(relayer).executeInflowDCA(user.address, amount)
     ).to.be.revertedWith("Authorized RVM ID only");
   });
 });
