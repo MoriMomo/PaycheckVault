@@ -193,21 +193,21 @@ export default function Navbar({
   // =========================================================================
   return (
     <nav
-      className={`fixed left-0 top-0 z-50 w-full flex justify-center transition-all duration-450 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+      className={`fixed left-0 top-0 z-50 w-full flex justify-center transition-all duration-450 ease-in-out ${
         isScrolled ? 'pt-2 sm:pt-3 px-3 sm:px-4' : 'pt-0 px-0'
       }`}
     >
       <div
-        className={`relative transition-all duration-450 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+        className={`relative transition-all duration-450 ease-in-out ${
           isScrolled
             ? 'w-fit px-5 sm:px-6 rounded-full'
-            : 'w-full max-w-[1536px] px-6 sm:px-8 rounded-none'
+            : 'w-full max-w-screen-2xl px-6 sm:px-8 rounded-none'
         }`}
       >
         {/* Solid Pitch Black Background for Scrolled Pill */}
         <div
           aria-hidden="true"
-          className={`pointer-events-none absolute inset-0 bg-black border border-white/15 transition-opacity duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+          className={`pointer-events-none absolute inset-0 bg-black border border-white/15 transition-opacity duration-300 ease-in-out ${
             isScrolled ? 'opacity-100 rounded-full' : 'opacity-0 rounded-none'
           }`}
           style={{ borderRadius: 'inherit' }}
@@ -215,7 +215,7 @@ export default function Navbar({
 
         {/* Content Flex Row */}
         <div
-          className={`relative flex items-center transition-all duration-450 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+          className={`relative flex items-center transition-all duration-450 ease-in-out ${
             isScrolled ? 'h-12 sm:h-14 justify-center' : 'h-16 justify-between'
           }`}
         >
@@ -229,12 +229,12 @@ export default function Navbar({
                 onNavigate('landing');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className={`block h-6 shrink-0 overflow-hidden transition-all duration-450 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer select-none ${
-                isScrolled ? 'w-6' : 'w-[119px]'
+              className={`block h-6 shrink-0 overflow-hidden transition-all duration-450 ease-in-out cursor-pointer select-none ${
+                isScrolled ? 'w-6' : 'w-29.75'
               }`}
               title="Reactive Network"
             >
-              <div className="h-6 w-[119px]">
+              <div className="h-6 w-29.75">
                 <svg className="h-full" viewBox="0 0 417 84" fill="none" xmlns="http://www.w3.org/2000/svg">
                   {/* Letters: 'reactive' */}
                   <path d="M122.485 62.9999H112.573V20.9999H122.485V25.7879C125.341 22.4279 129.709 20.1599 135.085 20.1599V29.5679C134.749 29.4839 134.329 29.4839 133.993 29.4839C127.693 29.4839 122.485 33.9359 122.485 40.3199V62.9999Z" fill="white" />
@@ -274,7 +274,7 @@ export default function Navbar({
                   rel="noreferrer"
                   className="group"
                 >
-                  <div className="flex items-center inline-block font-mono text-xs sm:text-sm font-medium relative text-[#F5F5F7] after:bg-white/50 after:absolute after:h-0.5 after:w-0 after:-bottom-1 after:left-0 group-hover:after:w-full after:transition-all after:duration-100 cursor-pointer">
+                  <div className="flex items-center font-mono text-xs sm:text-sm font-medium relative text-[#F5F5F7] after:bg-white/50 after:absolute after:h-0.5 after:w-0 after:-bottom-1 after:left-0 group-hover:after:w-full after:transition-all after:duration-100 cursor-pointer">
                     <span className="uppercase">{item.label}</span>
                   </div>
                 </a>
