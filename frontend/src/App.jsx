@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ethers } from 'ethers';
 
+const DEPLOYED_CONTRACTS = {
+  sepoliaUsdc: '0x4f93F4E22F90F1F66C4E56dB10D8a2990035A09e',
+  lasnaReactive: '0xe18f4DF3B4Faa2D7F49b3F1581c04427a0Be9223',
+  baseVault: '0x68FE8Ff67a3bF8bC3AdC78b4282bf79E6cbD0142',
+  deployerRvmId: '0x18634B5266369a482836328b8954E67918e5255a',
+};
+
 // Smooth numeric odometer hook (zero layout shift)
 function useAnimatedNumber(targetValue, duration = 400) {
   const [displayValue, setDisplayValue] = useState(targetValue);
@@ -268,19 +275,60 @@ export default function App() {
 
         {/* Collapsible Contract Reference (Out of the main visual path) */}
         {showInspector && (
-          <div className="border-t border-slate-800/60 bg-obsidian-900/95 px-6 py-3 text-xs text-slate-400">
-            <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono">
-              <div className="flex justify-between items-center bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                <span>Sepolia (USDC):</span>
-                <span className="text-indigo-300">11155111</span>
+          <div className="border-t border-slate-800/60 bg-obsidian-900/95 px-6 py-4 text-xs text-slate-300">
+            <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-3 font-mono">
+              <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 space-y-1.5">
+                <div className="flex justify-between items-center text-[11px] text-slate-400">
+                  <span className="font-semibold text-indigo-400">Sepolia (Origin USDC)</span>
+                  <span>ID: 11155111</span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] text-slate-200 truncate">{DEPLOYED_CONTRACTS.sepoliaUsdc}</span>
+                  <a
+                    href={`https://sepolia.etherscan.io/address/${DEPLOYED_CONTRACTS.sepoliaUsdc}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-cyan-400 hover:text-cyan-300 underline text-[10px]"
+                  >
+                    Scan ↗
+                  </a>
+                </div>
               </div>
-              <div className="flex justify-between items-center bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                <span>Lasna (RSC):</span>
-                <span className="text-cyan-300">5318007</span>
+
+              <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 space-y-1.5">
+                <div className="flex justify-between items-center text-[11px] text-slate-400">
+                  <span className="font-semibold text-cyan-400">Lasna (Reactive RSC)</span>
+                  <span>ID: 5318007</span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] text-slate-200 truncate">{DEPLOYED_CONTRACTS.lasnaReactive}</span>
+                  <a
+                    href={`https://lasna.reactivescan.net/address/${DEPLOYED_CONTRACTS.lasnaReactive}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-cyan-400 hover:text-cyan-300 underline text-[10px]"
+                  >
+                    Scan ↗
+                  </a>
+                </div>
               </div>
-              <div className="flex justify-between items-center bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                <span>Base (Vault):</span>
-                <span className="text-blue-300">84532</span>
+
+              <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 space-y-1.5">
+                <div className="flex justify-between items-center text-[11px] text-slate-400">
+                  <span className="font-semibold text-blue-400">Base Sepolia (Vault)</span>
+                  <span>ID: 84532</span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] text-slate-200 truncate">{DEPLOYED_CONTRACTS.baseVault}</span>
+                  <a
+                    href={`https://sepolia.basescan.org/address/${DEPLOYED_CONTRACTS.baseVault}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-cyan-400 hover:text-cyan-300 underline text-[10px]"
+                  >
+                    Scan ↗
+                  </a>
+                </div>
               </div>
             </div>
           </div>
