@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CONFIG } from '../config/contracts';
 import SplitFlapText from './ui/SplitFlapText';
+import CursorGrid from './ui/CursorGrid';
 
 export default function LandingPage({
   onLaunchApp,
@@ -38,103 +39,98 @@ export default function LandingPage({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           
           {/* ========================================================== */}
-          {/* LEFT COLUMN: Top Fluid Wave Banner (Solid Color) + Details */}
+          {/* LEFT COLUMN: React Bits <CursorGrid /> Interactive Matrix  */}
           {/* ========================================================== */}
-          <div className="lg:col-span-5 space-y-5">
-            
-            {/* The Solid Fluid Curve Wave Banner (Pure Pitch Black) */}
-            <div className="relative w-full h-52 sm:h-64 rounded-2xl overflow-hidden bg-black border border-white/15 flex items-center justify-center">
-              
-              {/* Solid Fluid Curve Wave Graphic (No Gradients) */}
-              <svg
-                className="w-full h-full object-cover pointer-events-none select-none"
-                viewBox="0 0 800 400"
-                fill="none"
-                preserveAspectRatio="none"
+          <div className="lg:col-span-5">
+            <div className="relative w-full h-[600px] rounded-2xl overflow-hidden bg-black border border-white/12">
+              <CursorGrid
+                cellSize={60}
+                color="#ffffff"
+                highlight="area"
+                gridStyle="lines"
+                radius={140}
+                holdTime={400}
+                fadeDuration={800}
+                fillOpacity={0.06}
+                gridOpacity={0.08}
+                spotlight={0.6}
+                clickPulse
               >
-                {/* Background base */}
-                <rect width="800" height="400" fill="#000000" />
+                <div className="relative z-10 h-full p-6 flex flex-col justify-between">
+                  
+                  {/* Top Status Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="px-3 py-1 rounded-full bg-black border border-white/15 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#62D0FF]" />
+                      <span className="text-[10px] font-mono text-zinc-300 uppercase tracking-wider">
+                        Reactive Event Layer
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
+                      LASNA RVM • ACTIVE
+                    </span>
+                  </div>
 
-                {/* Solid Royal Blue Wave Body */}
-                <path
-                  d="M -30 360 C 80 150, 180 35, 360 55 C 540 75, 600 300, 760 200 C 790 180, 810 140, 830 110"
-                  stroke="#2756FC"
-                  strokeWidth="60"
-                  strokeLinecap="round"
-                  fill="none"
-                />
+                  {/* Center Interactive Shader Cue */}
+                  <div className="my-auto py-6 text-center space-y-1.5 pointer-events-none select-none">
+                    <div className="text-xs font-mono uppercase tracking-widest text-zinc-400">
+                      [ INTERACTIVE EVENT GRID ]
+                    </div>
+                    <p className="text-[11px] font-mono text-zinc-500">
+                      Hover to illuminate • Click anywhere to pulse
+                    </p>
+                  </div>
 
-                {/* Solid Bright Cyan Crest Line */}
-                <path
-                  d="M -30 350 C 80 140, 180 30, 360 48 C 540 66, 600 290, 760 190 C 790 170, 810 130, 830 100"
-                  stroke="#62D0FF"
-                  strokeWidth="5"
-                  fill="none"
-                />
+                  {/* Bottom Buildathon Implementation Card & Subscribe */}
+                  <div className="space-y-4">
+                    {/* Featured Buildathon Implementation Card */}
+                    <div className="p-4 rounded-xl bg-black border border-white/15 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-[#62D0FF]" />
+                          <span className="text-[11px] font-mono text-[#62D0FF] uppercase tracking-wider font-semibold">
+                            DoraHacks Omni Buildathon
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono text-zinc-500">SET IT &amp; FORGET IT</span>
+                      </div>
+                      <p className="text-xs text-zinc-300 leading-relaxed">
+                        Autonomous recipient-side cross-chain smart vault. Inflows to Sepolia trigger cross-chain callbacks to convert {savedPct}% into WETH on Base—zero keepers, 100% on-chain.
+                      </p>
+                    </div>
 
-                {/* Inner Void Arc */}
-                <path
-                  d="M -10 400 C 100 230, 200 130, 360 145 C 500 160, 600 380, 780 290 L 820 400 Z"
-                  fill="#000000"
-                />
-              </svg>
+                    {/* Subscribe Input Row */}
+                    <div className="space-y-2">
+                      <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <input
+                          type="text"
+                          value={emailInput}
+                          onChange={(e) => setEmailInput(e.target.value)}
+                          placeholder="Your email address"
+                          className="flex-1 bg-black border border-white/20 focus:border-white/40 rounded-lg px-3.5 py-2 text-xs sm:text-sm text-white placeholder-zinc-500 outline-none font-sans"
+                        />
+                        <button
+                          type="submit"
+                          className="text-xs sm:text-sm font-medium text-white hover:text-[#62D0FF] transition px-3.5 py-2 cursor-pointer whitespace-nowrap bg-black border border-white/20 rounded-lg"
+                        >
+                          {subscribed ? 'Subscribed ✓' : 'Subscribe'}
+                        </button>
+                      </form>
+                      <div className="flex items-center justify-between text-xs font-mono text-zinc-500">
+                        <span>Follow updates on Lasna</span>
+                        <button
+                          onClick={onLaunchApp}
+                          className="text-white hover:text-[#62D0FF] transition underline font-sans font-semibold cursor-pointer"
+                        >
+                          Launch Vault App ↗
+                        </button>
+                      </div>
+                    </div>
+                  </div>
 
-              {/* Pinpoint Starlight */}
-              <div className="absolute right-8 sm:right-12 top-[52%] w-2 h-2 rounded-full bg-white" />
-
-              {/* Floating Badge inside Top Banner */}
-              <div className="absolute bottom-3 left-3 px-3 py-1 rounded-full bg-black border border-white/15 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#62D0FF]" />
-                <span className="text-[10px] font-mono text-zinc-300 uppercase tracking-wider">
-                  Reactive Event Layer
-                </span>
-              </div>
-            </div>
-
-            {/* Featured Buildathon Implementation Card */}
-            <div className="p-4 rounded-xl bg-black border border-white/10 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#62D0FF]" />
-                  <span className="text-[11px] font-mono text-[#62D0FF] uppercase tracking-wider font-semibold">
-                    DoraHacks Omni Buildathon
-                  </span>
                 </div>
-                <span className="text-[10px] font-mono text-zinc-500">SET IT &amp; FORGET IT</span>
-              </div>
-              <p className="text-xs text-zinc-300 leading-relaxed">
-                Autonomous recipient-side cross-chain smart vault. Inflows to Sepolia trigger cross-chain callbacks to convert {savedPct}% into WETH on Base—zero keepers, 100% on-chain.
-              </p>
+              </CursorGrid>
             </div>
-
-            {/* Subscribe Input Row */}
-            <div className="space-y-2 pt-1">
-              <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <input
-                  type="text"
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  placeholder="Your email address"
-                  className="flex-1 bg-black border border-white/15 focus:border-white/30 rounded-lg px-3.5 py-2 text-xs sm:text-sm text-white placeholder-zinc-500 outline-none font-sans"
-                />
-                <button
-                  type="submit"
-                  className="text-xs sm:text-sm font-medium text-white hover:text-[#62D0FF] transition px-3 py-2 cursor-pointer whitespace-nowrap bg-black border border-white/15 rounded-lg"
-                >
-                  {subscribed ? 'Subscribed ✓' : 'Subscribe'}
-                </button>
-              </form>
-              <div className="flex items-center justify-between text-xs font-mono text-zinc-500">
-                <span>Follow updates on Lasna</span>
-                <button
-                  onClick={onLaunchApp}
-                  className="text-white hover:text-[#62D0FF] transition underline font-sans font-semibold cursor-pointer"
-                >
-                  Launch Vault App ↗
-                </button>
-              </div>
-            </div>
-
           </div>
 
           {/* ========================================================== */}
