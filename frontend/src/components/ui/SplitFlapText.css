@@ -33,18 +33,8 @@
   height: 1.08em;
   overflow: hidden;
   border-radius: var(--split-flap-radius, 8px);
-  background:
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.16), transparent 44%),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--split-flap-tile-color, #111827) 82%, white),
-      var(--split-flap-tile-color, #111827)
-    );
-  box-shadow:
-    0 0.035em 0.08em rgba(255, 255, 255, 0.08) inset,
-    0 -0.05em 0.1em rgba(0, 0, 0, 0.38) inset,
-    0 calc(0.16em * var(--split-flap-lift, 1)) calc(0.38em * var(--split-flap-lift, 1))
-      rgba(0, 0, 0, var(--split-flap-drop, 0.28));
+  background: var(--split-flap-tile-color, #000000);
+  box-shadow: none;
   perspective: 10em;
   transform-style: preserve-3d;
   isolation: isolate;
@@ -58,17 +48,8 @@
   left: 0;
   width: 100%;
   height: var(--split-flap-hinge, 1px);
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.18) 18%,
-    rgba(0, 0, 0, var(--split-flap-hinge-shade, 0.64)) 50%,
-    rgba(255, 255, 255, 0.14) 82%,
-    transparent
-  );
-  box-shadow:
-    0 -1px 0 rgba(255, 255, 255, 0.08),
-    0 1px 0 rgba(0, 0, 0, 0.5);
+  background: #222222;
+  box-shadow: none;
   pointer-events: none;
 }
 
@@ -77,9 +58,9 @@
   position: absolute;
   inset: 0;
   z-index: 9;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: inherit;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2) inset;
+  box-shadow: none;
   pointer-events: none;
 }
 
@@ -90,8 +71,7 @@
   width: 100%;
   height: 50%;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent 34%), var(--split-flap-tile-color, #111827);
+  background: var(--split-flap-tile-color, #000000);
   backface-visibility: hidden;
 }
 
@@ -107,9 +87,7 @@
 
 .split-flap-text__half--bottom,
 .split-flap-text__flap--back {
-  background:
-    linear-gradient(0deg, rgba(255, 255, 255, 0.06), transparent 38%),
-    color-mix(in srgb, var(--split-flap-tile-color, #111827) 92%, black);
+  background: var(--split-flap-tile-color, #000000);
 }
 
 .split-flap-text__char {
@@ -167,12 +145,12 @@
 
 .split-flap-text__shade--top {
   top: 0;
-  background: linear-gradient(0deg, rgba(0, 0, 0, var(--split-flap-cast, 0)), transparent 85%);
+  background: transparent;
 }
 
 .split-flap-text__shade--bottom {
   bottom: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, var(--split-flap-cast, 0)), transparent 90%);
+  background: transparent;
   animation-name: split-flap-shade-bottom;
 }
 
@@ -181,14 +159,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(
-      180deg,
-      transparent 32%,
-      rgba(255, 255, 255, var(--split-flap-glare, 0)) 50%,
-      transparent 68%
-    )
-    0 100% / 100% 300% no-repeat;
-  animation: split-flap-glare-front var(--split-flap-flip-duration, 0.12s) linear both;
+  background: none;
 }
 
 .split-flap-text--glare .split-flap-text__flap--back::after {
@@ -398,3 +369,4 @@
     animation: none !important;
   }
 }
+

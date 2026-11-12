@@ -2,53 +2,38 @@
 @config "../tailwind.config.js";
 
 :root {
-  --bg-app: #0A0A0C;
-  --bg-surface: #121215;
-  --bg-surface-elevated: #18181D;
+  --bg-app: #000000;
+  --bg-surface: #000000;
+  --bg-surface-elevated: #000000;
   --reactive-blue: #2756FC;
   --reactive-cyan: #62D0FF;
   --reactive-purple: #CBB5FF;
   --reactive-green: #00C853;
 }
 
-body {
-  background-color: var(--bg-app);
+html, body {
+  background-color: #000000 !important;
+  background: #000000 !important;
+  background-image: none !important;
   color: #F5F5F7;
   font-family: 'Inter', sans-serif;
-  background-image:
-    radial-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
-    radial-gradient(circle at 50% 0%, rgba(39, 86, 252, 0.16), transparent 45%),
-    radial-gradient(circle at 82% 20%, rgba(98, 208, 255, 0.10), transparent 38%),
-    radial-gradient(circle at 18% 35%, rgba(203, 181, 255, 0.07), transparent 40%);
-  background-size: 24px 24px, 100% 100%, 100% 100%, 100% 100%;
-  background-attachment: fixed;
+  margin: 0;
+  padding: 0;
 }
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
 
-/* Reactive Network Glass Bento Card */
+/* Reactive Network Pitch Black Bento Card */
 .reactive-card {
   position: relative;
-  background: rgba(18, 18, 21, 0.78);
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  background: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: none;
 }
 
-.reactive-card::before {
-  content: '';
-  position: absolute;
-  inset-inline: 0;
-  top: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
-  pointer-events: none;
-}
-
-/* Data Stream Animation */
+/* Data Stream Animation - Solid Single Color (No Gradient) */
 @keyframes streamBeam {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(250%); }
@@ -64,7 +49,7 @@ body {
   position: absolute;
   inset: 0;
   width: 45%;
-  background: linear-gradient(90deg, transparent, #62D0FF, #2756FC, transparent);
+  background: #62D0FF;
   animation: streamBeam 1.2s infinite ease-in-out;
 }
 
@@ -82,15 +67,14 @@ input[type="range"]::-webkit-slider-thumb {
   height: 22px;
   border-radius: 9999px;
   background: #62D0FF;
-  border: 3px solid #0A0A0C;
-  box-shadow: 0 0 16px rgba(98, 208, 255, 0.75);
+  border: 3px solid #000000;
+  box-shadow: none;
   cursor: grab;
-  transition: transform 150ms ease, box-shadow 150ms ease;
+  transition: transform 150ms ease;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.1);
-  box-shadow: 0 0 22px rgba(98, 208, 255, 0.95);
 }
 
 input[type="range"]::-webkit-slider-thumb:active {

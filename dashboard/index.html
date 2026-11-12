@@ -33,34 +33,17 @@
   </script>
   <style>
     body {
-      background-color: #0A0A0C;
+      background-color: #000000;
+      background: #000000;
       color: #F5F5F7;
       font-family: 'Inter', sans-serif;
-      background-image:
-        radial-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
-        radial-gradient(circle at 50% 0%, rgba(39, 86, 252, 0.16), transparent 45%),
-        radial-gradient(circle at 82% 20%, rgba(98, 208, 255, 0.10), transparent 38%),
-        radial-gradient(circle at 18% 35%, rgba(203, 181, 255, 0.07), transparent 40%);
-      background-size: 24px 24px, 100% 100%, 100% 100%, 100% 100%;
-      background-attachment: fixed;
     }
     .tabular-nums { font-variant-numeric: tabular-nums; }
     .reactive-card {
       position: relative;
-      background: rgba(18, 18, 21, 0.78);
-      -webkit-backdrop-filter: blur(18px);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-    }
-    .reactive-card::before {
-      content: '';
-      position: absolute;
-      inset-inline: 0;
-      top: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
-      pointer-events: none;
+      background: #000000;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: none;
     }
     input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
@@ -69,8 +52,8 @@
       height: 22px;
       border-radius: 9999px;
       background: #62D0FF;
-      border: 3px solid #0A0A0C;
-      box-shadow: 0 0 16px rgba(98, 208, 255, 0.75);
+      border: 3px solid #000000;
+      box-shadow: none;
       cursor: grab;
     }
   </style>

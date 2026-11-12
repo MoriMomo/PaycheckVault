@@ -408,3 +408,4 @@ const SplitFlapText = ({
 };
 
 export default SplitFlapText;
+

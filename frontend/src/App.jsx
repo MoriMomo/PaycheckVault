@@ -434,17 +434,17 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-dvh flex flex-col justify-between font-sans">
+    <div className="min-h-dvh flex flex-col justify-between font-sans bg-black text-white">
       
       {/* Toast Notification */}
       {toast && (
         <div
           role="status"
           aria-live="polite"
-          className={`fixed bottom-6 right-6 z-50 max-w-sm p-4 rounded-2xl border backdrop-blur-xl shadow-2xl transition-all flex items-start gap-3 ${
+          className={`fixed bottom-6 right-6 z-50 max-w-sm p-4 rounded-2xl border transition-all flex items-start gap-3 ${
             toast.type === 'warn'
-              ? 'bg-[#121215]/95 border-amber-500/40 text-amber-100'
-              : 'bg-[#121215]/95 border-[#62D0FF]/40 text-slate-100'
+              ? 'bg-black border-amber-500 text-amber-100'
+              : 'bg-black border-[#62D0FF] text-white'
           }`}
         >
           <span
@@ -504,8 +504,8 @@ export default function App() {
         )}
       </main>
 
-      {/* Meadow Rise Interactive Ambient Footer */}
-      <div className="w-full mt-12 border-t border-white/8">
+      {/* Footer Container */}
+      <div className="w-full mt-12 border-t border-white/10 bg-black">
         <MeadowRiseFooter
           name="PaycheckVault"
           brandHref="#"
@@ -518,7 +518,28 @@ export default function App() {
           tagline="The first recipient-side autonomous smart vault built for DoraHacks Omni Buildathon."
           newsletter={true}
           placeholder="Enter your email or wallet address"
-          preset="moonlit"
+          palette={{
+            sky: ['#000000', '#000000'],
+            haze: '#000000',
+            glow: 'transparent',
+            hills: [
+              ['#000000', '#000000'],
+              ['#000000', '#000000'],
+              ['#000000', '#000000'],
+              ['#000000', '#000000'],
+              ['#000000', '#000000'],
+              ['#000000', '#000000'],
+            ],
+            ground: '#000000',
+            ink: '#FFFFFF',
+            muted: '#888888',
+            accent: '#62D0FF',
+            button: {
+              bg: '#2756FC',
+              text: '#FFFFFF',
+              hover: '#3260ff',
+            },
+          }}
           columns={[
             {
               title: "Chains & Explorers",

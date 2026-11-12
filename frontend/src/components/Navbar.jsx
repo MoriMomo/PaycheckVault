@@ -36,10 +36,9 @@ export default function Navbar({
   ];
 
   // If user is inside the Vault DApp Control Center (activePage === 'app')
-  // show the specialized Web3 App Toolbar with wallet, network, contracts, and back link
   if (activePage === 'app') {
     return (
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#0A0A0C]/90 backdrop-blur-xl border-b border-white/8 transition-all">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-black border-b border-white/10 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           
           {/* Left: Brand + Back to Overview */}
@@ -55,16 +54,9 @@ export default function Navbar({
                     fillRule="evenodd"
                     clipRule="evenodd"
                     d="M42.0759 84C65.2719 84 84.0759 65.196 84.0759 42C84.0759 18.804 65.2719 0 42.0759 0C18.88 0 0.0759277 18.804 0.0759277 42C0.0759277 65.196 18.88 84 42.0759 84ZM42.076 73.5C59.473 73.5 73.576 59.397 73.576 42C73.576 24.603 59.473 10.5 42.076 10.5C24.679 10.5 10.576 24.603 10.576 42C10.576 59.397 24.679 73.5 42.076 73.5Z"
-                    fill="url(#appNavGrad)"
+                    fill="#62D0FF"
                   />
                   <path d="M18.4509 44.625L44.7009 18.375V39.375H65.7009L39.4509 65.625V44.625H18.4509Z" fill="white" />
-                  <defs>
-                    <linearGradient id="appNavGrad" x1="0" y1="0" x2="84" y2="84" gradientUnits="userSpaceOnUse">
-                      <stop stopColor="#62D0FF" />
-                      <stop offset="0.5" stopColor="#3C2EFF" />
-                      <stop offset="1" stopColor="#CBB5FF" />
-                    </linearGradient>
-                  </defs>
                 </svg>
               </div>
               <span className="font-mono text-sm uppercase tracking-wider text-white font-bold group-hover:text-[#62D0FF] transition">
@@ -86,22 +78,22 @@ export default function Navbar({
           {/* Right: Network + Contracts + Connect Wallet */}
           <div className="flex items-center gap-3">
             {walletAddress && currentChainId === CONFIG.sepolia.chainId && (
-              <span className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono px-3 py-1 rounded-full bg-[#2756FC]/15 text-[#62D0FF] border border-[#2756FC]/40">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#62D0FF] animate-pulse" />
+              <span className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono px-3 py-1 rounded-full bg-[#2756FC]/20 text-[#62D0FF] border border-[#2756FC]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#62D0FF]" />
                 Sepolia (Origin)
               </span>
             )}
 
             {walletAddress && currentChainId === CONFIG.baseSepolia.chainId && (
-              <span className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono px-3 py-1 rounded-full bg-[#0052FF]/15 text-blue-300 border border-[#0052FF]/40">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+              <span className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono px-3 py-1 rounded-full bg-blue-900/30 text-blue-300 border border-blue-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
                 Base Sepolia (Vault)
               </span>
             )}
 
             <button
               onClick={() => setShowInspector(!showInspector)}
-              className="text-xs font-mono text-zinc-400 hover:text-white transition px-2.5 py-1.5 rounded-full border border-white/8 hover:bg-white/5 cursor-pointer"
+              className="text-xs font-mono text-zinc-400 hover:text-white transition px-2.5 py-1.5 rounded-full border border-white/10 hover:bg-white/5 cursor-pointer"
             >
               {showInspector ? 'Hide Contracts' : 'Contracts'}
             </button>
@@ -111,13 +103,13 @@ export default function Navbar({
               disabled={isConnecting}
               className={`px-4 py-1.5 rounded-full font-semibold text-xs transition active:scale-95 flex items-center gap-2 cursor-pointer ${
                 walletAddress
-                  ? 'bg-[#00C853]/10 text-[#00C853] border border-[#00C853]/30 hover:bg-[#00C853]/20'
-                  : 'bg-white hover:bg-zinc-200 text-[#0A0A0C] font-bold shadow-[0_0_20px_rgba(255,255,255,0.2)]'
+                  ? 'bg-black text-[#00C853] border border-[#00C853] hover:bg-zinc-950'
+                  : 'bg-white hover:bg-zinc-200 text-black font-bold'
               }`}
             >
               {isConnecting ? (
                 <>
-                  <span className="w-2 h-2 rounded-full bg-[#0A0A0C] animate-ping" />
+                  <span className="w-2 h-2 rounded-full bg-black animate-ping" />
                   <span>Connecting...</span>
                 </>
               ) : walletAddress ? (
@@ -134,9 +126,9 @@ export default function Navbar({
 
         {/* Contract Drawer in App Mode */}
         {showInspector && (
-          <div className="border-t border-white/8 bg-[#0A0A0C]/95 px-6 py-4 text-xs">
+          <div className="border-t border-white/10 bg-black px-6 py-4 text-xs">
             <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-3 font-mono">
-              <div className="reactive-card p-3.5 rounded-xl space-y-1.5">
+              <div className="bg-black border border-white/10 p-3.5 rounded-xl space-y-1.5">
                 <div className="flex justify-between items-center text-[11px] text-zinc-400">
                   <span className="font-semibold text-[#CBB5FF]">1. Sepolia (Origin USDC)</span>
                   <span>11155111</span>
@@ -154,7 +146,7 @@ export default function Navbar({
                 </div>
               </div>
 
-              <div className="reactive-card p-3.5 rounded-xl space-y-1.5">
+              <div className="bg-black border border-white/10 p-3.5 rounded-xl space-y-1.5">
                 <div className="flex justify-between items-center text-[11px] text-zinc-400">
                   <span className="font-semibold text-[#62D0FF]">2. Lasna (Reactive RSC)</span>
                   <span>5318007</span>
@@ -172,7 +164,7 @@ export default function Navbar({
                 </div>
               </div>
 
-              <div className="reactive-card p-3.5 rounded-xl space-y-1.5">
+              <div className="bg-black border border-white/10 p-3.5 rounded-xl space-y-1.5">
                 <div className="flex justify-between items-center text-[11px] text-zinc-400">
                   <span className="font-semibold text-[#2756FC]">3. Base Sepolia (Vault)</span>
                   <span>84532</span>
@@ -197,10 +189,7 @@ export default function Navbar({
   }
 
   // =========================================================================
-  // LANDING PAGE NAVBAR:
-  // Replicates reactive.network's authentic 2-state responsive navbar:
-  // State 1 (Top / Unscrolled): Full-width header matching Image 2
-  // State 2 (Scrolled): Floating centered capsule pill matching Image 1
+  // LANDING PAGE NAVBAR: Pitch Black & Zero Gradients
   // =========================================================================
   return (
     <nav
@@ -215,10 +204,10 @@ export default function Navbar({
             : 'w-full max-w-[1536px] px-6 sm:px-8 rounded-none'
         }`}
       >
-        {/* Backdrop blur and subtle glow container in scrolled state */}
+        {/* Solid Pitch Black Background for Scrolled Pill */}
         <div
           aria-hidden="true"
-          className={`pointer-events-none absolute inset-0 backdrop-blur-md bg-[#0A0A0C]/85 ring-1 ring-white/10 shadow-lg shadow-black/50 transition-opacity duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+          className={`pointer-events-none absolute inset-0 bg-black border border-white/15 transition-opacity duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
             isScrolled ? 'opacity-100 rounded-full' : 'opacity-0 rounded-none'
           }`}
           style={{ borderRadius: 'inherit' }}
@@ -231,7 +220,7 @@ export default function Navbar({
           }`}
         >
           
-          {/* Left Brand: SVG Logo that morphs between full wordmark (119px) and circular icon (24px) */}
+          {/* Left Brand: SVG Logo with flat single color */}
           <div className="flex items-center">
             <a
               href="https://reactive.network"
@@ -256,32 +245,26 @@ export default function Navbar({
                   <path d="M322.067 62.9999H312.155V20.9999H322.067V62.9999ZM311.231 7.55993C311.231 4.36793 313.835 1.67993 317.111 1.67993C320.387 1.67993 322.991 4.36793 322.991 7.55993C322.991 10.8359 320.387 13.5239 317.111 13.5239C313.835 13.5239 311.231 10.8359 311.231 7.55993Z" fill="white" />
                   <path d="M345.114 62.9999L327.642 20.9999H338.394L350.658 50.9039L362.838 20.9999H373.59L356.202 62.9999H345.114Z" fill="white" />
                   <path d="M375.104 41.9999C375.104 29.6519 384.344 20.1599 396.524 20.1599C408.452 20.1599 416.6 28.8959 416.6 41.4119C416.6 43.0079 416.348 44.7719 416.18 46.4519H384.932C386.612 51.6599 391.316 54.8519 397.532 54.8519C401.564 54.8519 405.428 53.4239 407.948 50.6519L414.248 56.9519C410.216 61.4039 404.336 63.8399 397.448 63.8399C384.764 63.8399 375.104 54.3479 375.104 41.9999ZM396.356 29.0639C390.56 29.0639 385.604 32.9279 384.764 38.7239H407.276C406.436 32.7599 401.984 29.0639 396.356 29.0639Z" fill="white" />
-                  {/* Glowing Ring & Lightning bolt */}
+                  {/* Flat Single Color Ring (Solid Cyan #62D0FF) */}
                   <path
                     fillRule="evenodd"
                     clipRule="evenodd"
                     d="M42.0759 84C65.2719 84 84.0759 65.196 84.0759 42C84.0759 18.804 65.2719 0 42.0759 0C18.88 0 0.0759277 18.804 0.0759277 42C0.0759277 65.196 18.88 84 42.0759 84ZM42.076 73.5C59.473 73.5 73.576 59.397 73.576 42C73.576 24.603 59.473 10.5 42.076 10.5C24.679 10.5 10.576 24.603 10.576 42C10.576 59.397 24.679 73.5 42.076 73.5Z"
-                    fill="url(#navIconGrad)"
+                    fill="#62D0FF"
                   />
+                  {/* Lightning Symbol */}
                   <path d="M18.4509 44.625L44.7009 18.375V39.375H65.7009L39.4509 65.625V44.625H18.4509Z" fill="white" />
-                  <defs>
-                    <linearGradient id="navIconGrad" x1="0.0759277" y1="0" x2="84.0759" y2="84" gradientUnits="userSpaceOnUse">
-                      <stop stopColor="#62D0FF" />
-                      <stop offset="0.5" stopColor="#3C2EFF" />
-                      <stop offset="1" stopColor="#CBB5FF" />
-                    </linearGradient>
-                  </defs>
                 </svg>
               </div>
             </a>
 
-            {/* Vertical Divider after (⚡) icon when in scrolled capsule pill (Image 1) */}
+            {/* Vertical Divider after (⚡) icon when in scrolled capsule pill */}
             {isScrolled && (
               <div className="h-4 w-px bg-white/20 ml-4 mr-0 shrink-0 hidden md:block" />
             )}
           </div>
 
-          {/* Right Navigation Links: divide-x list matching Image 1 & Image 2 */}
+          {/* Right Navigation Links: divide-x list */}
           <div className="hidden md:flex shrink-0 divide-x divide-white/20 items-center">
             {navLinks.map((item) => (
               <div key={item.label} className="px-3 xl:px-4 inline-flex">
@@ -334,7 +317,7 @@ export default function Navbar({
 
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden mt-2 p-4 rounded-2xl bg-[#0A0A0C]/95 border border-white/10 backdrop-blur-xl space-y-3 font-mono text-xs">
+          <div className="md:hidden mt-2 p-4 rounded-2xl bg-black border border-white/10 space-y-3 font-mono text-xs">
             <div className="divide-y divide-white/10">
               {navLinks.map((item) => (
                 <a
