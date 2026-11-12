@@ -41,3 +41,4 @@ export const VAULT_ABI = [
   'function setConfig(address _dexRouter, address _inputToken, address _targetToken, uint256 _allocationBps) external',
   'event PaycheckAllocated(address indexed caller, uint256 amountIn, uint256 amountOut, uint256 timestamp)',
 ];
+
