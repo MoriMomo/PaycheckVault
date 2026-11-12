@@ -2,7 +2,15 @@ import hardhat from "hardhat";
 const { ethers } = hardhat;
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
+  const signers = await ethers.getSigners();
+  if (!signers || signers.length === 0) {
+    console.error("\n❌ ERROR: No valid private key found in .env!");
+    console.error("1. Make sure you open the file '.env' (NOT .env.example).");
+    console.error("2. Paste your 64-character private key from MetaMask on line 1: PRIVATE_KEY=...");
+    console.error("3. Save the file with Ctrl + S.\n");
+    process.exit(1);
+  }
+  const deployer = signers[0];
   console.log("========================================================");
   console.log("Deploying Sepolia Mock USDC (Origin Inflow Token)");
   console.log("Deployer Address:", deployer.address);
