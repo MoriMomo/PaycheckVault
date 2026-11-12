@@ -4,6 +4,7 @@ import { CONFIG, ERC20_ABI, VAULT_ABI } from './config/contracts';
 import Navbar from './components/Navbar';
 import LandingPage from './components/LandingPage';
 import DashboardPage from './components/DashboardPage';
+import MeadowRiseFooter from '@/components/ui/meadow-rise-footer';
 
 // Smooth numeric odometer hook
 function useAnimatedNumber(targetValue, duration = 400) {
@@ -503,18 +504,56 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-white/[0.08] bg-[#0A0A0C]/80 py-6 text-center text-xs text-slate-500">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#2756FC]" />
-            <span>PaycheckVault — Built for DoraHacks &times; Reactive Network Omni Buildathon</span>
-          </div>
-          <div className="font-mono text-[11px] text-slate-400">
-            Sepolia (11155111) &rarr; Lasna (5318007) &rarr; Base (84532)
-          </div>
-        </div>
-      </footer>
+      {/* Meadow Rise Interactive Ambient Footer */}
+      <div className="w-full mt-12 border-t border-white/[0.08]">
+        <MeadowRiseFooter
+          name="PaycheckVault"
+          brandHref="#"
+          heading="Autonomous cross-chain *inflow* automation."
+          subheading="Recipient-side autonomous DCA from Ethereum Sepolia to Base Sepolia powered by Reactive Network."
+          cta={{
+            label: "Launch Vault App",
+            href: "#",
+          }}
+          tagline="The first recipient-side autonomous smart vault built for DoraHacks Omni Buildathon."
+          newsletter={true}
+          placeholder="Enter your email or wallet address"
+          preset="moonlit"
+          columns={[
+            {
+              title: "Chains & Explorers",
+              links: [
+                { label: "Ethereum Sepolia (11155111)", href: `${CONFIG.sepolia.explorer}/address/${CONFIG.sepolia.usdcAddress}` },
+                { label: "Reactive Lasna (5318007)", href: `${CONFIG.lasna.explorer}/address/${CONFIG.lasna.reactiveAddress}` },
+                { label: "Base Sepolia (84532)", href: `${CONFIG.baseSepolia.explorer}/address/${CONFIG.baseSepolia.vaultAddress}` },
+              ],
+            },
+            {
+              title: "Reactive Network",
+              links: [
+                { label: "Documentation", href: "https://docs.reactive.network" },
+                { label: "Reactive Scan", href: "https://lasna.reactivescan.net" },
+                { label: "Ecosystem", href: "https://reactive.network" },
+                { label: "GitHub Repository", href: "https://github.com/Reactive-Network" },
+              ],
+            },
+            {
+              title: "Omni Buildathon",
+              links: [
+                { label: "DoraHacks Hackathon", href: "https://dorahacks.io" },
+                { label: "Set It & Forget It Track", href: "https://dorahacks.io" },
+                { label: "PaycheckReactive RSC", href: `${CONFIG.lasna.explorer}/address/${CONFIG.lasna.reactiveAddress}` },
+              ],
+            },
+          ]}
+          copyright="© 2026 PaycheckVault • DoraHacks × Reactive Network Omni Buildathon."
+          legal={[
+            { label: "MIT License", href: "#" },
+            { label: "Reactive Lasna Testnet", href: "https://lasna.reactivescan.net" },
+            { label: "Base Sepolia Testnet", href: "https://sepolia.basescan.org" },
+          ]}
+        />
+      </div>
 
     </div>
   );
