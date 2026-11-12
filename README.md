@@ -130,3 +130,9 @@ npx hardhat run scripts/deploy-reactive.js --network lasna
 ```
 
 Both contracts share the same deployer address (`rvm_id`), completing the trustless on-chain loop!
+
+### 5. Trigger a Live Test Paycheck (Sepolia $\rightarrow$ Lasna $\rightarrow$ Base)
+```bash
+npx hardhat run scripts/send-paycheck.js --network sepolia
+```
+This sends 500 Mock USDC on Sepolia to your monitored address, firing the live Reactive cross-chain automation in ~5–15 seconds!
