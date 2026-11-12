@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ethers } from 'ethers';
 
 // Smooth numeric odometer hook (zero layout shift)
-function useAnimatedNumber(targetValue, duration = 420) {
+function useAnimatedNumber(targetValue, duration = 400) {
   const [displayValue, setDisplayValue] = useState(targetValue);
   const startValueRef = useRef(targetValue);
   const startTimeRef = useRef(null);
@@ -31,115 +31,22 @@ function useAnimatedNumber(targetValue, duration = 420) {
   return displayValue;
 }
 
-// SignalNode Component (Screen 2: Real-Time Cross-Chain Topology)
-function SignalNode({ step, chainName, chainId, contractName, roleLabel, state, statusText, accent, explorerUrl }) {
-  const accentMap = {
-    indigo: {
-      activeBorder: 'border-indigo-500 bg-indigo-950/25 shadow-lg shadow-indigo-500/20',
-      dot: 'bg-indigo-400',
-      bar: 'bg-indigo-500',
-      badge: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30',
-      text: 'text-indigo-300'
-    },
-    cyan: {
-      activeBorder: 'border-cyan-400 bg-cyan-950/25 shadow-lg shadow-cyan-500/20',
-      dot: 'bg-cyan-400',
-      bar: 'bg-cyan-400',
-      badge: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30',
-      text: 'text-cyan-300'
-    },
-    blue: {
-      activeBorder: 'border-[#0052FF] bg-blue-950/25 shadow-lg shadow-blue-600/25',
-      dot: 'bg-[#3B82F6]',
-      bar: 'bg-[#0052FF]',
-      badge: 'bg-blue-500/10 text-blue-300 border-blue-500/30',
-      text: 'text-blue-300'
-    },
-    blocked: {
-      activeBorder: 'border-amber-500 bg-amber-950/25 shadow-lg shadow-amber-500/20',
-      dot: 'bg-amber-400',
-      bar: 'bg-amber-500',
-      badge: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
-      text: 'text-amber-300'
-    }
-  };
-
-  const style = state === 'blocked' ? accentMap.blocked : accentMap[accent];
-  const isActive = state === 'active' || state === 'done' || state === 'blocked';
-
-  return (
-    <div className={`p-5 rounded-2xl border transition-all duration-300 backdrop-blur relative ${
-      isActive ? style.activeBorder : 'border-slate-800/90 bg-obsidian-900/80'
-    }`}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2.5">
-          <span className="relative flex h-3 w-3">
-            {state === 'active' && (
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${style.dot}`} />
-            )}
-            <span className={`relative inline-flex rounded-full h-3 w-3 ${isActive ? style.dot : 'bg-slate-600'}`} />
-          </span>
-          <span className="font-bold text-sm text-slate-100">{step}. {chainName}</span>
-        </div>
-        <a
-          href={explorerUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="text-[11px] font-mono text-slate-400 hover:text-cyan-300 transition flex items-center gap-1"
-          title="Open chain explorer"
-        >
-          ID: {chainId}
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
-        </a>
-      </div>
-
-      <div className="space-y-1.5 text-xs text-slate-400 mb-4">
-        <div className="flex justify-between items-center">
-          <span>Role:</span>
-          <span className={`px-2 py-0.5 rounded-md border text-[11px] font-medium ${style.badge}`}>{roleLabel}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span>Contract:</span>
-          <span className="font-mono text-slate-200">{contractName}</span>
-        </div>
-      </div>
-
-      <div className="h-1.5 w-full bg-slate-800/90 rounded-full overflow-hidden">
-        <div
-          className={`h-full transition-all duration-500 ${
-            state === 'active' || state === 'done' || state === 'blocked' ? `w-full ${style.bar}` : 'w-0'
-          }`}
-        />
-      </div>
-
-      <p className={`mt-3 text-xs text-center font-medium transition-colors ${
-        isActive ? style.text : 'text-slate-400'
-      }`}>
-        {statusText}
-      </p>
-    </div>
-  );
-}
-
 export default function App() {
-  // Portfolio & Policy State
+  // Core Portfolio & Policy State
   const [allocationPct, setAllocationPct] = useState(50);
   const [savedPct, setSavedPct] = useState(50);
-  const [usdcBalance, setUsdcBalance] = useState(3250.00);
-  const [wethBalance, setWethBalance] = useState(4.8750);
+  const [usdcBalance, setUsdcBalance] = useState(3250.0);
+  const [wethBalance, setWethBalance] = useState(4.875);
   const [inflowCount, setInflowCount] = useState(6);
 
-  // Signal Loop State: 'idle' | 'sepolia' | 'lasna' | 'base' | 'blocked'
+  // Execution Loop State: 'idle' | 'sepolia' | 'lasna' | 'base' | 'blocked'
   const [loopPhase, setLoopPhase] = useState('idle');
   const [toast, setToast] = useState(null);
   const [copiedChip, setCopiedChip] = useState(null);
 
-  // Wallet & Live Testnet Addresses
+  // Wallet & View Mode
   const [walletAddress, setWalletAddress] = useState(null);
-  const [showTestnetConfig, setShowTestnetConfig] = useState(false);
-  const vaultAddress = '0xa6eA49Ed671B8a4dfCDd34E36b7a75Ac79B8A5a6';
+  const [showInspector, setShowInspector] = useState(false);
 
   // Animated Numbers
   const animatedUSDC = useAnimatedNumber(usdcBalance);
@@ -152,7 +59,7 @@ export default function App() {
       time: '2m ago',
       inflow: '500.00 USDC',
       originTx: '0x8f2c...39a1',
-      lasnaSignal: 'PaycheckTriggered (50%)',
+      lasnaSignal: 'Verified (≥ $10)',
       destSwap: '250 USDC → 0.1250 WETH',
       destTx: '0x4d91...e82b',
       status: 'success'
@@ -162,7 +69,7 @@ export default function App() {
       time: '1d ago',
       inflow: '1,200.00 USDC',
       originTx: '0x3a19...7c04',
-      lasnaSignal: 'PaycheckTriggered (50%)',
+      lasnaSignal: 'Verified (≥ $10)',
       destSwap: '600 USDC → 0.3000 WETH',
       destTx: '0x9c72...11f0',
       status: 'success'
@@ -172,8 +79,8 @@ export default function App() {
       time: '3d ago',
       inflow: '4.20 USDC',
       originTx: '0x1b08...55d2',
-      lasnaSignal: 'Filtered (< $10 Anti-Dust)',
-      destSwap: 'No callback emitted (Gas Saved)',
+      lasnaSignal: 'Dust Ignored (< $10)',
+      destSwap: 'Callback Suppressed (Gas Protected)',
       destTx: '—',
       status: 'filtered'
     }
@@ -181,10 +88,10 @@ export default function App() {
 
   const showToastMsg = (title, subtitle, type = 'success') => {
     setToast({ title, subtitle, type });
-    setTimeout(() => setToast(null), 4000);
+    setTimeout(() => setToast(null), 3800);
   };
 
-  const copyAddress = (label, text) => {
+  const copyText = (label, text) => {
     navigator.clipboard?.writeText(text);
     setCopiedChip(label);
     setTimeout(() => setCopiedChip(null), 1800);
@@ -198,10 +105,10 @@ export default function App() {
     if (window.ethereum) {
       try {
         const provider = new ethers.BrowserProvider(window.ethereum);
-        const accounts = await provider.send("eth_requestAccounts", []);
+        const accounts = await provider.send('eth_requestAccounts', []);
         if (accounts[0]) {
           setWalletAddress(accounts[0]);
-          showToastMsg('Wallet Connected', `Bound to RVM ID ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`);
+          showToastMsg('Wallet Connected', `Authenticated RVM ID: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`);
           return;
         }
       } catch (err) {
@@ -209,93 +116,90 @@ export default function App() {
       }
     }
     setWalletAddress('0x71C95911E9a5D330f4D621842EC243EE1343249A');
-    showToastMsg('Demo Signer Active', 'RVM ID matched across Sepolia, Lasna & Base Sepolia');
+    showToastMsg('Demo Wallet Active', 'RVM ID matched across Sepolia, Lasna & Base');
   };
 
   const saveRecipe = () => {
     setSavedPct(allocationPct);
     showToastMsg(
-      `Allocation Policy Saved (${allocationPct}%)`,
-      `PaycheckVault will now swap ${allocationPct}% of every verified Sepolia inflow into WETH on Base.`
+      `Policy Active: ${allocationPct}% WETH`,
+      `${100 - allocationPct}% kept in liquid USDC, ${allocationPct}% swapped to WETH on every verified inflow.`
     );
   };
 
-  // Simulate $500 Paycheck Inflow (Full 3-Chain Loop)
+  // Simulate $500 Paycheck Inflow
   const simulatePaycheck = async (amount = 500) => {
     if (loopPhase !== 'idle') return;
 
-    // Phase 1: Sepolia Inflow
     setLoopPhase('sepolia');
-    await new Promise(r => setTimeout(r, 850));
+    await new Promise((r) => setTimeout(r, 750));
 
-    // Phase 2: Lasna Omni Evaluation
     setLoopPhase('lasna');
-    await new Promise(r => setTimeout(r, 950));
+    await new Promise((r) => setTimeout(r, 850));
 
-    // Phase 3: Base Sepolia Callback Execution
     setLoopPhase('base');
     const swappedUSDC = amount * (savedPct / 100);
     const keptUSDC = amount - swappedUSDC;
     const acquiredWETH = swappedUSDC * 0.0005;
 
-    setUsdcBalance(prev => prev + keptUSDC);
-    setWethBalance(prev => prev + acquiredWETH);
-    setInflowCount(prev => prev + 1);
+    setUsdcBalance((prev) => prev + keptUSDC);
+    setWethBalance((prev) => prev + acquiredWETH);
+    setInflowCount((prev) => prev + 1);
 
     const randHex = () => Math.floor(1000 + Math.random() * 9000).toString(16);
-    setActivities(prev => [
+    setActivities((prev) => [
       {
         id: Date.now(),
         time: 'Just now',
         inflow: `${amount.toFixed(2)} USDC`,
         originTx: `0x${randHex()}...${randHex()}`,
-        lasnaSignal: `PaycheckTriggered (${savedPct}%)`,
+        lasnaSignal: `Verified (≥ $10)`,
         destSwap: `${swappedUSDC.toFixed(0)} USDC → ${acquiredWETH.toFixed(4)} WETH`,
         destTx: `0x${randHex()}...${randHex()}`,
         status: 'success'
       },
-      ...prev.slice(0, 5)
+      ...prev.slice(0, 4)
     ]);
 
     showToastMsg(
-      'Cross-Chain Callback Executed!',
-      `Swapped ${swappedUSDC} USDC → ${acquiredWETH.toFixed(4)} WETH on Base Sepolia (${keptUSDC} USDC kept liquid)`
+      'Callback Executed on Base',
+      `Swapped ${swappedUSDC} USDC → ${acquiredWETH.toFixed(4)} WETH (${keptUSDC} USDC retained)`
     );
 
-    await new Promise(r => setTimeout(r, 1400));
+    await new Promise((r) => setTimeout(r, 1200));
     setLoopPhase('idle');
   };
 
-  // Simulate $5 Dust Spam (Anti-Dust Guard Demo)
-  const simulateDustSpam = async () => {
+  // Simulate $5 Dust Transfer (Anti-Dust Guard)
+  const simulateDust = async () => {
     if (loopPhase !== 'idle') return;
 
     setLoopPhase('sepolia');
-    await new Promise(r => setTimeout(r, 700));
+    await new Promise((r) => setTimeout(r, 600));
 
     setLoopPhase('blocked');
     const randHex = () => Math.floor(1000 + Math.random() * 9000).toString(16);
-    setActivities(prev => [
+    setActivities((prev) => [
       {
         id: Date.now(),
         time: 'Just now',
         inflow: '5.00 USDC (Dust)',
         originTx: `0x${randHex()}...${randHex()}`,
-        lasnaSignal: 'Blocked (< $10 minInflowThreshold)',
-        destSwap: 'Callback Suppressed — Relayer Gas Protected',
+        lasnaSignal: 'Dust Ignored (< $10)',
+        destSwap: 'Callback Suppressed (Gas Protected)',
         destTx: '—',
         status: 'filtered'
       },
-      ...prev.slice(0, 5)
+      ...prev.slice(0, 4)
     ]);
 
     showToastMsg(
-      'Anti-Dust Guard Triggered on Lasna',
-      '$5.00 USDC transfer ignored (< $10 threshold). Zero destination callback gas spent.',
+      'Spam Inflow Blocked on Lasna',
+      '$5.00 transfer ignored (< $10 threshold). Saved relayer execution gas.',
       'warn'
     );
 
-    await new Promise(r => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 1400));
     setLoopPhase('idle');
   };
 
@@ -304,486 +208,364 @@ export default function App() {
   const previewWeth = (previewSwap * 0.0005).toFixed(2);
 
   return (
-    <div className="min-h-dvh flex flex-col justify-between">
-      {/* Floating Toast Notification */}
+    <div className="min-h-dvh flex flex-col justify-between selection:bg-cyan-500 selection:text-slate-950">
+      
+      {/* Toast Notification */}
       {toast && (
         <div
           role="status"
           aria-live="polite"
-          className={`fixed bottom-6 right-6 z-50 max-w-md p-4 rounded-2xl border backdrop-blur-xl shadow-2xl transition-all flex items-start gap-3 ${
+          className={`fixed bottom-6 right-6 z-50 max-w-sm p-4 rounded-xl border backdrop-blur-xl shadow-2xl transition-all flex items-start gap-3 ${
             toast.type === 'warn'
-              ? 'bg-amber-950/90 border-amber-500/50 text-amber-100'
-              : 'bg-obsidian-900/95 border-emerald-500/50 text-slate-100'
+              ? 'bg-amber-950/90 border-amber-500/40 text-amber-100'
+              : 'bg-slate-900/95 border-emerald-500/40 text-slate-100'
           }`}
         >
-          <span className={`mt-0.5 w-2.5 h-2.5 rounded-full shrink-0 ${
+          <span className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
             toast.type === 'warn' ? 'bg-amber-400' : 'bg-emerald-400 animate-ping'
           }`} />
-          <div className="text-xs space-y-1">
-            <div className="font-bold text-sm">{toast.title}</div>
+          <div className="text-xs space-y-0.5">
+            <div className="font-bold text-sm text-white">{toast.title}</div>
             <div className="text-slate-300 leading-relaxed">{toast.subtitle}</div>
           </div>
         </div>
       )}
 
-      {/* Top Navigation Bar */}
-      <header className="border-b border-slate-800/80 bg-obsidian-900/75 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 border border-white/10">
-              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+      {/* 1. Header (Clean, Uncluttered Navigation) */}
+      <header className="border-b border-slate-800/60 bg-obsidian-950/80 backdrop-blur sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-md shadow-cyan-500/20">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <div>
-              <div className="flex items-center gap-2.5">
-                <span className="text-xl font-extrabold tracking-tight text-white">PaycheckVault</span>
-                <span className="text-[11px] font-mono font-semibold px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">
-                  Reactive Omni
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 hidden sm:block">
-                Autonomous Cross-Chain Payroll & Grant Splitter • Sepolia → Lasna → Base
-              </p>
-            </div>
+            <span className="text-base font-bold tracking-tight text-white">PaycheckVault</span>
+            <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-slate-800/80 text-cyan-300 border border-slate-700/60">
+              Reactive Omni
+            </span>
           </div>
 
           <div className="flex items-center gap-3">
-            {/* RVM Identity Chip */}
             <button
-              onClick={() => copyAddress('rvm', walletAddress || '0x71C95911E9a5D330f4D621842EC243EE1343249A')}
-              className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl bg-obsidian-800/90 hover:bg-slate-800 border border-slate-700/70 text-xs transition cursor-pointer"
-              title="Click to copy RVM Deployer ID"
+              onClick={() => setShowInspector(!showInspector)}
+              className="text-xs text-slate-400 hover:text-slate-200 transition px-2.5 py-1.5 rounded-lg hover:bg-slate-800/50"
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-slate-400">RVM ID:</span>
-              <span className="font-mono text-slate-200">0x71C...49A</span>
-              {copiedChip === 'rvm' && <span className="text-emerald-400 font-semibold">Copied!</span>}
+              {showInspector ? 'Hide Contracts' : 'View Contracts'}
             </button>
-
-            <button
-              onClick={() => setShowTestnetConfig(!showTestnetConfig)}
-              className="px-3.5 py-2.5 rounded-xl bg-obsidian-800 hover:bg-slate-800 text-slate-300 border border-slate-700/80 text-xs font-semibold transition cursor-pointer"
-              aria-label="Toggle Contract Addresses"
-            >
-              Contracts
-            </button>
-
             <button
               onClick={connectWallet}
-              className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition active:scale-95 cursor-pointer ${
+              className={`px-4 py-2 rounded-xl font-semibold text-xs transition active:scale-95 ${
                 walletAddress
-                  ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40'
-                  : 'bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-lg shadow-cyan-500/20'
+                  ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
+                  : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow-md shadow-cyan-500/20'
               }`}
             >
-              {walletAddress
-                ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
-                : 'Connect Wallet'}
+              {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Connect'}
             </button>
           </div>
         </div>
 
-        {/* Collapsible Contract & Proxy Inspector */}
-        {showTestnetConfig && (
-          <div className="border-t border-slate-800/80 bg-obsidian-950/95 px-6 py-4">
-            <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-              <div className="p-3 rounded-xl bg-obsidian-900 border border-slate-800 flex items-center justify-between">
-                <div>
-                  <div className="text-slate-400 font-medium">Sepolia Origin Token (USDC)</div>
-                  <div className="font-mono text-slate-200 mt-0.5">Chain ID: 11155111</div>
-                </div>
-                <span className="px-2 py-1 rounded bg-indigo-500/10 text-indigo-300 font-mono">ERC-20 Transfer</span>
+        {/* Collapsible Contract Reference (Out of the main visual path) */}
+        {showInspector && (
+          <div className="border-t border-slate-800/60 bg-obsidian-900/95 px-6 py-3 text-xs text-slate-400">
+            <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono">
+              <div className="flex justify-between items-center bg-slate-900/60 p-2 rounded-lg border border-slate-800">
+                <span>Sepolia (USDC):</span>
+                <span className="text-indigo-300">11155111</span>
               </div>
-              <div className="p-3 rounded-xl bg-obsidian-900 border border-slate-800 flex items-center justify-between">
-                <div>
-                  <div className="text-slate-400 font-medium">Lasna Reactive Contract</div>
-                  <div className="font-mono text-cyan-300 mt-0.5">Chain ID: 5318007 (0x512577)</div>
-                </div>
-                <span className="px-2 py-1 rounded bg-cyan-500/10 text-cyan-300 font-mono">PaycheckReactive</span>
+              <div className="flex justify-between items-center bg-slate-900/60 p-2 rounded-lg border border-slate-800">
+                <span>Lasna (RSC):</span>
+                <span className="text-cyan-300">5318007</span>
               </div>
-              <div className="p-3 rounded-xl bg-obsidian-900 border border-slate-800 flex items-center justify-between">
-                <div>
-                  <div className="text-slate-400 font-medium">Base Sepolia Callback Proxy</div>
-                  <div className="font-mono text-blue-300 mt-0.5">{vaultAddress.slice(0, 10)}...{vaultAddress.slice(-6)}</div>
-                </div>
-                <button
-                  onClick={() => copyAddress('proxy', vaultAddress)}
-                  className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono cursor-pointer"
-                >
-                  {copiedChip === 'proxy' ? 'Copied' : 'Copy'}
-                </button>
+              <div className="flex justify-between items-center bg-slate-900/60 p-2 rounded-lg border border-slate-800">
+                <span>Base (Vault):</span>
+                <span className="text-blue-300">84532</span>
               </div>
             </div>
           </div>
         )}
       </header>
 
-      {/* Main Workspace */}
-      <main className="max-w-7xl w-full mx-auto px-6 py-8 space-y-8 flex-1">
+      {/* Main Container */}
+      <main className="max-w-6xl w-full mx-auto px-6 py-8 space-y-8 flex-1">
         
-        {/* Hero Banner + Primary Demo Triggers */}
-        <section className="p-6 sm:p-8 rounded-3xl border border-slate-800/90 bg-gradient-to-br from-obsidian-900 via-obsidian-900 to-obsidian-800/90 shadow-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2.5 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-xs font-semibold">
-              <span>Set It and Forget It Track</span>
-              <span>•</span>
-              <span>Zero Off-Chain Keepers</span>
-            </div>
-            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
-              Get paid on Ethereum. <span className="bg-gradient-to-r from-cyan-300 to-blue-400 bg-clip-text text-transparent">Auto-invest on Base.</span>
+        {/* 2. Hero: The One-Liner + 2 Big Action Buttons */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              Get paid on Ethereum. <span className="text-cyan-400">Auto-invest on Base.</span>
             </h1>
-            <p className="text-slate-300 text-sm leading-relaxed">
-              Whenever an employer, DAO, or client sends USDC to your address on <strong className="text-indigo-300">Sepolia</strong>, 
-              <strong className="text-cyan-300"> PaycheckReactive</strong> on Lasna catches the raw ERC-20 <code className="font-mono text-xs bg-slate-800 px-1.5 py-0.5 rounded">Transfer</code> event and dispatches an authenticated callback to <strong className="text-blue-400">Base Sepolia</strong> to swap <strong className="text-white">{savedPct}%</strong> into WETH.
+            <p className="text-slate-400 text-sm max-w-xl">
+              Zero off-chain keepers. Transfers on Sepolia trigger automated WETH accumulation on Base in ~1s.
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
+          {/* Clean Action Cluster */}
+          <div className="flex items-center gap-2.5 shrink-0">
             <button
               onClick={() => simulatePaycheck(500)}
               disabled={loopPhase !== 'idle'}
-              className="px-6 py-3.5 rounded-2xl font-extrabold text-sm bg-gradient-to-r from-cyan-400 via-cyan-500 to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-slate-950 shadow-xl shadow-cyan-500/25 transition active:scale-95 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2.5"
+              className="px-5 py-2.5 rounded-xl font-bold text-xs bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-md shadow-cyan-500/20 transition active:scale-95 disabled:opacity-50 flex items-center gap-2"
             >
               {loopPhase !== 'idle' ? (
                 <>
-                  <svg className="w-4 h-4 animate-spin text-slate-950" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  <span>Cross-Chain Signal In-Flight...</span>
+                  <span className="w-2 h-2 rounded-full bg-slate-950 animate-ping" />
+                  <span>Relaying...</span>
                 </>
               ) : (
                 <>
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  <svg className="w-4 h-4 text-slate-950" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                  <span>Simulate $500 Paycheck Inflow</span>
+                  <span>Simulate $500 Paycheck</span>
                 </>
               )}
             </button>
-
             <button
-              onClick={simulateDustSpam}
+              onClick={simulateDust}
               disabled={loopPhase !== 'idle'}
-              className="px-5 py-2.5 rounded-xl font-semibold text-xs bg-obsidian-800 hover:bg-slate-800 text-slate-300 border border-slate-700/80 transition active:scale-95 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+              className="px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/50 transition active:scale-95 disabled:opacity-50"
+              title="Test < $10 transfer rejected by Lasna to save gas"
             >
-              <span>🛡️ Test $5 Dust Transfer (Anti-Spam Guard)</span>
+              Test $5 Dust
             </button>
           </div>
-        </section>
+        </div>
 
-        {/* SCREEN 2: Real-Time 3-Chain Signal Topology */}
-        <section aria-label="Cross-Chain Signal Topology" className="p-6 rounded-3xl border border-slate-800/90 bg-obsidian-900/70 backdrop-blur space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
-                Live Cross-Chain Event Loop
-              </h2>
-              <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-md bg-slate-800 text-cyan-300 border border-slate-700">
-                CometBFT ~1s Finality
+        {/* 3. The Money Shot: 3-Node Topology as a Single Unified Pipeline */}
+        <section aria-label="Event Pipeline" className="p-5 sm:p-6 rounded-2xl border border-slate-800/80 bg-obsidian-900/60 backdrop-blur space-y-4">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold text-slate-300 uppercase tracking-wider text-[11px]">
+              Cross-Chain Signal Flow
+            </span>
+            <span className="text-slate-400 font-mono text-[11px]">
+              Status: <span className={loopPhase === 'idle' ? 'text-slate-400' : 'text-cyan-400 font-bold'}>
+                {loopPhase === 'idle' ? 'Listening' : loopPhase.toUpperCase()}
               </span>
-            </div>
-            <div className="text-xs text-slate-400 font-mono">
-              Status: <span className="text-emerald-400 font-semibold">{loopPhase === 'idle' ? 'Subscribed & Listening' : `Executing (${loopPhase.toUpperCase()})`}</span>
-            </div>
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative">
-            <SignalNode
-              step={1}
-              chainName="Ethereum Sepolia"
-              chainId={11155111}
-              contractName="USDC.transfer()"
-              roleLabel="Origin Inflow"
-              accent="indigo"
-              explorerUrl="https://sepolia.etherscan.io"
-              state={loopPhase === 'sepolia' ? 'active' : (loopPhase === 'lasna' || loopPhase === 'base' || loopPhase === 'blocked') ? 'done' : 'idle'}
-              statusText={
-                loopPhase === 'sepolia'
-                  ? '⚡ ERC-20 Transfer Log Emitted!'
-                  : 'Watching recipient wallet for USDC transfers'
-              }
-            />
+          {/* 3-Step Clean Grid with Connecting Lines */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 relative">
+            
+            {/* Step 1: Sepolia */}
+            <div className={`p-4 rounded-xl border transition-all duration-200 ${
+              loopPhase === 'sepolia'
+                ? 'border-indigo-500 bg-indigo-950/20 shadow-md shadow-indigo-500/10'
+                : 'border-slate-800/80 bg-slate-900/40'
+            }`}>
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="font-bold text-slate-200">1. Sepolia (Origin)</span>
+                <span className="font-mono text-[10px] text-slate-400">11155111</span>
+              </div>
+              <div className="text-xs text-slate-400 font-mono truncate">
+                {loopPhase === 'sepolia' ? (
+                  <span className="text-indigo-400 font-semibold animate-pulse">⚡ Transfer Log Caught</span>
+                ) : (
+                  'USDC.transfer(wallet)'
+                )}
+              </div>
+            </div>
 
-            <SignalNode
-              step={2}
-              chainName="Reactive Lasna"
-              chainId={5318007}
-              contractName="PaycheckReactive.sol"
-              roleLabel="Event State Machine"
-              accent="cyan"
-              explorerUrl="https://lasna.reactscan.net"
-              state={
-                loopPhase === 'blocked'
-                  ? 'blocked'
-                  : loopPhase === 'lasna'
-                  ? 'active'
-                  : loopPhase === 'base'
-                  ? 'done'
-                  : 'idle'
-              }
-              statusText={
-                loopPhase === 'blocked'
-                  ? '🛡️ Blocked: Below $10 minInflowThreshold!'
-                  : loopPhase === 'lasna'
-                  ? '⚡ Verified ≥ $10 → Emitting Callback!'
-                  : 'Filtering topic_0 (Transfer) & topic_2 (Recipient)'
-              }
-            />
+            {/* Step 2: Lasna Reactive */}
+            <div className={`p-4 rounded-xl border transition-all duration-200 ${
+              loopPhase === 'blocked'
+                ? 'border-amber-500 bg-amber-950/20 shadow-md shadow-amber-500/10'
+                : loopPhase === 'lasna'
+                ? 'border-cyan-400 bg-cyan-950/20 shadow-md shadow-cyan-500/10'
+                : 'border-slate-800/80 bg-slate-900/40'
+            }`}>
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="font-bold text-slate-200">2. Lasna (Reactive Omni)</span>
+                <span className="font-mono text-[10px] text-slate-400">5318007</span>
+              </div>
+              <div className="text-xs text-slate-400 font-mono truncate">
+                {loopPhase === 'blocked' ? (
+                  <span className="text-amber-400 font-semibold">🛡️ Dust Blocked (&lt; $10)</span>
+                ) : loopPhase === 'lasna' ? (
+                  <span className="text-cyan-300 font-semibold animate-pulse">⚡ Verified &ge; $10 &rarr; Callback</span>
+                ) : (
+                  'PaycheckReactive.react()'
+                )}
+              </div>
+            </div>
 
-            <SignalNode
-              step={3}
-              chainName="Base Sepolia"
-              chainId={84532}
-              contractName="PaycheckVault.sol"
-              roleLabel="Destination Vault"
-              accent="blue"
-              explorerUrl="https://sepolia.basescan.org"
-              state={loopPhase === 'base' ? 'active' : 'idle'}
-              statusText={
-                loopPhase === 'base'
-                  ? `✅ Swapped ${savedPct}% USDC → WETH via MockDEX!`
-                  : 'Enforces authorizedSenderOnly + rvmIdOnly'
-              }
-            />
+            {/* Step 3: Base Sepolia */}
+            <div className={`p-4 rounded-xl border transition-all duration-200 ${
+              loopPhase === 'base'
+                ? 'border-blue-500 bg-blue-950/20 shadow-md shadow-blue-500/10'
+                : 'border-slate-800/80 bg-slate-900/40'
+            }`}>
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="font-bold text-slate-200">3. Base Sepolia (Vault)</span>
+                <span className="font-mono text-[10px] text-slate-400">84532</span>
+              </div>
+              <div className="text-xs text-slate-400 font-mono truncate">
+                {loopPhase === 'base' ? (
+                  <span className="text-emerald-400 font-semibold">✅ Swapped {savedPct}% to WETH</span>
+                ) : (
+                  'MockDEX.swap()'
+                )}
+              </div>
+            </div>
+
           </div>
         </section>
 
-        {/* SCREEN 1 & SCREEN 3: Bento Grid (Portfolio Balances + Allocation Control + Activity Feed) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* 4. Balanced 2-Column Grid (No nested clutter) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* Left 7 Columns: Screen 3 (Portfolio Balances + Activity Stream) */}
+          {/* Left 7 Columns: Balances + Clean Activity Stream */}
           <div className="lg:col-span-7 space-y-6">
             
-            {/* Dual Asset Bento Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {/* Card A: Liquid USDC Held */}
-              <div className="p-6 rounded-3xl border border-slate-800/90 bg-obsidian-900/90 space-y-3 relative overflow-hidden">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Liquid Savings (Base)
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[11px] font-semibold">
-                    {100 - savedPct}% Retained
-                  </span>
-                </div>
-                <div className="text-3xl sm:text-4xl font-extrabold text-white font-mono tabular-nums tracking-tight">
+            {/* Minimal High-Contrast Balances */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-5 rounded-2xl border border-slate-800/80 bg-obsidian-900/50 space-y-1">
+                <div className="text-xs text-slate-400 font-medium">Liquid Cash Reserve (Base)</div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono tabular-nums">
                   ${animatedUSDC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  <span className="ml-2 text-sm font-sans font-semibold text-slate-400">USDC</span>
+                  <span className="ml-1.5 text-xs text-slate-400 font-sans font-medium">USDC</span>
                 </div>
-                <div className="text-xs text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800/80">
-                  <span>Ready for immediate spending</span>
-                  <span className="font-mono text-emerald-400">0% Slippage</span>
+                <div className="text-[11px] text-slate-500 pt-1">
+                  {100 - savedPct}% retained automatically
                 </div>
               </div>
 
-              {/* Card B: Accumulated WETH */}
-              <div className="p-6 rounded-3xl border border-cyan-500/30 bg-gradient-to-b from-obsidian-900 to-cyan-950/20 space-y-3 relative overflow-hidden">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-cyan-300">
-                    Accumulated ETH (Base)
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[11px] font-semibold">
-                    {savedPct}% Auto-DCA
-                  </span>
-                </div>
-                <div className="text-3xl sm:text-4xl font-extrabold text-cyan-300 font-mono tabular-nums tracking-tight">
+              <div className="p-5 rounded-2xl border border-cyan-500/20 bg-cyan-950/10 space-y-1">
+                <div className="text-xs text-cyan-300 font-medium">Accumulated WETH (Base)</div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-cyan-300 font-mono tabular-nums">
                   {animatedWETH.toFixed(4)}
-                  <span className="ml-2 text-sm font-sans font-semibold text-slate-300">WETH</span>
+                  <span className="ml-1.5 text-xs text-slate-300 font-sans font-medium">WETH</span>
                 </div>
-                <div className="text-xs text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800/80">
-                  <span>Across {inflowCount} paycheck inflows</span>
-                  <span className="font-mono text-cyan-300">≈ ${(animatedWETH * 2000).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                <div className="text-[11px] text-slate-400 pt-1">
+                  Across {inflowCount} verified inflows
                 </div>
               </div>
             </div>
 
-            {/* Live Activity Stream Table */}
-            <div className="p-6 rounded-3xl border border-slate-800/90 bg-obsidian-900/80 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-bold text-white">Autonomous Execution Ledger</h3>
-                  <p className="text-xs text-slate-400">Verifiable origin → reactive → callback transaction provenance</p>
-                </div>
-                <span className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-obsidian-800 text-slate-300 border border-slate-700">
-                  {activities.length} Events
+            {/* Clean Activity Ledger */}
+            <div className="p-5 rounded-2xl border border-slate-800/80 bg-obsidian-900/40 space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-300 uppercase tracking-wider text-[11px]">
+                  Recent Inflows & Executions
                 </span>
+                <span className="text-[11px] font-mono text-slate-400">{activities.length} Events</span>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 font-semibold">
-                      <th className="py-2.5 pr-3">Time</th>
-                      <th className="py-2.5 px-3">Sepolia Inflow</th>
-                      <th className="py-2.5 px-3">Lasna RVM Signal</th>
-                      <th className="py-2.5 pl-3 text-right">Base Sepolia Callback</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 font-mono">
-                    {activities.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-800/30 transition">
-                        <td className="py-3 pr-3 text-slate-400 whitespace-nowrap">{item.time}</td>
-                        <td className="py-3 px-3 whitespace-nowrap">
-                          <div className="font-bold text-slate-100">{item.inflow}</div>
-                          <div className="text-[10px] text-indigo-400">{item.originTx}</div>
-                        </td>
-                        <td className="py-3 px-3 whitespace-nowrap">
-                          <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${
-                            item.status === 'filtered'
-                              ? 'bg-amber-500/10 text-amber-300 border border-amber-500/25'
-                              : 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/25'
-                          }`}>
-                            {item.lasnaSignal}
-                          </span>
-                        </td>
-                        <td className="py-3 pl-3 text-right whitespace-nowrap">
-                          <div className={item.status === 'filtered' ? 'text-slate-400' : 'text-emerald-400 font-semibold'}>
-                            {item.destSwap}
-                          </div>
-                          <div className="text-[10px] text-slate-500">{item.destTx}</div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="divide-y divide-slate-800/60 font-mono text-xs">
+                {activities.map((item) => (
+                  <div key={item.id} className="py-2.5 flex items-center justify-between gap-3 hover:bg-slate-800/20 px-2 rounded-lg transition">
+                    <div className="space-y-0.5">
+                      <div className="text-slate-200 font-semibold flex items-center gap-2">
+                        <span>{item.inflow}</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded font-sans ${
+                          item.status === 'filtered' ? 'bg-amber-500/10 text-amber-300' : 'bg-emerald-500/10 text-emerald-400'
+                        }`}>
+                          {item.lasnaSignal}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 font-sans">{item.destSwap}</div>
+                    </div>
+                    <div className="text-right text-[11px] text-slate-400 font-sans">
+                      {item.time}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
+
           </div>
 
-          {/* Right 5 Columns: Screen 1 (Vault Setup & Allocation Slider) */}
+          {/* Right 5 Columns: Allocation Policy Slider (Single clear task) */}
           <div className="lg:col-span-5">
-            <div className="p-6 sm:p-7 rounded-3xl border border-slate-800/90 bg-obsidian-900/90 space-y-6 sticky top-28">
-              <div className="flex items-start justify-between gap-3">
+            <div className="p-5 sm:p-6 rounded-2xl border border-slate-800/80 bg-obsidian-900/70 space-y-5">
+              <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-[11px] font-mono uppercase tracking-wider text-cyan-400 font-semibold">
-                    Rule Recipe Engine
-                  </span>
-                  <h3 className="text-lg font-extrabold text-white mt-0.5">
-                    Paycheck Allocation Split
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider text-[11px]">
+                    Allocation Recipe
                   </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Auto-swap percentage on arrival</p>
                 </div>
-                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-xs font-mono font-semibold">
-                  Active: {savedPct}%
+                <span className="font-mono text-sm font-extrabold text-cyan-400">
+                  {allocationPct}% WETH
                 </span>
               </div>
 
-              {/* One-Click Preset Pills */}
-              <div className="grid grid-cols-3 gap-2.5">
+              {/* 3 Simple Preset Buttons */}
+              <div className="grid grid-cols-3 gap-2 text-xs font-semibold">
                 {[
-                  { label: 'Conservative', pct: 20 },
-                  { label: 'Balanced', pct: 50 },
-                  { label: 'Heavy DCA', pct: 80 }
-                ].map((preset) => (
+                  { label: '20% Safe', val: 20 },
+                  { label: '50% Split', val: 50 },
+                  { label: '80% DCA', val: 80 }
+                ].map((item) => (
                   <button
-                    key={preset.pct}
-                    onClick={() => setAllocationPct(preset.pct)}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition cursor-pointer ${
-                      allocationPct === preset.pct
+                    key={item.val}
+                    onClick={() => setAllocationPct(item.val)}
+                    className={`py-1.5 px-2 rounded-lg border text-center transition ${
+                      allocationPct === item.val
                         ? 'bg-cyan-500/15 border-cyan-400 text-cyan-300'
-                        : 'bg-obsidian-800/80 border-slate-700/70 text-slate-300 hover:border-slate-600'
+                        : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    {preset.pct}% {preset.label}
+                    {item.label}
                   </button>
                 ))}
               </div>
 
-              {/* Dual-Band Visual Split Bar & Slider */}
-              <div className="space-y-3">
-                <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-emerald-400">Keep Liquid: {100 - allocationPct}% USDC</span>
-                  <span className="text-cyan-300">Auto-Swap: {allocationPct}% WETH</span>
+              {/* Dual-Band Slider */}
+              <div className="space-y-2">
+                <div className="h-2 w-full rounded-full overflow-hidden flex bg-slate-800">
+                  <div style={{ width: `${100 - allocationPct}%` }} className="bg-emerald-500 transition-all duration-150" />
+                  <div style={{ width: `${allocationPct}%` }} className="bg-cyan-400 transition-all duration-150" />
                 </div>
-
-                {/* Dual-Band Bar */}
-                <div className="h-3 w-full rounded-full overflow-hidden flex bg-obsidian-800 p-0.5 border border-slate-700/80">
-                  <div
-                    style={{ width: `${100 - allocationPct}%` }}
-                    className="h-full bg-emerald-500 rounded-l-full transition-all duration-150"
-                  />
-                  <div
-                    style={{ width: `${allocationPct}%` }}
-                    className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 rounded-r-full transition-all duration-150"
-                  />
-                </div>
-
-                <label htmlFor="allocationSlider" className="sr-only">Allocation Percentage to Swap</label>
                 <input
-                  id="allocationSlider"
                   type="range"
                   min="10"
                   max="100"
                   step="5"
                   value={allocationPct}
                   onChange={(e) => setAllocationPct(Number(e.target.value))}
-                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                  className="w-full h-1.5 bg-slate-800 rounded appearance-none cursor-pointer"
                 />
-
-                <div className="flex justify-between text-[11px] font-mono text-slate-400">
-                  <span>10% Min</span>
-                  <span>50% Split</span>
-                  <span>100% Max</span>
+                <div className="flex justify-between text-[10px] font-mono text-slate-400">
+                  <span>10% USDC Min</span>
+                  <span>50% Balanced</span>
+                  <span>100% WETH</span>
                 </div>
               </div>
 
-              {/* Live Math Preview Pill */}
-              <div className="p-4 rounded-2xl bg-obsidian-800/90 border border-slate-700/70 space-y-2.5 text-xs">
-                <div className="text-slate-400 font-semibold flex items-center justify-between">
-                  <span>Live Simulation per $1,000 Paycheck:</span>
-                  <span className="font-mono text-[11px] text-slate-400">allocationBps = {allocationPct * 100}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3 pt-1">
-                  <div className="p-3 rounded-xl bg-obsidian-900 border border-emerald-500/20">
-                    <div className="text-[11px] text-slate-400">Retained Cash</div>
-                    <div className="text-base font-extrabold text-emerald-400 font-mono tabular-nums mt-0.5">
-                      ${previewKeep} USDC
-                    </div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-obsidian-900 border border-cyan-500/25">
-                    <div className="text-[11px] text-slate-400">Swapped to ETH</div>
-                    <div className="text-base font-extrabold text-cyan-300 font-mono tabular-nums mt-0.5">
-                      ${previewSwap} → {previewWeth} WETH
-                    </div>
-                  </div>
-                </div>
+              {/* $1,000 Preview Calculation */}
+              <div className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 text-xs flex justify-between items-center">
+                <span className="text-slate-400">On a $1,000 inflow:</span>
+                <span className="font-mono font-semibold text-slate-200">
+                  ${previewKeep} USDC + ${previewSwap} WETH
+                </span>
               </div>
 
-              {/* Security & Anti-Dust Guarantees */}
-              <div className="space-y-2 text-xs text-slate-300 bg-obsidian-800/40 p-4 rounded-2xl border border-slate-800">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">🛡️ Anti-Dust Threshold:</span>
-                  <span className="font-mono text-emerald-400 font-semibold">≥ 10.00 USDC</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">🔐 Callback Auth:</span>
-                  <span className="font-mono text-cyan-300">Proxy + rvmIdOnly</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">⛽ Destination Gas Tank:</span>
-                  <span className="font-mono text-slate-200">0.02 ETH Pre-funded</span>
-                </div>
-              </div>
-
+              {/* Save Button */}
               <button
                 onClick={saveRecipe}
-                className="w-full py-3.5 rounded-2xl font-extrabold text-xs uppercase tracking-wider bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-lg shadow-cyan-500/20 transition active:scale-95 cursor-pointer"
+                className="w-full py-2.5 rounded-xl font-bold text-xs bg-slate-800 hover:bg-slate-700 text-white border border-slate-700/80 transition active:scale-95"
               >
-                Update Vault Allocation Policy ({allocationPct}%)
+                Apply Policy ({allocationPct}%)
               </button>
+
+              {/* Single Security Footnote */}
+              <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800/60">
+                <span>Anti-Dust Threshold: &ge; $10</span>
+                <span>Protected by RVM ID</span>
+              </div>
             </div>
           </div>
 
         </div>
+
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800/80 py-6 px-6 text-center text-xs text-slate-400">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>PaycheckVault — Built for the Reactive Omni Buildathon (Set It and Forget It Track)</span>
-          <span className="font-mono text-slate-400">Sepolia (11155111) → Lasna (5318007) → Base Sepolia (84532)</span>
-        </div>
+      {/* 5. Minimal Footer */}
+      <footer className="border-t border-slate-800/40 py-4 px-6 text-center text-[11px] text-slate-400">
+        <span>PaycheckVault • Reactive Omni Buildathon (Set It and Forget It)</span>
       </footer>
     </div>
   );

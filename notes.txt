@@ -1,0 +1,18 @@
+What to Learn and Apply
+From YieldGuard (closest competitor on Reactive Network)
+
+Study how they present the "why Reactive?" argument in their README and demo. Since judges will compare you directly, your README needs one clear paragraph that says: "YieldGuard reacts to pool rate events. PaycheckVault reacts to inbound transfers to a specific recipient — an event the vault itself cannot observe without an external watcher. That's the same architecture, different trigger, different user story."
+
+Your contracts already do this correctly. The gap is just making sure the README says it explicitly.
+
+From Reccura (recurring payments without keepers)
+
+Their key insight: frame the absence of a keeper as a feature, not just an implementation detail. In your demo video and README, make a point of saying "no Gelato subscription, no Chainlink Automation fee, no backend server." Reccura leads with this and it lands well with judges who understand the trust/cost tradeoffs.
+
+From YO Treasury (UI)
+
+Their allocation UI uses visual split bars and preset buttons — which your dashboard already has. The one thing worth borrowing: their labeling. Instead of calling it "50% swap," they frame it as "Accumulation Strategy" vs "Liquid Reserve." That framing makes it sound like a wealth management tool, not a script. Your dashboard already uses "Auto-DCA" and "Liquid Savings" — keep those, they're already on the right track.
+
+From DeFi AI Agent Consultant (user story)
+
+They described your exact product but never built it. The lesson: own the story they wrote. In your DoraHacks submission description, you can directly say: "This is the working implementation of the recipient-side auto-allocation vault that existing payroll protocols don't provide." That's not copying — that's validating that
