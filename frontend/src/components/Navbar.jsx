@@ -44,7 +44,7 @@ export default function Navbar({
   };
 
   return (
-    <header className="border-b border-white/[0.08] bg-[#0A0A0C]/90 backdrop-blur-xl sticky top-0 z-40">
+    <header className="border-b border-white/8 bg-[#0A0A0C]/90 backdrop-blur-xl sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         
         {/* Left: Reactive Brand Logo */}
@@ -133,7 +133,7 @@ export default function Navbar({
         {/* Right: Switcher Pill + Network + Wallet CTA */}
         <div className="flex items-center gap-2.5">
           {/* Two-Page Switcher Pill */}
-          <div className="flex items-center p-1 rounded-full bg-[#121215] border border-white/[0.08]">
+          <div className="flex items-center p-1 rounded-full bg-[#121215] border border-white/8">
             <button
               onClick={() => onNavigate('landing')}
               className={`px-3.5 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
@@ -161,7 +161,7 @@ export default function Navbar({
 
           <button
             onClick={() => setShowInspector(!showInspector)}
-            className="hidden sm:inline-flex text-xs text-zinc-400 hover:text-white transition px-2.5 py-1.5 rounded-full border border-transparent hover:border-white/10 hover:bg-white/[0.04] cursor-pointer"
+            className="hidden sm:inline-flex text-xs text-zinc-400 hover:text-white transition px-2.5 py-1.5 rounded-full border border-transparent hover:border-white/10 hover:bg-white/4 cursor-pointer"
           >
             {showInspector ? 'Hide Contracts' : 'Contracts'}
           </button>
@@ -194,7 +194,7 @@ export default function Navbar({
 
       {/* Collapsible Verified Contract Drawer */}
       {showInspector && (
-        <div className="border-t border-white/[0.08] bg-[#0A0A0C]/95 px-6 py-4 text-xs">
+        <div className="border-t border-white/8 bg-[#0A0A0C]/95 px-6 py-4 text-xs">
           <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-3 font-mono">
             <div className="reactive-card p-3.5 rounded-xl space-y-1.5">
               <div className="flex justify-between items-center text-[11px] text-zinc-400">

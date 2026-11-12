@@ -505,7 +505,7 @@ export default function App() {
       </main>
 
       {/* Meadow Rise Interactive Ambient Footer */}
-      <div className="w-full mt-12 border-t border-white/[0.08]">
+      <div className="w-full mt-12 border-t border-white/8">
         <MeadowRiseFooter
           name="PaycheckVault"
           brandHref="#"

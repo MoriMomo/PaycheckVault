@@ -164,7 +164,7 @@ export default function LandingPage({
             </div>
 
             {/* Featured Buildathon Implementation Callout */}
-            <div className="p-4 rounded-xl bg-[#121215] border border-white/[0.08] max-w-xl space-y-2 shadow-lg">
+            <div className="p-4 rounded-xl bg-[#121215] border border-white/8 max-w-xl space-y-2 shadow-lg">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#62D0FF] animate-pulse" />
@@ -187,7 +187,7 @@ export default function LandingPage({
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   placeholder="Your email address"
-                  className="bg-[#121215] border border-zinc-800 rounded-lg px-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 flex-1 font-sans"
+                  className="flex-1 bg-[#121215] border border-zinc-800 focus:border-zinc-500 rounded-lg px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 outline-none font-sans"
                 />
                 <button
                   type="submit"
@@ -223,7 +223,7 @@ export default function LandingPage({
 
               <button
                 onClick={onTriggerDemo}
-                className="px-5 py-2.5 rounded-full font-display font-semibold text-xs sm:text-sm bg-[#121215] hover:bg-[#18181D] text-zinc-200 border border-white/[0.1] hover:border-[#62D0FF]/40 transition active:scale-95 flex items-center gap-2 cursor-pointer"
+                className="px-5 py-2.5 rounded-full font-display font-semibold text-xs sm:text-sm bg-[#121215] hover:bg-[#18181D] text-zinc-200 border border-white/10 hover:border-[#62D0FF]/40 transition active:scale-95 flex items-center gap-2 cursor-pointer"
               >
                 <span className="w-2 h-2 rounded-full bg-[#00C853] animate-pulse" />
                 <span>Simulate Event Loop</span>
@@ -335,7 +335,7 @@ export default function LandingPage({
               </div>
 
               {/* PaycheckVault Live Protocol Telemetry */}
-              <div className="p-3 rounded-xl bg-[#121215] border border-white/[0.06] grid grid-cols-3 gap-2 text-center font-mono">
+              <div className="p-3 rounded-xl bg-[#121215] border border-white/6 grid grid-cols-3 gap-2 text-center font-mono">
                 <div>
                   <div className="text-[9px] uppercase text-zinc-500">Speed</div>
                   <div className="text-xs font-bold text-white mt-0.5">~1.2s</div>
@@ -384,11 +384,11 @@ export default function LandingPage({
               className={`p-5 rounded-xl border transition-all duration-300 ${
                 loopPhase === 'sepolia'
                   ? 'bg-[#2756FC]/15 border-[#62D0FF] shadow-[0_0_24px_rgba(98,208,255,0.3)]'
-                  : 'bg-[#18181D]/60 border-white/[0.08]'
+                  : 'bg-[#18181D]/60 border-white/8'
               }`}
             >
               <div className="flex justify-between items-center text-xs font-mono text-zinc-400 mb-3">
-                <span className="px-2 py-0.5 rounded bg-white/[0.06] text-white">1. Origin Chain</span>
+                <span className="px-2 py-0.5 rounded bg-white/6 text-white">1. Origin Chain</span>
                 <span>Sepolia • 11155111</span>
               </div>
               <h3 className="font-display text-base font-bold text-white mb-1.5">
@@ -397,7 +397,7 @@ export default function LandingPage({
               <p className="text-xs text-zinc-400 leading-relaxed mb-4">
                 Employer deposits USDC to recipient's wallet. An ERC-20 <code className="text-[#62D0FF]">Transfer(from, to, value)</code> event is emitted on Ethereum Sepolia.
               </p>
-              <div className="p-2.5 rounded-lg bg-[#0A0A0C] border border-white/[0.06] font-mono text-[10px] text-zinc-300">
+              <div className="p-2.5 rounded-lg bg-[#0A0A0C] border border-white/6 font-mono text-[10px] text-zinc-300">
                 <span className="text-zinc-500">Filter: </span>
                 <span>to == 0x1863...255a</span>
               </div>
@@ -408,7 +408,7 @@ export default function LandingPage({
               className={`p-5 rounded-xl border transition-all duration-300 ${
                 loopPhase === 'lasna'
                   ? 'bg-[#2756FC]/25 border-[#62D0FF] shadow-[0_0_32px_rgba(98,208,255,0.45)]'
-                  : 'bg-[#18181D]/60 border-white/[0.08]'
+                  : 'bg-[#18181D]/60 border-white/8'
               }`}
             >
               <div className="flex justify-between items-center text-xs font-mono text-zinc-400 mb-3">
@@ -423,7 +423,7 @@ export default function LandingPage({
               <p className="text-xs text-zinc-400 leading-relaxed mb-4">
                 Reactive Network RVM ingests the event, evaluates <code className="text-[#CBB5FF]">react(LogRecord)</code>, applies the &ge; 10 USDC threshold, and dispatches a cross-chain callback.
               </p>
-              <div className="p-2.5 rounded-lg bg-[#0A0A0C] border border-white/[0.06] font-mono text-[10px] text-zinc-300">
+              <div className="p-2.5 rounded-lg bg-[#0A0A0C] border border-white/6 font-mono text-[10px] text-zinc-300">
                 <span className="text-zinc-500">RSC: </span>
                 <span className="text-[#CBB5FF]">PaycheckReactive</span>
               </div>
@@ -434,7 +434,7 @@ export default function LandingPage({
               className={`p-5 rounded-xl border transition-all duration-300 ${
                 loopPhase === 'base'
                   ? 'bg-[#00C853]/15 border-[#00C853] shadow-[0_0_24px_rgba(0,200,83,0.3)]'
-                  : 'bg-[#18181D]/60 border-white/[0.08]'
+                  : 'bg-[#18181D]/60 border-white/8'
               }`}
             >
               <div className="flex justify-between items-center text-xs font-mono text-zinc-400 mb-3">
@@ -449,7 +449,7 @@ export default function LandingPage({
               <p className="text-xs text-zinc-400 leading-relaxed mb-4">
                 The vault receives the callback, verifies authorized caller, and swaps {savedPct}% USDC into WETH via MockDEX—funds remain liquid and auto-compounded.
               </p>
-              <div className="p-2.5 rounded-lg bg-[#0A0A0C] border border-white/[0.06] font-mono text-[10px] text-zinc-300">
+              <div className="p-2.5 rounded-lg bg-[#0A0A0C] border border-white/6 font-mono text-[10px] text-zinc-300">
                 <span className="text-zinc-500">Vault: </span>
                 <span className="text-[#00C853]">0x68FE...0142</span>
               </div>
@@ -560,7 +560,7 @@ export default function LandingPage({
               <span className="text-[#CBB5FF] font-semibold">Sepolia (Origin)</span>
               <span className="text-zinc-500">ID: 11155111</span>
             </div>
-            <div className="font-mono text-[11px] text-zinc-300 break-all bg-black/40 p-2 rounded border border-white/[0.05]">
+            <div className="font-mono text-[11px] text-zinc-300 break-all bg-black/40 p-2 rounded border border-white/5">
               {CONFIG.sepolia.usdcAddress}
             </div>
             <div className="flex justify-between items-center pt-1 text-xs">
@@ -587,7 +587,7 @@ export default function LandingPage({
               <span className="text-[#62D0FF] font-semibold">Lasna (Reactive RSC)</span>
               <span className="text-zinc-500">ID: 5318007</span>
             </div>
-            <div className="font-mono text-[11px] text-zinc-300 break-all bg-black/40 p-2 rounded border border-white/[0.05]">
+            <div className="font-mono text-[11px] text-zinc-300 break-all bg-black/40 p-2 rounded border border-white/5">
               {CONFIG.lasna.reactiveAddress}
             </div>
             <div className="flex justify-between items-center pt-1 text-xs">
@@ -614,7 +614,7 @@ export default function LandingPage({
               <span className="text-[#2756FC] font-semibold">Base Sepolia (Vault)</span>
               <span className="text-zinc-500">ID: 84532</span>
             </div>
-            <div className="font-mono text-[11px] text-zinc-300 break-all bg-black/40 p-2 rounded border border-white/[0.05]">
+            <div className="font-mono text-[11px] text-zinc-300 break-all bg-black/40 p-2 rounded border border-white/5">
               {CONFIG.baseSepolia.vaultAddress}
             </div>
             <div className="flex justify-between items-center pt-1 text-xs">
