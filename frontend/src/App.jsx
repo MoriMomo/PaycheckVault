@@ -82,11 +82,13 @@ export default function App() {
   const [currentChainId, setCurrentChainId] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
 
-  // Live Balances
+  // Live Balances & Liveness Tracking
   const [vaultUsdc, setVaultUsdc] = useState(5000.0);
   const [vaultWeth, setVaultWeth] = useState(0.0);
   const [userSepoliaUsdc, setUserSepoliaUsdc] = useState(1000000.0);
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(Date.now());
+  const [secondsAgo, setSecondsAgo] = useState(0);
 
   // Policy Settings
   const [allocationPct, setAllocationPct] = useState(50);
@@ -148,7 +150,8 @@ export default function App() {
       setVaultWeth(Number(ethers.formatEther(bWethBal)));
       const onChainPct = Number(onChainBps) / 100;
       setSavedPct(onChainPct);
-      setAllocationPct(onChainPct);
+      setLastUpdated(Date.now());
+      setSecondsAgo(0);
     } catch (err) {
       console.warn('Error fetching live balances:', err);
     } finally {
@@ -156,10 +159,22 @@ export default function App() {
     }
   }, [walletAddress]);
 
-  // Initial balance load on mount
+  // Continuous 15-second background polling
   useEffect(() => {
     fetchLiveBalances();
+    const pollTimer = setInterval(() => {
+      fetchLiveBalances();
+    }, 15000);
+    return () => clearInterval(pollTimer);
   }, [fetchLiveBalances]);
+
+  // Dynamic seconds-ago counter
+  useEffect(() => {
+    const tickTimer = setInterval(() => {
+      setSecondsAgo(Math.floor((Date.now() - lastUpdated) / 1000));
+    }, 1000);
+    return () => clearInterval(tickTimer);
+  }, [lastUpdated]);
 
   // Listen to window.ethereum changes
   useEffect(() => {
@@ -403,18 +418,21 @@ export default function App() {
     const keptUSDC = amount - swappedUSDC;
     const acquiredWETH = swappedUSDC * 0.5;
 
-    setVaultUsdc((prev) => Math.max(0, prev - swappedUSDC));
+    // Coherent allocation: kept USDC increases liquid cash, swapped USDC converts to WETH
+    setVaultUsdc((prev) => prev + keptUSDC);
     setVaultWeth((prev) => prev + acquiredWETH);
+    setLastUpdated(Date.now());
+    setSecondsAgo(0);
 
     const randHex = () => Math.floor(1000 + Math.random() * 9000).toString(16);
     setActivities((prev) => [
       {
         id: Date.now(),
         time: 'Just now',
-        inflow: `${amount.toFixed(2)} USDC`,
+        inflow: `+${amount.toFixed(2)} USDC`,
         originTx: `0x${randHex()}...${randHex()}`,
-        lasnaSignal: 'Verified (>= $10)',
-        destSwap: `${swappedUSDC.toFixed(0)} USDC -> ${acquiredWETH.toFixed(2)} WETH`,
+        lasnaSignal: 'Verified (≥ $10)',
+        destSwap: `Swapped ${swappedUSDC.toFixed(0)} USDC → ${acquiredWETH.toFixed(2)} WETH (+${keptUSDC.toFixed(0)} USDC liquid)`,
         destTx: `0x${randHex()}...${randHex()}`,
         status: 'success',
       },
@@ -423,7 +441,7 @@ export default function App() {
 
     showToastMsg(
       'Callback Executed on Base',
-      `Swapped ${swappedUSDC} USDC -> ${acquiredWETH.toFixed(2)} WETH (${keptUSDC} USDC liquid)`
+      `Swapped ${swappedUSDC} USDC → ${acquiredWETH.toFixed(2)} WETH (+${keptUSDC} USDC retained in liquid reserve)`
     );
 
     await new Promise((r) => setTimeout(r, 1200));
@@ -780,6 +798,22 @@ export default function App() {
           {/* Left 7 Columns: Real On-Chain Vault Balances + Activity Stream */}
           <div className="lg:col-span-7 space-y-6">
             
+            {/* Header with Live Liveness Indicator */}
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider text-[11px]">
+                Base Sepolia Vault Portfolio
+              </span>
+              <button
+                onClick={() => fetchLiveBalances()}
+                className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono hover:text-slate-200 transition bg-slate-900/60 px-2.5 py-1 rounded-lg border border-slate-800"
+                title="Click to refresh on-chain balances"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Live • Updated {secondsAgo <= 1 ? 'just now' : `${secondsAgo}s ago`}</span>
+                <span className={`text-[12px] text-cyan-400 ml-0.5 ${isLoadingBalances ? 'animate-spin' : ''}`}>⟳</span>
+              </button>
+            </div>
+
             {/* Minimal High-Contrast Balances */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="p-5 rounded-2xl border border-slate-800/80 bg-obsidian-900/50 space-y-1">
