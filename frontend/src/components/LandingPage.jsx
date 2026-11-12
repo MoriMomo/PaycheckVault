@@ -343,7 +343,7 @@ export default function LandingPage({
       {/* ============================================================== */}
       {/* 2. INTERACTIVE 3-CHAIN REACTIVE CIRCUIT DIAGRAM                 */}
       {/* ============================================================== */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
+      <section id="how-it-works" className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
         <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
           <div>
             <span className="text-[11px] font-mono uppercase tracking-widest text-[#62D0FF] font-semibold">
@@ -518,7 +518,7 @@ export default function LandingPage({
       {/* ============================================================== */}
       {/* 4. VERIFIED CONTRACT REGISTRY (Pitch Black)                     */}
       {/* ============================================================== */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 space-y-4">
+      <section id="contracts" className="max-w-6xl mx-auto px-4 sm:px-6 space-y-4">
         <div className="border-t border-white/10 pt-8 flex items-center justify-between">
           <div>
             <span className="text-[11px] font-mono uppercase tracking-widest text-[#62D0FF] font-semibold">
