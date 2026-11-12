@@ -504,8 +504,8 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer Container */}
-      <div className="w-full mt-12 border-t border-white/10 bg-black">
+      {/* Footer Container with seamless blend into starry scene */}
+      <div className="relative w-full mt-12 bg-black">
         <MeadowRiseFooter
           name="PaycheckVault"
           brandHref="#"

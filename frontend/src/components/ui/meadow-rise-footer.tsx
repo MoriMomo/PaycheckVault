@@ -841,6 +841,8 @@ const MRF_CSS = `
   height: var(--mrf-hero);
   z-index: 0;
   pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 180px);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 180px);
 }
 .mrf-scene canvas {
   display: block;
