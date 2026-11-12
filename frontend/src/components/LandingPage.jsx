@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CONFIG } from '../config/contracts';
+import SplitFlapText from './ui/SplitFlapText';
 
 export default function LandingPage({
   onLaunchApp,
@@ -28,178 +29,153 @@ export default function LandingPage({
   };
 
   return (
-    <div className="space-y-14 pb-20">
+    <div className="space-y-16 pb-20">
       
       {/* ============================================================== */}
-      {/* 1. TOP CURVED FLUID WAVE BANNER (Matching reactive.network)      */}
+      {/* 1. HERO SECTION: TOP PART (FLUID WAVE) MOVED TO THE LEFT       */}
+      {/*    RIGHT PART FOLLOWS WITH PRODUCT INFO & SPLIT-FLAP DISPLAY   */}
       {/* ============================================================== */}
-      <section className="relative w-full max-w-6xl mx-auto px-4 sm:px-6 pt-2">
-        <div className="relative w-full h-40 sm:h-52 md:h-60 rounded-2xl sm:rounded-3xl overflow-hidden bg-[#02040A] border border-blue-900/30 shadow-[0_0_50px_rgba(20,50,160,0.18)] flex items-center justify-center">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           
-          {/* Subtle Ambient Dot Grid inside banner */}
-          <div 
-            className="absolute inset-0 opacity-15 pointer-events-none"
-            style={{
-              backgroundImage: 'radial-gradient(rgba(98, 208, 255, 0.4) 1px, transparent 1px)',
-              backgroundSize: '16px 16px'
-            }}
-          />
-
-          {/* Glowing Fluid Curve Wave Graphic - High Fidelity to reactive.network */}
-          <svg
-            className="w-full h-full object-cover pointer-events-none select-none"
-            viewBox="0 0 1200 360"
-            fill="none"
-            preserveAspectRatio="none"
-          >
-            <defs>
-              {/* Luminous Specular Rim Gradient */}
-              <linearGradient id="rimGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#1e3a8a" stopOpacity="0.3" />
-                <stop offset="15%" stopColor="#38bdf8" stopOpacity="0.95" />
-                <stop offset="45%" stopColor="#60a5fa" stopOpacity="0.85" />
-                <stop offset="70%" stopColor="#1d4ed8" stopOpacity="0.8" />
-                <stop offset="90%" stopColor="#0284c7" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="transparent" />
-              </linearGradient>
-
-              {/* Deep Blue Body Gradient */}
-              <linearGradient id="bodyGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#0b1b4d" stopOpacity="0.8" />
-                <stop offset="30%" stopColor="#1e40af" stopOpacity="0.65" />
-                <stop offset="60%" stopColor="#2563eb" stopOpacity="0.5" />
-                <stop offset="90%" stopColor="#0f172a" stopOpacity="0.2" />
-              </linearGradient>
-
-              {/* Ambient Glow */}
-              <radialGradient id="centerGlow" cx="25%" cy="20%" r="55%">
-                <stop offset="0%" stopColor="#1d4ed8" stopOpacity="0.35" />
-                <stop offset="50%" stopColor="#030712" stopOpacity="0.1" />
-                <stop offset="100%" stopColor="transparent" stopOpacity="0" />
-              </radialGradient>
-
-              <filter id="softBlur" x="-15%" y="-15%" width="130%" height="130%">
-                <feGaussianBlur stdDeviation="8" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-
-            {/* Background Radial Glow */}
-            <rect width="1200" height="360" fill="url(#centerGlow)" />
-
-            {/* Dark organic shadow contour underneath */}
-            <path
-              d="M -30 380 C 120 180, 260 20, 520 40 C 780 60, 880 340, 1140 220 L 1220 380 Z"
-              fill="#03081a"
-              opacity="0.85"
-            />
-
-            {/* Translucent Deep Blue Wave Body */}
-            <path
-              d="M -40 340 C 100 130, 240 25, 500 45 C 760 65, 870 300, 1120 190 C 1170 165, 1220 120, 1260 90"
-              stroke="url(#bodyGrad)"
-              strokeWidth="90"
-              strokeLinecap="round"
-              fill="none"
-              filter="url(#softBlur)"
-            />
-
-            {/* Specular Bright Luminous Crest Line */}
-            <path
-              d="M -40 330 C 100 120, 240 20, 500 38 C 760 56, 870 290, 1120 180 C 1170 155, 1220 110, 1260 80"
-              stroke="url(#rimGrad)"
-              strokeWidth="6"
-              fill="none"
-              filter="url(#softBlur)"
-            />
-
-            {/* Void cutout arc inside the loop */}
-            <path
-              d="M -20 380 C 140 210, 280 120, 500 135 C 720 150, 860 370, 1120 280 L 1240 380 Z"
-              fill="#02040A"
-              opacity="0.95"
-            />
-          </svg>
-
-          {/* Solitary Tiny Star / Pinpoint Light on the Far Right (As seen in reactive.network screenshot) */}
-          <div className="absolute right-14 sm:right-28 top-[54%] w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_10px_#ffffff,0_0_20px_#38bdf8]" />
-        </div>
-      </section>
-
-      {/* ============================================================== */}
-      {/* 2. TWO-COLUMN SPLIT SECTION (Exact layout of reactive.network) */}
-      {/* ============================================================== */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-start">
-          
-          {/* LEFT COLUMN: // INTERLUDE + Headline + Brackets + Copy + Input */}
-          <div className="lg:col-span-7 space-y-5">
+          {/* ========================================================== */}
+          {/* LEFT COLUMN: Top Fluid Banner + Quick Protocol Controls    */}
+          {/* ========================================================== */}
+          <div className="lg:col-span-5 space-y-5">
             
-            {/* Monospace Interlude Tag */}
-            <div className="font-mono text-xs text-zinc-500 uppercase tracking-widest">
-              // INTERLUDE
+            {/* The Curved Fluid Wave Banner (Positioned on the Left) */}
+            <div className="relative w-full h-52 sm:h-64 rounded-2xl overflow-hidden bg-[#02040A] border border-blue-900/30 shadow-[0_0_50px_rgba(20,50,160,0.22)] flex items-center justify-center">
+              
+              {/* Ambient Dot Grid */}
+              <div 
+                className="absolute inset-0 opacity-15 pointer-events-none"
+                style={{
+                  backgroundImage: 'radial-gradient(rgba(98, 208, 255, 0.4) 1px, transparent 1px)',
+                  backgroundSize: '16px 16px'
+                }}
+              />
+
+              {/* Glowing Fluid Curve Wave Graphic */}
+              <svg
+                className="w-full h-full object-cover pointer-events-none select-none"
+                viewBox="0 0 800 400"
+                fill="none"
+                preserveAspectRatio="none"
+              >
+                <defs>
+                  <linearGradient id="leftRimGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#1e3a8a" stopOpacity="0.3" />
+                    <stop offset="20%" stopColor="#38bdf8" stopOpacity="0.95" />
+                    <stop offset="50%" stopColor="#60a5fa" stopOpacity="0.85" />
+                    <stop offset="75%" stopColor="#1d4ed8" stopOpacity="0.8" />
+                    <stop offset="100%" stopColor="transparent" />
+                  </linearGradient>
+
+                  <linearGradient id="leftBodyGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#0b1b4d" stopOpacity="0.85" />
+                    <stop offset="35%" stopColor="#1e40af" stopOpacity="0.7" />
+                    <stop offset="65%" stopColor="#2563eb" stopOpacity="0.5" />
+                    <stop offset="90%" stopColor="#0f172a" stopOpacity="0.2" />
+                  </linearGradient>
+
+                  <radialGradient id="leftCenterGlow" cx="30%" cy="30%" r="60%">
+                    <stop offset="0%" stopColor="#1d4ed8" stopOpacity="0.4" />
+                    <stop offset="60%" stopColor="#030712" stopOpacity="0.1" />
+                    <stop offset="100%" stopColor="transparent" stopOpacity="0" />
+                  </radialGradient>
+
+                  <filter id="leftSoftBlur" x="-15%" y="-15%" width="130%" height="130%">
+                    <feGaussianBlur stdDeviation="7" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+
+                <rect width="800" height="400" fill="url(#leftCenterGlow)" />
+
+                {/* Dark organic shadow contour underneath */}
+                <path
+                  d="M -20 400 C 90 200, 180 30, 360 50 C 540 70, 600 340, 780 240 L 820 400 Z"
+                  fill="#03081a"
+                  opacity="0.85"
+                />
+
+                {/* Translucent Deep Blue Wave Body */}
+                <path
+                  d="M -30 360 C 80 150, 180 35, 360 55 C 540 75, 600 300, 760 200 C 790 180, 810 140, 830 110"
+                  stroke="url(#leftBodyGrad)"
+                  strokeWidth="80"
+                  strokeLinecap="round"
+                  fill="none"
+                  filter="url(#leftSoftBlur)"
+                />
+
+                {/* Specular Bright Luminous Crest Line */}
+                <path
+                  d="M -30 350 C 80 140, 180 30, 360 48 C 540 66, 600 290, 760 190 C 790 170, 810 130, 830 100"
+                  stroke="url(#leftRimGrad)"
+                  strokeWidth="5"
+                  fill="none"
+                  filter="url(#leftSoftBlur)"
+                />
+
+                {/* Inner Void Arc */}
+                <path
+                  d="M -10 400 C 100 230, 200 130, 360 145 C 500 160, 600 380, 780 290 L 820 400 Z"
+                  fill="#02040A"
+                  opacity="0.95"
+                />
+              </svg>
+
+              {/* Pinpoint Starlight */}
+              <div className="absolute right-8 sm:right-12 top-[52%] w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_10px_#ffffff,0_0_18px_#38bdf8]" />
+
+              {/* Floating Badge inside Top Banner */}
+              <div className="absolute bottom-3 left-3 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#62D0FF] animate-pulse" />
+                <span className="text-[10px] font-mono text-zinc-300 uppercase tracking-wider">
+                  Reactive Event Layer
+                </span>
+              </div>
             </div>
 
-            {/* Giant Title */}
-            <h1 className="font-display text-5xl sm:text-6xl lg:text-[70px] font-bold tracking-tight text-white leading-[1.04]">
-              Reactive Network
-            </h1>
-
-            {/* Monospace Subtitle Tag in Square Brackets */}
-            <div className="font-mono text-xs sm:text-sm font-semibold tracking-wider text-zinc-400">
-              [ ON-CHAIN IF-THIS-THEN-THAT FOR SMART CONTRACTS ]
-            </div>
-
-            {/* Core Value Proposition Paragraphs */}
-            <div className="space-y-3.5 text-zinc-400 text-base sm:text-[17px] leading-relaxed max-w-xl">
-              <p>
-                Smart contracts need to react across chains. Today that means off-chain bots, custom infrastructure, and constant maintenance.
-              </p>
-              <p className="text-zinc-300">
-                Reactive Network replaces all of it with a single on-chain automation layer.
-              </p>
-            </div>
-
-            {/* Featured Buildathon Implementation Callout */}
-            <div className="p-4 rounded-xl bg-[#121215] border border-white/8 max-w-xl space-y-2 shadow-lg">
+            {/* Featured Buildathon Implementation Card */}
+            <div className="p-4 rounded-xl bg-[#121215] border border-white/8 space-y-2 shadow-lg">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#62D0FF] animate-pulse" />
                   <span className="text-[11px] font-mono text-[#62D0FF] uppercase tracking-wider font-semibold">
-                    DoraHacks Omni Buildathon • Featured Protocol
+                    DoraHacks Omni Buildathon
                   </span>
                 </div>
                 <span className="text-[10px] font-mono text-zinc-500">SET IT &amp; FORGET IT</span>
               </div>
-              <p className="text-xs sm:text-[13px] text-zinc-300 leading-relaxed">
-                <span className="text-white font-semibold">PaycheckVault:</span> Autonomous recipient-side cross-chain smart vault. When USDC hits your wallet on Sepolia, Reactive Lasna triggers a callback to auto-invest {savedPct}% into WETH on Base—zero keepers, 100% on-chain.
+              <p className="text-xs text-zinc-300 leading-relaxed">
+                Autonomous recipient-side cross-chain smart vault. Inflows to Sepolia trigger cross-chain callbacks to convert {savedPct}% into WETH on Base—zero keepers, 100% on-chain.
               </p>
             </div>
 
-            {/* Input Row + Action Buttons (Exact reactive.network style) */}
-            <div className="space-y-2.5 pt-1">
-              <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 max-w-md">
+            {/* Subscribe Input Row */}
+            <div className="space-y-2 pt-1">
+              <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <input
                   type="text"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   placeholder="Your email address"
-                  className="flex-1 bg-[#121215] border border-zinc-800 focus:border-zinc-500 rounded-lg px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 outline-none font-sans"
+                  className="flex-1 bg-[#121215] border border-zinc-800 focus:border-zinc-500 rounded-lg px-3.5 py-2 text-xs sm:text-sm text-zinc-200 placeholder-zinc-600 outline-none font-sans"
                 />
                 <button
                   type="submit"
-                  className="text-sm font-medium text-white hover:text-[#62D0FF] transition px-3 py-2.5 cursor-pointer whitespace-nowrap"
+                  className="text-xs sm:text-sm font-medium text-white hover:text-[#62D0FF] transition px-3 py-2 cursor-pointer whitespace-nowrap"
                 >
                   {subscribed ? 'Subscribed ✓' : 'Subscribe'}
                 </button>
               </form>
-
-              <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-zinc-500">
-                <span>Follow Reactive Network for updates.</span>
-                <span className="text-zinc-700">•</span>
+              <div className="flex items-center justify-between text-xs font-mono text-zinc-500">
+                <span>Follow updates on Lasna</span>
                 <button
                   onClick={onLaunchApp}
                   className="text-white hover:text-[#62D0FF] transition underline font-sans font-semibold cursor-pointer"
@@ -209,8 +185,67 @@ export default function LandingPage({
               </div>
             </div>
 
-            {/* Quick Action Buttons */}
-            <div className="pt-2 flex flex-wrap gap-3">
+          </div>
+
+          {/* ========================================================== */}
+          {/* RIGHT COLUMN: Product Name + SplitFlapText + Site Info     */}
+          {/* ========================================================== */}
+          <div className="lg:col-span-7 space-y-6 lg:border-l lg:border-zinc-800/80 lg:pl-10">
+            
+            {/* Monospace Interlude Tag */}
+            <div className="font-mono text-xs text-zinc-500 uppercase tracking-widest">
+              // INTERLUDE • OMNI VAULT
+            </div>
+
+            {/* Product Name Display Header */}
+            <div className="space-y-3">
+              <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-[1.05]">
+                PaycheckVault
+              </h1>
+
+              {/* REACT BITS: SplitFlapText Mechanical Departure Board */}
+              <div className="py-1 overflow-x-auto">
+                <SplitFlapText
+                  words={['PAYCHECKVAULT', 'CROSS-CHAIN', 'AUTO-INVEST', 'ZERO-KEEPERS', 'SIGNAL-LIVE']}
+                  flipDuration={0.10}
+                  stagger={0.05}
+                  cycleDelay={2200}
+                  charset="alphanumeric"
+                  flipsPerChar={6}
+                  order="left"
+                  align="left"
+                  tileStyle="board"
+                  tileColor="#121215"
+                  textColor="#62D0FF"
+                  glare={0.25}
+                  depth={0.6}
+                  tileRadius={6}
+                  gap={4}
+                  fontSize={26}
+                  loop
+                  padTo={13}
+                  intro
+                />
+              </div>
+
+              {/* Monospace Subtitle Tag in Square Brackets */}
+              <div className="font-mono text-xs sm:text-sm font-semibold tracking-wider text-zinc-400">
+                [ ON-CHAIN IF-THIS-THEN-THAT FOR SMART CONTRACTS ]
+              </div>
+            </div>
+
+            {/* Core Value Proposition Paragraphs */}
+            <div className="space-y-3 text-zinc-400 text-sm sm:text-base leading-relaxed">
+              <p>
+                Smart contracts need to react across chains. Today that means off-chain bots, custom infrastructure, and constant maintenance.
+              </p>
+              <p className="text-zinc-300">
+                <strong className="text-white">PaycheckVault</strong> replaces all of it with a single on-chain automation layer: the moment USDC enters your wallet on Ethereum Sepolia, Reactive Lasna detects the event and executes auto-DCA into WETH on Base Sepolia.
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-1 flex flex-wrap gap-3">
               <button
                 onClick={onLaunchApp}
                 className="px-6 py-2.5 rounded-full font-display font-bold text-xs sm:text-sm bg-[#2756FC] hover:bg-[#3662ff] text-white shadow-[0_0_24px_rgba(39,86,252,0.45)] hover:shadow-[0_0_32px_rgba(98,208,255,0.65)] transition active:scale-95 flex items-center gap-2 cursor-pointer"
@@ -229,128 +264,129 @@ export default function LandingPage({
                 <span>Simulate Event Loop</span>
               </button>
             </div>
-          </div>
 
-          {/* RIGHT COLUMN: LATEST NEWS ↗ + START BUILDING ↗ + MAINNET STATS ↗ */}
-          <div className="lg:col-span-5 flex flex-col justify-between space-y-6 lg:border-l lg:border-zinc-800/80 lg:pl-10">
-            
-            {/* 1. LATEST NEWS ↗ Section */}
-            <div className="border-t border-zinc-800/80 pt-4 space-y-3">
-              <div className="flex items-center justify-between">
+            {/* Following Information On The Site Itself */}
+            <div className="space-y-5 pt-3">
+              
+              {/* 1. LATEST NEWS ↗ Section */}
+              <div className="border-t border-zinc-800/80 pt-4 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <a
+                    href="https://reactive.network/blog"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-mono uppercase text-zinc-400 hover:text-white tracking-wider flex items-center gap-1 transition"
+                  >
+                    <span>LATEST NEWS</span>
+                    <span>↗</span>
+                  </a>
+                </div>
+
+                <div className="space-y-2 text-xs sm:text-[13px]">
+                  <a
+                    href="https://dorahacks.io"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block text-zinc-400 hover:text-zinc-200 transition leading-snug"
+                  >
+                    Reactive Omni Buildathon: Thirty Days to Find Out What One Second Buys
+                  </a>
+                  <a
+                    href="https://reactive.network/blog"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block text-zinc-400 hover:text-zinc-200 transition leading-snug"
+                  >
+                    Reactive Circuit: Incentive Program For Working Integrations
+                  </a>
+                  <a
+                    href="https://reactive.network/blog"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block text-zinc-400 hover:text-zinc-200 transition leading-snug"
+                  >
+                    Reactive Mainnet: Migration Complete
+                  </a>
+                  <div className="text-zinc-500 text-xs font-mono pt-0.5">
+                    PaycheckVault: Live deployed on Sepolia, Lasna &amp; Base Sepolia
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. START BUILDING ↗ Section */}
+              <div className="border-t border-zinc-800/80 pt-4 space-y-1.5">
                 <a
-                  href="https://reactive.network/blog"
+                  href="https://docs.reactive.network"
                   target="_blank"
                   rel="noreferrer"
                   className="text-xs font-mono uppercase text-zinc-400 hover:text-white tracking-wider flex items-center gap-1 transition"
                 >
-                  <span>LATEST NEWS</span>
+                  <span>START BUILDING</span>
                   <span>↗</span>
                 </a>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Deploy autonomous reactive smart contracts on Lasna Testnet with sub-second event subscription and cross-chain callback dispatch.
+                </p>
               </div>
 
-              <div className="space-y-2.5 text-xs sm:text-[13px]">
-                <a
-                  href="https://dorahacks.io"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block text-zinc-400 hover:text-zinc-200 transition leading-snug"
-                >
-                  Reactive Omni Buildathon: Thirty Days to Find Out What One Second Buys
-                </a>
-                <a
-                  href="https://reactive.network/blog"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block text-zinc-400 hover:text-zinc-200 transition leading-snug"
-                >
-                  Reactive Circuit: Incentive Program For Working Integrations
-                </a>
-                <a
-                  href="https://reactive.network/blog"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block text-zinc-400 hover:text-zinc-200 transition leading-snug"
-                >
-                  Reactive Mainnet: Migration Complete
-                </a>
-                <div className="text-zinc-500 text-xs font-mono pt-1">
-                  PaycheckVault: Live deployed on Sepolia, Lasna &amp; Base Sepolia
+              {/* 3. MAINNET ↗ & LASNA TELEMETRY Section */}
+              <div className="border-t border-zinc-800/80 pt-4 space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <a
+                    href="https://reactivescan.net"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-mono uppercase text-zinc-400 hover:text-white tracking-wider flex items-center gap-1 transition"
+                  >
+                    <span>MAINNET</span>
+                    <span>↗</span>
+                  </a>
+                  <span className="text-[10px] font-mono text-[#00C853] uppercase tracking-wider">
+                    Network Active
+                  </span>
                 </div>
-              </div>
-            </div>
 
-            {/* 2. START BUILDING ↗ Section */}
-            <div className="border-t border-zinc-800/80 pt-4 space-y-2">
-              <a
-                href="https://docs.reactive.network"
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs font-mono uppercase text-zinc-400 hover:text-white tracking-wider flex items-center gap-1 transition"
-              >
-                <span>START BUILDING</span>
-                <span>↗</span>
-              </a>
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                Deploy autonomous reactive smart contracts on Lasna Testnet with sub-second event subscription and cross-chain callback dispatch.
-              </p>
-            </div>
-
-            {/* 3. MAINNET ↗ & LASNA TELEMETRY Section */}
-            <div className="border-t border-zinc-800/80 pt-4 space-y-3.5">
-              <div className="flex items-center justify-between">
-                <a
-                  href="https://reactivescan.net"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs font-mono uppercase text-zinc-400 hover:text-white tracking-wider flex items-center gap-1 transition"
-                >
-                  <span>MAINNET</span>
-                  <span>↗</span>
-                </a>
-                <span className="text-[10px] font-mono text-[#00C853] uppercase tracking-wider">
-                  Network Active
-                </span>
-              </div>
-
-              {/* Big Metrics Grid (Matching reactive.network numbers) */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="font-display text-xl sm:text-2xl font-bold text-white tracking-tight">
-                    9,023,270
+                {/* Big Metrics Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="font-display text-xl sm:text-2xl font-bold text-white tracking-tight">
+                      9,023,270
+                    </div>
+                    <div className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider mt-0.5">
+                      BLOCKS
+                    </div>
                   </div>
-                  <div className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider mt-0.5">
-                    BLOCKS
+
+                  <div>
+                    <div className="font-display text-xl sm:text-2xl font-bold text-white tracking-tight flex items-baseline gap-1.5">
+                      <span>$0.00279</span>
+                      <span className="text-xs font-mono text-zinc-400 font-normal">-14.44%</span>
+                    </div>
+                    <div className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider mt-0.5">
+                      $REACT
+                    </div>
                   </div>
                 </div>
 
-                <div>
-                  <div className="font-display text-xl sm:text-2xl font-bold text-white tracking-tight flex items-baseline gap-1.5">
-                    <span>$0.00279</span>
-                    <span className="text-xs font-mono text-zinc-400 font-normal">-14.44%</span>
+                {/* PaycheckVault Protocol Telemetry */}
+                <div className="p-3 rounded-xl bg-[#121215] border border-white/6 grid grid-cols-3 gap-2 text-center font-mono">
+                  <div>
+                    <div className="text-[9px] uppercase text-zinc-500">Speed</div>
+                    <div className="text-xs font-bold text-white mt-0.5">~1.2s</div>
                   </div>
-                  <div className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider mt-0.5">
-                    $REACT
+                  <div>
+                    <div className="text-[9px] uppercase text-zinc-500">Vault USDC</div>
+                    <div className="text-xs font-bold text-[#62D0FF] mt-0.5">
+                      ${vaultUsdc.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[9px] uppercase text-zinc-500">Bots</div>
+                    <div className="text-xs font-bold text-[#00C853] mt-0.5">0 Keepers</div>
                   </div>
                 </div>
               </div>
 
-              {/* PaycheckVault Live Protocol Telemetry */}
-              <div className="p-3 rounded-xl bg-[#121215] border border-white/6 grid grid-cols-3 gap-2 text-center font-mono">
-                <div>
-                  <div className="text-[9px] uppercase text-zinc-500">Speed</div>
-                  <div className="text-xs font-bold text-white mt-0.5">~1.2s</div>
-                </div>
-                <div>
-                  <div className="text-[9px] uppercase text-zinc-500">Vault USDC</div>
-                  <div className="text-xs font-bold text-[#62D0FF] mt-0.5">
-                    ${vaultUsdc.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[9px] uppercase text-zinc-500">Bots</div>
-                  <div className="text-xs font-bold text-[#00C853] mt-0.5">0 Keepers</div>
-                </div>
-              </div>
             </div>
 
           </div>
@@ -359,7 +395,7 @@ export default function LandingPage({
       </section>
 
       {/* ============================================================== */}
-      {/* 3. INTERACTIVE 3-CHAIN REACTIVE CIRCUIT DIAGRAM                 */}
+      {/* 2. INTERACTIVE 3-CHAIN REACTIVE CIRCUIT DIAGRAM                 */}
       {/* ============================================================== */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
         <div className="border-t border-zinc-800/80 pt-8 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
@@ -460,7 +496,7 @@ export default function LandingPage({
       </section>
 
       {/* ============================================================== */}
-      {/* 4. 4-CARD BENTO GRID SHOWCASE                                  */}
+      {/* 3. 4-CARD BENTO GRID SHOWCASE                                  */}
       {/* ============================================================== */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6">
         <div className="border-t border-zinc-800/80 pt-8">
@@ -534,7 +570,7 @@ export default function LandingPage({
       </section>
 
       {/* ============================================================== */}
-      {/* 5. VERIFIED CONTRACT REGISTRY                                  */}
+      {/* 4. VERIFIED CONTRACT REGISTRY                                  */}
       {/* ============================================================== */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 space-y-4">
         <div className="border-t border-zinc-800/80 pt-8 flex items-center justify-between">
