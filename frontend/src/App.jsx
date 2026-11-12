@@ -471,7 +471,7 @@ export default function App() {
       />
 
       {/* Main Content Container */}
-      <main className="max-w-6xl w-full mx-auto px-6 py-8 flex-1">
+      <main className="max-w-6xl w-full mx-auto px-6 pt-20 sm:pt-24 pb-12 flex-1">
         {activePage === 'landing' ? (
           <LandingPage
             onLaunchApp={() => setActivePage('app')}
