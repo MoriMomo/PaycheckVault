@@ -11,22 +11,12 @@ export default function LandingPage({
   savedPct,
   loopPhase,
 }) {
-  const [emailInput, setEmailInput] = useState('');
-  const [subscribed, setSubscribed] = useState(false);
   const [copiedKey, setCopiedKey] = useState(null);
 
   const handleCopy = (key, text) => {
     navigator.clipboard?.writeText(text);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
-  };
-
-  const handleSubscribe = (e) => {
-    e.preventDefault();
-    if (!emailInput) return;
-    setSubscribed(true);
-    setTimeout(() => setSubscribed(false), 3500);
-    setEmailInput('');
   };
 
   return (
@@ -39,10 +29,10 @@ export default function LandingPage({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           
           {/* ========================================================== */}
-          {/* LEFT COLUMN: Clean <CursorGrid /> Showcase + Buildathon    */}
+          {/* LEFT COLUMN: Seamless <CursorGrid /> Interactive Canvas    */}
           {/* ========================================================== */}
-          <div className="lg:col-span-5 space-y-5">
-            <div className="relative w-full h-72 sm:h-80 rounded-2xl overflow-hidden bg-black border border-white/12">
+          <div className="lg:col-span-5">
+            <div className="relative w-full h-[380px] sm:h-[460px] lg:h-[620px] bg-black overflow-hidden">
               <CursorGrid
                 cellSize={48}
                 color="#ffffff"
@@ -54,61 +44,9 @@ export default function LandingPage({
                 fillOpacity={0.06}
                 gridOpacity={0.08}
                 spotlight={0.6}
+                edgeFade={0.32}
                 clickPulse
-              >
-                <div className="relative z-10 h-full p-4 flex flex-col justify-end pointer-events-none select-none">
-                  <div className="w-fit px-3 py-1 rounded-full bg-black border border-white/15 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#62D0FF]" />
-                    <span className="text-[10px] font-mono text-zinc-300 uppercase tracking-wider">
-                      Reactive Event Layer
-                    </span>
-                  </div>
-                </div>
-              </CursorGrid>
-            </div>
-
-            {/* Featured Buildathon Implementation Card */}
-            <div className="p-4 rounded-xl bg-black border border-white/10 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#62D0FF]" />
-                  <span className="text-[11px] font-mono text-[#62D0FF] uppercase tracking-wider font-semibold">
-                    DoraHacks Omni Buildathon
-                  </span>
-                </div>
-                <span className="text-[10px] font-mono text-zinc-500">SET IT &amp; FORGET IT</span>
-              </div>
-              <p className="text-xs text-zinc-300 leading-relaxed">
-                Autonomous recipient-side cross-chain smart vault. Inflows to Sepolia trigger cross-chain callbacks to convert {savedPct}% into WETH on Base—zero keepers, 100% on-chain.
-              </p>
-            </div>
-
-            {/* Subscribe Input Row */}
-            <div className="space-y-2">
-              <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <input
-                  type="text"
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  placeholder="Your email address"
-                  className="flex-1 bg-black border border-white/15 focus:border-white/35 rounded-lg px-3.5 py-2 text-xs sm:text-sm text-white placeholder-zinc-500 outline-none font-sans"
-                />
-                <button
-                  type="submit"
-                  className="text-xs sm:text-sm font-medium text-white hover:text-[#62D0FF] transition px-4 py-2 cursor-pointer whitespace-nowrap bg-black border border-white/15 rounded-lg"
-                >
-                  {subscribed ? 'Subscribed ✓' : 'Subscribe'}
-                </button>
-              </form>
-              <div className="flex items-center justify-between text-xs font-mono text-zinc-500">
-                <span>Follow updates on Lasna</span>
-                <button
-                  onClick={onLaunchApp}
-                  className="text-white hover:text-[#62D0FF] transition underline font-sans font-semibold cursor-pointer"
-                >
-                  Launch Vault App ↗
-                </button>
-              </div>
+              />
             </div>
           </div>
 
