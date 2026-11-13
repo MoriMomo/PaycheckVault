@@ -56,6 +56,7 @@ export type MeadowPreset = "auto" | MeadowTheme
 export interface MeadowLink {
   label: string
   href?: string
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void
 }
 
 export interface MeadowColumn {
@@ -84,7 +85,7 @@ export interface MeadowRiseFooterProps {
   /** The line under the headline. "" hides it. */
   subheading?: string
   /** The pill under the headline. null hides it. */
-  cta?: { label: string; href?: string } | null
+  cta?: { label: string; href?: string; onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void } | null
   /** The line under the brand. "" hides it. */
   tagline?: string
   /** Show the email signup. Defaults to true. */
@@ -256,7 +257,7 @@ const SOCIAL_NAMES: MeadowSocialNameMap = {
   youtube: "YouTube",
 }
 
-const SANS_STACK = '"Inter Tight", "Inter", "Inter Variable", "Geist", "Helvetica Neue", Arial, system-ui, sans-serif'
+const SANS_STACK = '"IBM Plex Sans", "Archivo", "Helvetica Neue", Arial, system-ui, sans-serif'
 const SERIF_STACK = '"Instrument Serif", "Cormorant Garamond", "Playfair Display", "Iowan Old Style", "Palatino Linotype", Georgia, serif'
 
 // #region scene
@@ -922,59 +923,43 @@ const MRF_CSS = `
 .mrf-in .mrf-r { opacity: 1; transform: none; filter: blur(0); }
 .mrf-cta-wrap { margin-top: clamp(20px, 2.6vw, 30px); }
 .mrf-cta {
-  --mx: 0px;
-  --my: 0px;
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: 10px;
   height: 40px;
-  padding: 0 8px 0 18px;
-  border-radius: 999px;
+  padding: 0 8px 0 16px;
+  border-radius: 6px;
   background: var(--mrf-pill);
   color: var(--mrf-pill-ink);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: -0.01em;
   text-decoration: none;
-  overflow: hidden;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 10px 30px -12px rgba(20, 30, 10, 0.45), 0 2px 6px -2px rgba(20, 30, 10, 0.25);
-  transform: translate3d(var(--mx), var(--my), 0);
-  transition: transform 500ms cubic-bezier(.2, .9, .3, 1.2), color 450ms ease, box-shadow 450ms ease;
-}
-.mrf-cta::before {
-  content: "";
-  position: absolute;
-  left: var(--fx, 50%);
-  top: var(--fy, 50%);
-  width: 260px;
-  height: 260px;
-  margin: -130px 0 0 -130px;
-  border-radius: 50%;
-  background: var(--mrf-ground);
-  transform: scale(0);
-  transition: transform 650ms cubic-bezier(.16, 1, .3, 1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
 }
 .mrf-cta > * { position: relative; }
 .mrf-cta-arrow {
   position: relative;
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
   background: var(--mrf-ground);
   color: var(--mrf-pill);
-  overflow: hidden;
-  transition: background 450ms ease, color 450ms ease;
+  transition: background-color 200ms ease, color 200ms ease;
 }
-.mrf-cta-arrow svg { grid-area: 1 / 1; transition: transform 520ms cubic-bezier(.65, 0, .25, 1); }
-.mrf-cta-arrow .mrf-a2 { transform: translate(-150%, 150%); }
-.mrf-cta:hover, .mrf-cta:focus-visible { color: var(--mrf-text); }
-.mrf-cta:hover::before, .mrf-cta:focus-visible::before { transform: scale(1); }
-.mrf-cta:hover .mrf-cta-arrow, .mrf-cta:focus-visible .mrf-cta-arrow { background: var(--mrf-pill); color: var(--mrf-ground); }
-.mrf-cta:hover .mrf-a1, .mrf-cta:focus-visible .mrf-a1 { transform: translate(150%, -150%); }
-.mrf-cta:hover .mrf-a2, .mrf-cta:focus-visible .mrf-a2 { transform: none; }
+.mrf-cta:hover, .mrf-cta:focus-visible {
+  background: var(--mrf-ground);
+  color: var(--mrf-text);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.mrf-cta:hover .mrf-cta-arrow, .mrf-cta:focus-visible .mrf-cta-arrow {
+  background: var(--mrf-pill);
+  color: var(--mrf-ground);
+}
 .mrf-cta:focus-visible { outline: 2px solid var(--mrf-ink); outline-offset: 3px; }
 
 .mrf-body {
@@ -1122,24 +1107,21 @@ const MRF_CSS = `
   height: 28px;
   padding: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: 4px;
   background: var(--mrf-text);
   color: var(--mrf-ground);
   cursor: pointer;
   overflow: hidden;
-  transition: transform 450ms cubic-bezier(.2, .9, .3, 1.3), background 300ms ease;
+  transition: background-color 200ms ease, opacity 200ms ease;
 }
-.mrf-send:hover { transform: scale(1.1); }
+.mrf-send:hover { opacity: 0.85; }
 .mrf-send:focus-visible { outline: 2px solid var(--mrf-text); outline-offset: 3px; }
-.mrf-send > * { grid-area: 1 / 1; transition: transform 500ms cubic-bezier(.65, 0, .25, 1), opacity 300ms ease; }
-.mrf-send .mrf-a2 { transform: translate(-150%, 150%); }
-.mrf-send:hover .mrf-a1 { transform: translate(150%, -150%); }
-.mrf-send:hover .mrf-a2 { transform: none; }
+.mrf-send > * { grid-area: 1 / 1; transition: opacity 250ms ease; }
 .mrf-spin, .mrf-check { opacity: 0; transform: scale(0.4); }
 .mrf-spin { animation: mrf-rot 800ms linear infinite; }
 @keyframes mrf-rot { to { rotate: 360deg; } }
-.mrf-form[data-state="sending"] .mrf-a1, .mrf-form[data-state="sending"] .mrf-a2,
-.mrf-form[data-state="done"] .mrf-a1, .mrf-form[data-state="done"] .mrf-a2 { opacity: 0; transform: scale(0.4); }
+.mrf-form[data-state="sending"] .mrf-a1,
+.mrf-form[data-state="done"] .mrf-a1 { opacity: 0; transform: scale(0.4); }
 .mrf-form[data-state="sending"] .mrf-spin { opacity: 1; transform: none; }
 .mrf-form[data-state="done"] .mrf-check { opacity: 1; transform: none; }
 .mrf-form[data-state="done"] .mrf-send { cursor: default; transform: none; }
@@ -1715,23 +1697,6 @@ export default function MeadowRiseFooter({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])
 
-  // Draw the eye along to the pill: it leans toward the pointer a little.
-  const onCtaMove = (e: React.PointerEvent<HTMLAnchorElement>) => {
-    const el = e.currentTarget
-    const r = el.getBoundingClientRect()
-    const fx = e.clientX - r.left
-    const fy = e.clientY - r.top
-    el.style.setProperty("--fx", fx + "px")
-    el.style.setProperty("--fy", fy + "px")
-    if (!interactive || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
-    el.style.setProperty("--mx", ((fx / r.width - 0.5) * 10).toFixed(2) + "px")
-    el.style.setProperty("--my", ((fy / r.height - 0.5) * 8).toFixed(2) + "px")
-  }
-  const onCtaLeave = (e: React.PointerEvent<HTMLAnchorElement>) => {
-    e.currentTarget.style.setProperty("--mx", "0px")
-    e.currentTarget.style.setProperty("--my", "0px")
-  }
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (formState === "sending" || formState === "done") return
@@ -1819,11 +1784,10 @@ export default function MeadowRiseFooter({
         ) : null}
         {cta ? (
           <div className="mrf-cta-wrap mrf-r" style={{ "--d": 1300 } as React.CSSProperties}>
-            <a className="mrf-cta" href={cta.href || "#"} onPointerMove={onCtaMove} onPointerLeave={onCtaLeave}>
+            <a className="mrf-cta" href={cta.href || "#"} onClick={cta.onClick}>
               <span>{cta.label}</span>
               <span className="mrf-cta-arrow">
-                <Arrow className="mrf-a1" />
-                <Arrow className="mrf-a2" />
+                <Arrow />
               </span>
             </a>
           </div>
@@ -1886,7 +1850,6 @@ export default function MeadowRiseFooter({
                   />
                   <button className="mrf-send" type="submit" aria-label={formState === "done" ? "Subscribed" : "Subscribe"}>
                     <Arrow className="mrf-a1" />
-                    <Arrow className="mrf-a2" />
                     <svg className="mrf-spin" viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
                       <path d="M8 2.2a5.8 5.8 0 1 1-5.6 4.3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                     </svg>
@@ -1908,13 +1871,22 @@ export default function MeadowRiseFooter({
                     {col.title}
                   </h3>
                   <ul>
-                    {col.links.map((l, li) => (
-                      <li key={l.label + li} className="mrf-r" style={{ "--d": 1380 + ci * 90 + li * 55 } as React.CSSProperties}>
-                        <a className="mrf-link" href={l.href || "#"}>
-                          {l.label}
-                        </a>
-                      </li>
-                    ))}
+                    {col.links.map((l, li) => {
+                      const external = Boolean(l.href && l.href.startsWith('http'))
+                      return (
+                        <li key={l.label + li} className="mrf-r" style={{ "--d": 1380 + ci * 90 + li * 55 } as React.CSSProperties}>
+                          <a
+                            className="mrf-link"
+                            href={l.href || "#"}
+                            onClick={l.onClick}
+                            target={external ? "_blank" : undefined}
+                            rel={external ? "noreferrer" : undefined}
+                          >
+                            {l.label}
+                          </a>
+                        </li>
+                      )
+                    })}
                   </ul>
                 </div>
               ))}
@@ -1950,13 +1922,22 @@ export default function MeadowRiseFooter({
             </p>
             {legal.length ? (
               <ul className="mrf-legal mrf-r" style={{ "--d": 1800 } as React.CSSProperties}>
-                {legal.map((l, i) => (
-                  <li key={l.label + i}>
-                    <a className="mrf-link" href={l.href || "#"}>
-                      {l.label}
-                    </a>
-                  </li>
-                ))}
+                {legal.map((l, i) => {
+                  const external = Boolean(l.href && l.href.startsWith('http'))
+                  return (
+                    <li key={l.label + i}>
+                      <a
+                        className="mrf-link"
+                        href={l.href || "#"}
+                        onClick={l.onClick}
+                        target={external ? "_blank" : undefined}
+                        rel={external ? "noreferrer" : undefined}
+                      >
+                        {l.label}
+                      </a>
+                    </li>
+                  )
+                })}
               </ul>
             ) : null}
           </div>

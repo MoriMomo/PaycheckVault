@@ -6,9 +6,9 @@
   --bg-surface: #000000;
   --bg-surface-elevated: #000000;
   --reactive-blue: #2756FC;
-  --reactive-cyan: #62D0FF;
-  --reactive-purple: #CBB5FF;
-  --reactive-green: #00C853;
+  --reactive-cyan: #58A6FF;
+  --reactive-silver: #D4D4D8;
+  --reactive-green: #10B981;
 }
 
 html, body {
@@ -16,7 +16,7 @@ html, body {
   background: #000000 !important;
   background-image: none !important;
   color: #F5F5F7;
-  font-family: 'Inter', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   margin: 0;
   padding: 0;
 }
@@ -49,7 +49,7 @@ html, body {
   position: absolute;
   inset: 0;
   width: 45%;
-  background: #62D0FF;
+  background: #58A6FF;
   animation: streamBeam 1.2s infinite ease-in-out;
 }
 
@@ -66,18 +66,13 @@ input[type="range"]::-webkit-slider-thumb {
   width: 22px;
   height: 22px;
   border-radius: 9999px;
-  background: #62D0FF;
+  background: #58A6FF;
   border: 3px solid #000000;
   box-shadow: none;
   cursor: grab;
   transition: transform 150ms ease;
 }
 
-input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.1);
-}
-
 input[type="range"]::-webkit-slider-thumb:active {
   cursor: grabbing;
-  transform: scale(1.15);
 }

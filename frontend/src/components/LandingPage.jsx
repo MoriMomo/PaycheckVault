@@ -55,9 +55,9 @@ export default function LandingPage({
           {/* ========================================================== */}
           <div className="lg:col-span-7 space-y-6 lg:border-l lg:border-white/10 lg:pl-10">
             
-            {/* Monospace Interlude Tag */}
+            {/* Eyebrow Metadata Tag */}
             <div className="font-mono text-xs text-zinc-500 uppercase tracking-widest">
-              // INTERLUDE • OMNI VAULT
+              PROTOCOL ARCHITECTURE &bull; OMNI VAULT
             </div>
 
             {/* Product Name Display Header */}
@@ -79,7 +79,7 @@ export default function LandingPage({
                   align="left"
                   tileStyle="board"
                   tileColor="#000000"
-                  textColor="#62D0FF"
+                  textColor="#58A6FF"
                   glare={0}
                   depth={0}
                   tileRadius={6}
@@ -93,7 +93,7 @@ export default function LandingPage({
 
               {/* Monospace Subtitle Tag in Square Brackets */}
               <div className="font-mono text-xs sm:text-sm font-semibold tracking-wider text-zinc-400">
-                [ ON-CHAIN IF-THIS-THEN-THAT FOR SMART CONTRACTS ]
+                ON-CHAIN IF-THIS-THEN-THAT FOR SMART CONTRACTS
               </div>
             </div>
 
@@ -111,7 +111,7 @@ export default function LandingPage({
             <div className="pt-1 flex flex-wrap gap-3">
               <button
                 onClick={onLaunchApp}
-                className="px-6 py-2.5 rounded-full font-display font-bold text-xs sm:text-sm bg-[#2756FC] hover:bg-[#3260ff] text-white transition active:scale-95 flex items-center gap-2 cursor-pointer"
+                className="px-6 py-2.5 rounded-md font-display font-bold text-xs sm:text-sm bg-[#2756FC] hover:bg-[#3260ff] text-white transition-colors flex items-center gap-2 cursor-pointer"
               >
                 <span>Launch Vault App</span>
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -121,9 +121,9 @@ export default function LandingPage({
 
               <button
                 onClick={onTriggerDemo}
-                className="px-5 py-2.5 rounded-full font-display font-semibold text-xs sm:text-sm bg-black hover:bg-zinc-900 text-zinc-200 border border-white/15 transition active:scale-95 flex items-center gap-2 cursor-pointer"
+                className="px-5 py-2.5 rounded-md font-display font-semibold text-xs sm:text-sm bg-black hover:bg-zinc-900 text-zinc-200 border border-white/15 transition-colors flex items-center gap-2 cursor-pointer"
               >
-                <span className="w-2 h-2 rounded-full bg-[#00C853]" />
+                <span className="w-1.5 h-1.5 rounded-[1px] bg-[#10B981]" />
                 <span>Simulate Event Loop</span>
               </button>
             </div>
@@ -204,7 +204,7 @@ export default function LandingPage({
                     <span>MAINNET</span>
                     <span>↗</span>
                   </a>
-                  <span className="text-[10px] font-mono text-[#00C853] uppercase tracking-wider">
+                  <span className="text-[10px] font-mono text-[#10B981] uppercase tracking-wider">
                     Network Active
                   </span>
                 </div>
@@ -232,20 +232,20 @@ export default function LandingPage({
                 </div>
 
                 {/* PaycheckVault Protocol Telemetry */}
-                <div className="p-3 rounded-xl bg-black border border-white/10 grid grid-cols-3 gap-2 text-center font-mono">
+                <div className="p-3 rounded-md bg-black border border-white/10 grid grid-cols-3 gap-2 text-center font-mono">
                   <div>
                     <div className="text-[9px] uppercase text-zinc-500">Speed</div>
                     <div className="text-xs font-bold text-white mt-0.5">~1.2s</div>
                   </div>
                   <div>
                     <div className="text-[9px] uppercase text-zinc-500">Vault USDC</div>
-                    <div className="text-xs font-bold text-[#62D0FF] mt-0.5">
+                    <div className="text-xs font-bold text-[#58A6FF] mt-0.5">
                       ${vaultUsdc.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                     </div>
                   </div>
                   <div>
                     <div className="text-[9px] uppercase text-zinc-500">Bots</div>
-                    <div className="text-xs font-bold text-[#00C853] mt-0.5">0 Keepers</div>
+                    <div className="text-xs font-bold text-[#10B981] mt-0.5">0 Keepers</div>
                   </div>
                 </div>
               </div>
@@ -263,7 +263,7 @@ export default function LandingPage({
       <section id="how-it-works" className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
         <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
           <div>
-            <span className="text-[11px] font-mono uppercase tracking-widest text-[#62D0FF] font-semibold">
+            <span className="text-[11px] font-mono uppercase tracking-widest text-[#58A6FF] font-semibold">
               Cross-Chain Execution Pipeline
             </span>
             <h2 className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight mt-1">
@@ -275,28 +275,28 @@ export default function LandingPage({
           </div>
         </div>
 
-        <div className="relative rounded-2xl bg-black border border-white/12 p-6 sm:p-8">
+        <div className="relative rounded-lg bg-black border border-white/12 p-6 sm:p-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
             
             {/* Step 1: Origin (Sepolia) */}
             <div
-              className={`p-5 rounded-xl border transition-all duration-300 ${
+              className={`p-5 rounded-lg border transition-colors duration-200 ${
                 loopPhase === 'sepolia'
-                  ? 'bg-black border-[#62D0FF]'
+                  ? 'bg-black border-[#58A6FF]'
                   : 'bg-black border-white/10'
               }`}
             >
-              <div className="flex justify-between items-center text-xs font-mono text-zinc-400 mb-3">
-                <span className="px-2 py-0.5 rounded bg-white/10 text-white">1. Origin Chain</span>
-                <span>Sepolia • 11155111</span>
+              <div className="flex justify-between items-center gap-2 text-xs font-mono text-zinc-400 mb-3">
+                <span className="px-2 py-0.5 rounded-[3px] bg-white/10 text-white whitespace-nowrap shrink-0">1. Origin</span>
+                <span className="whitespace-nowrap">Sepolia &bull; 11155111</span>
               </div>
               <h3 className="font-display text-base font-bold text-white mb-1.5">
                 Salary Deposit Inflow
               </h3>
               <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-                Employer deposits USDC to recipient's wallet. An ERC-20 <code className="text-[#62D0FF]">Transfer(from, to, value)</code> event is emitted on Ethereum Sepolia.
+                Employer deposits USDC to recipient's wallet. An ERC-20 <code className="text-[#58A6FF]">Transfer(from, to, value)</code> event is emitted on Ethereum Sepolia.
               </p>
-              <div className="p-2.5 rounded-lg bg-black border border-white/10 font-mono text-[10px] text-zinc-300">
+              <div className="p-2.5 rounded-md bg-black border border-white/10 font-mono text-[10px] text-zinc-300">
                 <span className="text-zinc-500">Filter: </span>
                 <span>to == 0x1863...255a</span>
               </div>
@@ -304,53 +304,53 @@ export default function LandingPage({
 
             {/* Step 2: Reactive Brain (Lasna) */}
             <div
-              className={`p-5 rounded-xl border transition-all duration-300 ${
+              className={`p-5 rounded-lg border transition-colors duration-200 ${
                 loopPhase === 'lasna'
-                  ? 'bg-black border-[#62D0FF]'
+                  ? 'bg-black border-[#58A6FF]'
                   : 'bg-black border-white/10'
               }`}
             >
-              <div className="flex justify-between items-center text-xs font-mono text-zinc-400 mb-3">
-                <span className="px-2 py-0.5 rounded bg-black text-[#62D0FF] border border-[#62D0FF] font-semibold">
+              <div className="flex justify-between items-center gap-2 text-xs font-mono text-zinc-400 mb-3">
+                <span className="px-2 py-0.5 rounded-[3px] bg-black text-[#58A6FF] border border-[#58A6FF]/70 font-semibold whitespace-nowrap shrink-0">
                   2. Reactive Brain
                 </span>
-                <span>Lasna • 5318007</span>
+                <span className="whitespace-nowrap">Lasna &bull; 5318007</span>
               </div>
               <h3 className="font-display text-base font-bold text-white mb-1.5">
                 On-Chain Inversion of Control
               </h3>
               <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-                Reactive Network RVM ingests the event, evaluates <code className="text-[#CBB5FF]">react(LogRecord)</code>, applies the &ge; 10 USDC threshold, and dispatches a cross-chain callback.
+                Reactive Network RVM ingests the event, evaluates <code className="text-zinc-200">react(LogRecord)</code>, applies the &ge; 10 USDC threshold, and dispatches a cross-chain callback.
               </p>
-              <div className="p-2.5 rounded-lg bg-black border border-white/10 font-mono text-[10px] text-zinc-300">
+              <div className="p-2.5 rounded-md bg-black border border-white/10 font-mono text-[10px] text-zinc-300">
                 <span className="text-zinc-500">RSC: </span>
-                <span className="text-[#CBB5FF]">PaycheckReactive</span>
+                <span className="text-zinc-200">PaycheckReactive</span>
               </div>
             </div>
 
             {/* Step 3: Destination (Base Sepolia) */}
             <div
-              className={`p-5 rounded-xl border transition-all duration-300 ${
+              className={`p-5 rounded-lg border transition-colors duration-200 ${
                 loopPhase === 'base'
-                  ? 'bg-black border-[#00C853]'
+                  ? 'bg-black border-[#10B981]'
                   : 'bg-black border-white/10'
               }`}
             >
-              <div className="flex justify-between items-center text-xs font-mono text-zinc-400 mb-3">
-                <span className="px-2 py-0.5 rounded bg-black text-blue-300 border border-blue-500 font-semibold">
-                  3. Destination Chain
+              <div className="flex justify-between items-center gap-2 text-xs font-mono text-zinc-400 mb-3">
+                <span className="px-2 py-0.5 rounded-[3px] bg-black text-zinc-200 border border-[#2756FC]/70 font-semibold whitespace-nowrap shrink-0">
+                  3. Destination
                 </span>
-                <span>Base Sepolia • 84532</span>
+                <span className="whitespace-nowrap">Base &bull; 84532</span>
               </div>
               <h3 className="font-display text-base font-bold text-white mb-1.5">
                 Autonomous DCA Execution
               </h3>
               <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-                The vault receives the callback, verifies authorized caller, and swaps {savedPct}% USDC into WETH via MockDEX—funds remain liquid and auto-compounded.
+                The vault receives the callback, verifies authorized caller, and swaps {savedPct}% USDC into WETH via MockDEX; funds remain liquid and auto-compounded.
               </p>
-              <div className="p-2.5 rounded-lg bg-black border border-white/10 font-mono text-[10px] text-zinc-300">
+              <div className="p-2.5 rounded-md bg-black border border-white/10 font-mono text-[10px] text-zinc-300">
                 <span className="text-zinc-500">Vault: </span>
-                <span className="text-[#00C853]">0x68FE...0142</span>
+                <span className="text-[#10B981]">0x68FE...0142</span>
               </div>
             </div>
 
@@ -362,73 +362,69 @@ export default function LandingPage({
       {/* 3. 4-CARD BENTO GRID SHOWCASE (Pitch Black)                     */}
       {/* ============================================================== */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6">
-        <div className="border-t border-white/10 pt-8">
-          <span className="text-[11px] font-mono uppercase tracking-widest text-[#62D0FF] font-semibold">
-            Core Innovations
-          </span>
-          <h2 className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight mt-1">
-            Built for the 'Set It &amp; Forget It' Track
-          </h2>
+        <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+          <div>
+            <span className="text-[11px] font-mono uppercase tracking-widest text-[#58A6FF] font-semibold">
+              Core Innovations
+            </span>
+            <h2 className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight mt-1">
+              Built for Autonomous Settlement
+            </h2>
+          </div>
+          <span className="text-xs font-mono text-zinc-500">PROTOCOL SPECIFICATIONS &bull; V1</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          
-          <div className="bg-black border border-white/10 p-6 rounded-2xl space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-black border border-[#2756FC] flex items-center justify-center text-[#62D0FF]">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+        <div className="border-y border-white/10 divide-y divide-white/10">
+          {[
+            {
+              index: '01',
+              tag: 'INVERSION OF CONTROL',
+              title: 'Zero-Click Autonomous Execution',
+              desc: 'No Gelato, Chainlink Automation, or server-side cron jobs. The trigger originates directly from the Ethereum Sepolia block header and executes on Base via the Reactive relayer network.',
+              accent: 'text-[#58A6FF]',
+            },
+            {
+              index: '02',
+              tag: 'VM ISOLATION',
+              title: 'Dual-Environment State Isolation',
+              desc: 'Sepolia state stays on Sepolia. Lasna handles detection and authorization. Base Sepolia handles vault swaps. A vulnerability on one chain cannot compromise the others.',
+              accent: 'text-zinc-200',
+            },
+            {
+              index: '03',
+              tag: 'GAS GUARDRAIL',
+              title: 'Anti-Dust Filtering Threshold',
+              desc: 'The Reactive contract enforces a >= 10 USDC threshold. Phishing dust transfers and micro-transactions are silently filtered on Lasna without burning gas on Base Sepolia.',
+              accent: 'text-[#10B981]',
+            },
+            {
+              index: '04',
+              tag: 'ATOMIC EXECUTION',
+              title: 'Pre-Funded Vault Liquidity',
+              desc: 'The destination vault is pre-seeded with 5,000 USDC and 0.004 ETH for callback proxy gas. Swaps execute atomically on MockDEX at 1 USDC = 0.5 WETH instantly.',
+              accent: 'text-[#58A6FF]',
+            },
+          ].map((spec) => (
+            <div
+              key={spec.index}
+              className="py-5 sm:py-6 grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-8 items-baseline"
+            >
+              <div className="md:col-span-4 flex items-center gap-3">
+                <span className="font-mono text-xs text-zinc-500 tabular-nums">{spec.index}</span>
+                <span className={`font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border border-white/12 rounded-[3px] ${spec.accent}`}>
+                  {spec.tag}
+                </span>
+              </div>
+              <div className="md:col-span-8 space-y-1.5">
+                <h3 className="font-display text-base sm:text-lg font-bold text-white tracking-tight">
+                  {spec.title}
+                </h3>
+                <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                  {spec.desc}
+                </p>
+              </div>
             </div>
-            <h3 className="font-display text-lg font-bold text-white">
-              Zero-Click Autonomous Execution
-            </h3>
-            <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-              No Gelato, Chainlink Automation, or server-side cron jobs. The trigger originates directly from the Ethereum Sepolia block header and executes on Base via the Reactive relayer network.
-            </p>
-          </div>
-
-          <div className="bg-black border border-white/10 p-6 rounded-2xl space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-black border border-[#CBB5FF] flex items-center justify-center text-[#CBB5FF]">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            </div>
-            <h3 className="font-display text-lg font-bold text-white">
-              Dual-Environment VM Isolation
-            </h3>
-            <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-              Sepolia state stays on Sepolia. Lasna handles detection and authorization. Base Sepolia handles vault swaps. A vulnerability on one chain cannot compromise the others.
-            </p>
-          </div>
-
-          <div className="bg-black border border-white/10 p-6 rounded-2xl space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-black border border-[#00C853] flex items-center justify-center text-[#00C853]">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="font-display text-lg font-bold text-white">
-              Anti-Dust Filtering Threshold
-            </h3>
-            <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-              The Reactive contract enforces a &ge; 10 USDC threshold. Phishing dust transfers and micro-transactions are silently filtered on Lasna without burning gas on Base Sepolia.
-            </p>
-          </div>
-
-          <div className="bg-black border border-white/10 p-6 rounded-2xl space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-black border border-sky-400 flex items-center justify-center text-sky-400">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            </div>
-            <h3 className="font-display text-lg font-bold text-white">
-              Pre-Funded Vault Liquidity
-            </h3>
-            <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-              The destination vault is pre-seeded with 5,000 USDC and 0.004 ETH for callback proxy gas. Swaps execute atomically on MockDEX at 1 USDC = 0.5 WETH instantly.
-            </p>
-          </div>
-
+          ))}
         </div>
       </section>
 
@@ -438,15 +434,15 @@ export default function LandingPage({
       <section id="contracts" className="max-w-6xl mx-auto px-4 sm:px-6 space-y-4">
         <div className="border-t border-white/10 pt-8 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-mono uppercase tracking-widest text-[#62D0FF] font-semibold">
+            <span className="text-[11px] font-mono uppercase tracking-widest text-[#58A6FF] font-semibold">
               Live Verified Deployments
             </span>
             <h2 className="font-display text-xl sm:text-2xl font-bold text-white tracking-tight mt-0.5">
               Multi-Chain Smart Contract Registry
             </h2>
           </div>
-          <span className="text-xs font-mono text-[#00C853] flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#00C853]" />
+          <span className="text-xs font-mono text-[#10B981] flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-[1px] bg-[#10B981]" />
             Testnet Active
           </span>
         </div>
@@ -454,9 +450,9 @@ export default function LandingPage({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           
           {/* Sepolia Contract Card */}
-          <div className="bg-black border border-white/10 p-4 rounded-xl space-y-2">
+          <div className="bg-black border border-white/10 p-4 rounded-lg space-y-2">
             <div className="flex justify-between items-center text-xs font-mono">
-              <span className="text-[#CBB5FF] font-semibold">Sepolia (Origin)</span>
+              <span className="text-zinc-200 font-semibold">Sepolia (Origin)</span>
               <span className="text-zinc-500">ID: 11155111</span>
             </div>
             <div className="font-mono text-[11px] text-zinc-300 break-all bg-black p-2 rounded border border-white/10">
@@ -467,13 +463,13 @@ export default function LandingPage({
                 onClick={() => handleCopy('sepolia', CONFIG.sepolia.usdcAddress)}
                 className="text-zinc-400 hover:text-white transition font-mono text-[11px] cursor-pointer"
               >
-                {copiedKey === 'sepolia' ? 'Copied ✓' : 'Copy'}
+                {copiedKey === 'sepolia' ? 'Copied' : 'Copy'}
               </button>
               <a
                 href={`${CONFIG.sepolia.explorer}/address/${CONFIG.sepolia.usdcAddress}`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-[#62D0FF] hover:underline font-mono text-[11px]"
+                className="text-[#58A6FF] hover:underline font-mono text-[11px]"
               >
                 Etherscan ↗
               </a>
@@ -481,9 +477,9 @@ export default function LandingPage({
           </div>
 
           {/* Lasna RSC Card */}
-          <div className="bg-black border border-white/10 p-4 rounded-xl space-y-2">
+          <div className="bg-black border border-white/10 p-4 rounded-lg space-y-2">
             <div className="flex justify-between items-center text-xs font-mono">
-              <span className="text-[#62D0FF] font-semibold">Lasna (Reactive RSC)</span>
+              <span className="text-[#58A6FF] font-semibold">Lasna (Reactive RSC)</span>
               <span className="text-zinc-500">ID: 5318007</span>
             </div>
             <div className="font-mono text-[11px] text-zinc-300 break-all bg-black p-2 rounded border border-white/10">
@@ -494,13 +490,13 @@ export default function LandingPage({
                 onClick={() => handleCopy('lasna', CONFIG.lasna.reactiveAddress)}
                 className="text-zinc-400 hover:text-white transition font-mono text-[11px] cursor-pointer"
               >
-                {copiedKey === 'lasna' ? 'Copied ✓' : 'Copy'}
+                {copiedKey === 'lasna' ? 'Copied' : 'Copy'}
               </button>
               <a
                 href={`${CONFIG.lasna.explorer}/address/${CONFIG.lasna.reactiveAddress}`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-[#62D0FF] hover:underline font-mono text-[11px]"
+                className="text-[#58A6FF] hover:underline font-mono text-[11px]"
               >
                 ReactScan ↗
               </a>
@@ -508,7 +504,7 @@ export default function LandingPage({
           </div>
 
           {/* Base Sepolia Vault Card */}
-          <div className="bg-black border border-white/10 p-4 rounded-xl space-y-2">
+          <div className="bg-black border border-white/10 p-4 rounded-lg space-y-2">
             <div className="flex justify-between items-center text-xs font-mono">
               <span className="text-[#2756FC] font-semibold">Base Sepolia (Vault)</span>
               <span className="text-zinc-500">ID: 84532</span>
@@ -521,13 +517,13 @@ export default function LandingPage({
                 onClick={() => handleCopy('base', CONFIG.baseSepolia.vaultAddress)}
                 className="text-zinc-400 hover:text-white transition font-mono text-[11px] cursor-pointer"
               >
-                {copiedKey === 'base' ? 'Copied ✓' : 'Copy'}
+                {copiedKey === 'base' ? 'Copied' : 'Copy'}
               </button>
               <a
                 href={`${CONFIG.baseSepolia.explorer}/address/${CONFIG.baseSepolia.vaultAddress}`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-[#62D0FF] hover:underline font-mono text-[11px]"
+                className="text-[#58A6FF] hover:underline font-mono text-[11px]"
               >
                 BaseScan ↗
               </a>

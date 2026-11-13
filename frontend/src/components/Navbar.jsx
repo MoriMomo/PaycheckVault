@@ -48,7 +48,7 @@ export default function Navbar({
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }}
       className="flex items-center gap-2.5 cursor-pointer select-none group"
-      title="PaycheckVault — Home"
+      title="PaycheckVault Home"
     >
       <div className="h-6 w-6 shrink-0">
         <svg className="h-full w-full" viewBox="0 0 84 84" fill="none">
@@ -56,17 +56,17 @@ export default function Navbar({
             fillRule="evenodd"
             clipRule="evenodd"
             d="M42.0759 84C65.2719 84 84.0759 65.196 84.0759 42C84.0759 18.804 65.2719 0 42.0759 0C18.88 0 0.0759277 18.804 0.0759277 42C0.0759277 65.196 18.88 84 42.0759 84ZM42.076 73.5C59.473 73.5 73.576 59.397 73.576 42C73.576 24.603 59.473 10.5 42.076 10.5C24.679 10.5 10.576 24.603 10.576 42C10.576 59.397 24.679 73.5 42.076 73.5Z"
-            fill="#62D0FF"
+            fill="#58A6FF"
           />
           <path d="M18.4509 44.625L44.7009 18.375V39.375H65.7009L39.4509 65.625V44.625H18.4509Z" fill="white" />
         </svg>
       </div>
       <div className="flex flex-col">
-        <span className="font-display font-bold text-base tracking-tight text-white group-hover:text-[#62D0FF] transition leading-none">
+        <span className="font-display font-bold text-base tracking-tight text-white group-hover:text-[#58A6FF] transition leading-none">
           PaycheckVault
         </span>
         {!compact && (
-          <span className="mt-1 inline-block w-fit px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider bg-white/8 text-[#62D0FF] border border-white/12 leading-none">
+          <span className="mt-1 inline-block w-fit px-1.5 py-0.5 rounded-[3px] text-[9px] font-mono uppercase tracking-wider bg-white/8 text-[#58A6FF] border border-white/12 leading-none">
             Reactive Omni
           </span>
         )}
@@ -89,14 +89,14 @@ export default function Navbar({
               onNavigate('landing');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl font-mono text-xs transition cursor-pointer ${
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-md font-mono text-xs transition cursor-pointer ${
               activePage === 'landing'
                 ? 'bg-white/10 text-white border border-white/15'
                 : 'text-zinc-400 hover:text-white hover:bg-white/5 border border-transparent'
             }`}
           >
             <span>OVERVIEW</span>
-            {activePage === 'landing' && <span className="w-1.5 h-1.5 rounded-full bg-[#62D0FF]" />}
+            {activePage === 'landing' && <span className="w-1.5 h-1.5 rounded-[1px] bg-[#58A6FF]" />}
           </button>
           <button
             onClick={() => {
@@ -104,14 +104,14 @@ export default function Navbar({
               onNavigate('app');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl font-mono text-xs transition cursor-pointer ${
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-md font-mono text-xs transition cursor-pointer ${
               activePage === 'app'
                 ? 'bg-[#2756FC] text-white border border-[#2756FC]'
                 : 'text-zinc-400 hover:text-white hover:bg-white/5 border border-transparent'
             }`}
           >
             <span>VAULT APP</span>
-            <span className={`w-1.5 h-1.5 rounded-full ${activePage === 'app' ? 'bg-white' : 'bg-[#00C853]'}`} />
+            <span className={`w-1.5 h-1.5 rounded-[1px] ${activePage === 'app' ? 'bg-white' : 'bg-[#10B981]'}`} />
           </button>
         </div>
 
@@ -127,7 +127,7 @@ export default function Navbar({
               target={item.isExternal ? '_blank' : undefined}
               rel={item.isExternal ? 'noreferrer' : undefined}
               onClick={(e) => handleLinkClick(e, item)}
-              className="flex items-center justify-between px-3 py-2 rounded-xl font-mono text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition cursor-pointer group"
+              className="flex items-center justify-between px-3 py-2 rounded-md font-mono text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition cursor-pointer group"
             >
               <span>{item.label}</span>
               <span className="text-[10px] text-zinc-600 group-hover:text-zinc-300 transition">
@@ -141,22 +141,22 @@ export default function Navbar({
       {/* Bottom Controls: Network, Contracts Inspector, Wallet & App CTA */}
       <div className="p-4 border-t border-white/10 space-y-2.5 bg-black">
         {walletAddress && currentChainId === CONFIG.sepolia.chainId && (
-          <div className="flex items-center gap-2 text-[11px] font-mono px-3 py-1.5 rounded-xl bg-[#2756FC]/15 text-[#62D0FF] border border-[#2756FC]/40">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#62D0FF] shrink-0" />
+          <div className="flex items-center gap-2 text-[11px] font-mono px-3 py-1.5 rounded-md bg-black text-[#58A6FF] border border-[#2756FC]/60">
+            <span className="w-1.5 h-1.5 rounded-[1px] bg-[#58A6FF] shrink-0" />
             <span className="truncate">Sepolia (Origin)</span>
           </div>
         )}
 
         {walletAddress && currentChainId === CONFIG.baseSepolia.chainId && (
-          <div className="flex items-center gap-2 text-[11px] font-mono px-3 py-1.5 rounded-xl bg-blue-950/40 text-blue-300 border border-blue-700/50">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+          <div className="flex items-center gap-2 text-[11px] font-mono px-3 py-1.5 rounded-md bg-black text-zinc-200 border border-[#2756FC]/60">
+            <span className="w-1.5 h-1.5 rounded-[1px] bg-[#58A6FF] shrink-0" />
             <span className="truncate">Base Sepolia (Vault)</span>
           </div>
         )}
 
         <button
           onClick={() => setShowInspector(!showInspector)}
-          className="w-full text-xs font-mono text-zinc-400 hover:text-white transition px-3 py-2 rounded-xl border border-white/10 hover:bg-white/5 flex items-center justify-between cursor-pointer"
+          className="w-full text-xs font-mono text-zinc-400 hover:text-white transition px-3 py-2 rounded-md border border-white/10 hover:bg-white/5 flex items-center justify-between cursor-pointer"
         >
           <span>{showInspector ? 'Hide Contracts' : 'Contracts'}</span>
           <span className="text-[10px] text-zinc-500">{showInspector ? '×' : '3'}</span>
@@ -165,20 +165,20 @@ export default function Navbar({
         <button
           onClick={onConnectWallet}
           disabled={isConnecting}
-          className={`w-full px-3.5 py-2 rounded-xl font-semibold text-xs transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer ${
+          className={`w-full px-3.5 py-2 rounded-md font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer ${
             walletAddress
-              ? 'bg-black text-[#00C853] border border-[#00C853] hover:bg-zinc-950'
+              ? 'bg-black text-[#10B981] border border-[#10B981]/60 hover:bg-zinc-950'
               : 'bg-white hover:bg-zinc-200 text-black font-bold'
           }`}
         >
           {isConnecting ? (
             <>
-              <span className="w-2 h-2 rounded-full bg-black animate-ping" />
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-[#58A6FF]" />
               <span>Connecting...</span>
             </>
           ) : walletAddress ? (
             <>
-              <span className="w-2 h-2 rounded-full bg-[#00C853]" />
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-[#10B981]" />
               <span className="font-mono">{`${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`}</span>
             </>
           ) : (
@@ -193,7 +193,7 @@ export default function Navbar({
               onNavigate('app');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className="w-full py-2 rounded-xl bg-[#2756FC] hover:bg-[#3260ff] text-white font-sans font-semibold text-xs text-center transition cursor-pointer flex items-center justify-center gap-1.5"
+            className="w-full py-2 rounded-md bg-[#2756FC] hover:bg-[#3260ff] text-white font-sans font-semibold text-xs text-center transition cursor-pointer flex items-center justify-center gap-1.5"
           >
             <span>Launch Vault App</span>
             <span>→</span>
@@ -222,7 +222,7 @@ export default function Navbar({
             {activePage === 'landing' ? (
               <button
                 onClick={() => onNavigate('app')}
-                className="px-3 py-1.5 rounded-full bg-[#2756FC] hover:bg-[#3260ff] text-white font-sans font-medium text-xs transition cursor-pointer"
+                className="px-3 py-1.5 rounded-md bg-[#2756FC] hover:bg-[#3260ff] text-white font-sans font-medium text-xs transition cursor-pointer"
               >
                 Launch App →
               </button>
@@ -230,9 +230,9 @@ export default function Navbar({
               <button
                 onClick={onConnectWallet}
                 disabled={isConnecting}
-                className={`px-3 py-1.5 rounded-full font-semibold text-xs transition cursor-pointer ${
+                className={`px-3 py-1.5 rounded-md font-semibold text-xs transition cursor-pointer ${
                   walletAddress
-                    ? 'bg-black text-[#00C853] border border-[#00C853]'
+                    ? 'bg-black text-[#10B981] border border-[#10B981]/60'
                     : 'bg-white text-black font-bold'
                 }`}
               >
@@ -287,9 +287,9 @@ export default function Navbar({
               </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 font-mono">
-              <div className="bg-black border border-white/10 p-3.5 rounded-xl space-y-1.5">
+              <div className="bg-black border border-white/10 p-3.5 rounded-lg space-y-1.5">
                 <div className="flex justify-between items-center text-[11px] text-zinc-400">
-                  <span className="font-semibold text-[#CBB5FF]">1. Sepolia (Origin USDC)</span>
+                  <span className="font-semibold text-zinc-200">1. Sepolia (Origin USDC)</span>
                   <span>11155111</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
@@ -298,16 +298,16 @@ export default function Navbar({
                     href={`${CONFIG.sepolia.explorer}/address/${CONFIG.sepolia.usdcAddress}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[#62D0FF] hover:underline text-[10px] shrink-0"
+                    className="text-[#58A6FF] hover:underline text-[10px] shrink-0"
                   >
                     Etherscan ↗
                   </a>
                 </div>
               </div>
 
-              <div className="bg-black border border-white/10 p-3.5 rounded-xl space-y-1.5">
+              <div className="bg-black border border-white/10 p-3.5 rounded-lg space-y-1.5">
                 <div className="flex justify-between items-center text-[11px] text-zinc-400">
-                  <span className="font-semibold text-[#62D0FF]">2. Lasna (Reactive RSC)</span>
+                  <span className="font-semibold text-[#58A6FF]">2. Lasna (Reactive RSC)</span>
                   <span>5318007</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
@@ -316,14 +316,14 @@ export default function Navbar({
                     href={`${CONFIG.lasna.explorer}/address/${CONFIG.lasna.reactiveAddress}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[#62D0FF] hover:underline text-[10px] shrink-0"
+                    className="text-[#58A6FF] hover:underline text-[10px] shrink-0"
                   >
                     ReactScan ↗
                   </a>
                 </div>
               </div>
 
-              <div className="bg-black border border-white/10 p-3.5 rounded-xl space-y-1.5">
+              <div className="bg-black border border-white/10 p-3.5 rounded-lg space-y-1.5">
                 <div className="flex justify-between items-center text-[11px] text-zinc-400">
                   <span className="font-semibold text-[#2756FC]">3. Base Sepolia (Vault)</span>
                   <span>84532</span>
@@ -334,7 +334,7 @@ export default function Navbar({
                     href={`${CONFIG.baseSepolia.explorer}/address/${CONFIG.baseSepolia.vaultAddress}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[#62D0FF] hover:underline text-[10px] shrink-0"
+                    className="text-[#58A6FF] hover:underline text-[10px] shrink-0"
                   >
                     BaseScan ↗
                   </a>

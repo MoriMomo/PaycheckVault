@@ -62,6 +62,7 @@ export default function App() {
   const [loopPhase, setLoopPhase] = useState('idle');
   const [activeTxHash, setActiveTxHash] = useState(null);
   const [toast, setToast] = useState(null);
+  const [legalModal, setLegalModal] = useState(null);
 
   // Activity Feed
   const [activities, setActivities] = useState([
@@ -417,7 +418,7 @@ export default function App() {
         originTx: `0x${randHex()}...${randHex()}`,
         lasnaSignal: 'Dust Ignored (< $10)',
         destSwap: 'Callback Suppressed (Gas Protected)',
-        destTx: '—',
+        destTx: '-',
         status: 'filtered',
       },
       ...prev.slice(0, 4),
@@ -441,15 +442,15 @@ export default function App() {
         <div
           role="status"
           aria-live="polite"
-          className={`fixed bottom-6 right-6 z-50 max-w-sm p-4 rounded-2xl border transition-all flex items-start gap-3 ${
+          className={`fixed bottom-6 right-6 z-50 max-w-sm p-4 rounded-lg border transition-colors flex items-start gap-3 ${
             toast.type === 'warn'
               ? 'bg-black border-amber-500 text-amber-100'
-              : 'bg-black border-[#62D0FF] text-white'
+              : 'bg-black border-[#58A6FF] text-white'
           }`}
         >
           <span
-            className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
-              toast.type === 'warn' ? 'bg-amber-400' : 'bg-[#00C853] animate-ping'
+            className={`mt-1.5 w-2 h-2 rounded-[1px] shrink-0 ${
+              toast.type === 'warn' ? 'bg-amber-400' : 'bg-[#10B981]'
             }`}
           />
           <div className="text-xs space-y-0.5">
@@ -515,7 +516,12 @@ export default function App() {
           subheading="Recipient-side autonomous DCA from Ethereum Sepolia to Base Sepolia powered by Reactive Network."
           cta={{
             label: "Launch Vault App",
-            href: "#",
+            href: "#vault-app",
+            onClick: (e) => {
+              e.preventDefault();
+              setActivePage('app');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            },
           }}
           tagline="The first recipient-side autonomous smart vault built for DoraHacks Omni Buildathon."
           newsletter={true}
@@ -535,7 +541,7 @@ export default function App() {
             ground: '#000000',
             ink: '#FFFFFF',
             muted: '#888888',
-            accent: '#62D0FF',
+            accent: '#58A6FF',
             button: {
               bg: '#2756FC',
               text: '#FFFFFF',
@@ -571,13 +577,108 @@ export default function App() {
           ]}
           copyright="© 2026 PaycheckVault • DoraHacks × Reactive Network Omni Buildathon."
           legal={[
-            { label: "MIT License", href: "#" },
+            { label: "Terms of Service", href: "#terms", onClick: (e) => { e.preventDefault(); setLegalModal('terms'); } },
+            { label: "Privacy Policy", href: "#privacy", onClick: (e) => { e.preventDefault(); setLegalModal('privacy'); } },
+            { label: "MIT License", href: "#license", onClick: (e) => { e.preventDefault(); setLegalModal('license'); } },
             { label: "Reactive Lasna Testnet", href: "https://lasna.reactivescan.net" },
             { label: "Base Sepolia Testnet", href: "https://sepolia.basescan.org" },
           ]}
         />
       </div>
       </div>
+
+      {/* Legal & Protocol Disclosure Modal (Terms of Service, Privacy Policy, MIT License) */}
+      {legalModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="legal-modal-title"
+          onClick={() => setLegalModal(null)}
+        >
+          <div
+            className="w-full max-w-lg bg-black border border-white/15 rounded-lg p-6 space-y-4 text-left"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-3">
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-[#58A6FF]">
+                  Protocol Disclosure
+                </div>
+                <h2 id="legal-modal-title" className="font-display text-lg font-bold text-white mt-0.5">
+                  {legalModal === 'terms'
+                    ? 'Terms of Service'
+                    : legalModal === 'privacy'
+                    ? 'Privacy Policy'
+                    : 'MIT License'}
+                </h2>
+              </div>
+              <button
+                onClick={() => setLegalModal(null)}
+                className="px-2.5 py-1 rounded-md border border-white/12 text-xs font-mono text-zinc-400 hover:text-white hover:border-white/25 transition-colors cursor-pointer"
+                aria-label="Close disclosure modal"
+              >
+                Close
+              </button>
+            </div>
+
+            {legalModal === 'terms' && (
+              <div className="space-y-3 text-xs text-zinc-300 leading-relaxed">
+                <p>
+                  PaycheckVault is an experimental open-source reactive smart contract prototype deployed on Ethereum Sepolia, Reactive Lasna Testnet, and Base Sepolia Testnet.
+                </p>
+                <p>
+                  All cross-chain event subscriptions, anti-dust thresholds (&ge; 10 USDC), and WETH swap dispatches operate autonomously via public on-chain transactions. Do not send mainnet funds to testnet contract addresses.
+                </p>
+                <p className="text-zinc-400">
+                  By connecting a Web3 wallet, you acknowledge sole responsibility for signing transactions, paying network gas fees, and verifying testnet contract addresses before execution.
+                </p>
+              </div>
+            )}
+
+            {legalModal === 'privacy' && (
+              <div className="space-y-3 text-xs text-zinc-300 leading-relaxed">
+                <p>
+                  PaycheckVault does not collect, store, or sell personal telemetry, IP logs, cookies, or off-chain user profiles.
+                </p>
+                <p>
+                  Wallet addresses connected via MetaMask or injected EIP-1193 providers are read strictly in client memory to query public RPC endpoints (`ethereum-sepolia-rpc.publicnode.com`, `lasna-rpc.rnk.dev`, `sepolia.base.org`).
+                </p>
+                <p className="text-zinc-400">
+                  All ERC-20 transfers, allocation policies, and callback receipts recorded by smart contracts are inherently public on their respective blockchain ledgers.
+                </p>
+              </div>
+            )}
+
+            {legalModal === 'license' && (
+              <div className="space-y-3 text-xs text-zinc-300 leading-relaxed font-mono">
+                <p>Copyright (c) 2026 PaycheckVault Contributors</p>
+                <p className="font-sans text-zinc-400">
+                  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated smart contract files, to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, subject to standard MIT terms.
+                </p>
+              </div>
+            )}
+
+            <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-500">
+              <span>PaycheckVault &bull; Reactive Lasna / Base Sepolia</span>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setLegalModal('terms')}
+                  className={`cursor-pointer ${legalModal === 'terms' ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
+                >
+                  Terms
+                </button>
+                <button
+                  onClick={() => setLegalModal('privacy')}
+                  className={`cursor-pointer ${legalModal === 'privacy' ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
+                >
+                  Privacy
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
