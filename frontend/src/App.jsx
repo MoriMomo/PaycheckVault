@@ -470,8 +470,10 @@ export default function App() {
         onSwitchNetwork={switchNetwork}
       />
 
-      {/* Main Content Container */}
-      <main className="max-w-6xl w-full mx-auto px-6 pt-20 sm:pt-24 pb-12 flex-1">
+      {/* Main Content + Footer Wrapper (offset for fixed left sidebar on desktop) */}
+      <div className="lg:pl-64 flex-1 flex flex-col min-w-0">
+        {/* Main Content Container */}
+        <main className="max-w-6xl w-full mx-auto px-6 pt-20 lg:pt-10 pb-12 flex-1">
         {activePage === 'landing' ? (
           <LandingPage
             onLaunchApp={() => setActivePage('app')}
@@ -574,6 +576,7 @@ export default function App() {
             { label: "Base Sepolia Testnet", href: "https://sepolia.basescan.org" },
           ]}
         />
+      </div>
       </div>
 
     </div>
