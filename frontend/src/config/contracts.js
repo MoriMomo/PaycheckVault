@@ -23,9 +23,12 @@ export const CONFIG = {
     explorer: 'https://sepolia.basescan.org',
     vaultAddress: '0x68FE8Ff67a3bF8bC3AdC78b4282bf79E6cbD0142',
     usdcAddress: '0xe18f4DF3B4Faa2D7F49b3F1581c04427a0Be9223',
+    sUsdcAddress: null,
     wethAddress: '0x4f93F4E22F90F1F66C4E56dB10D8a2990035A09e',
     dexAddress: '0xC56bffDC6d87222128e60D617221AeC584e9F643',
   },
+  inflowAsset: 'WETH',
+  ethUsdRate: 2500,
   deployerRvmId: '0x18634B5266369a482836328b8954E67918e5255a',
 };
 
@@ -38,7 +41,14 @@ export const ERC20_ABI = [
 export const VAULT_ABI = [
   'function owner() view returns (address)',
   'function allocationBps() view returns (uint256)',
+  'function stableBps() view returns (uint256)',
+  'function yieldBps() view returns (uint256)',
+  'function maxSingleAllocation() view returns (uint256)',
+  'function minStableOutPerInput() view returns (uint256)',
+  'function setBuckets(uint256 _stableBps, uint256 _yieldBps) external',
+  'function setGuardrails(uint256 _maxSingleAllocation, uint256 _minStableOutPerInput) external',
   'function setConfig(address _dexRouter, address _inputToken, address _targetToken, uint256 _allocationBps) external',
   'event PaycheckAllocated(address indexed caller, uint256 amountIn, uint256 amountOut, uint256 timestamp)',
+  'event MultiBucketAllocated(address indexed caller, uint256 effectiveInflow, uint256 stableOut, uint256 yieldOut, uint256 retainedIn, uint256 timestamp)',
 ];
 

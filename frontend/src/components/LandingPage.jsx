@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
 import { CONFIG } from '../config/contracts';
 import SplitFlapText from './ui/SplitFlapText';
-import CursorGrid from './ui/CursorGrid';
+import MicroSlats from './ui/MicroSlats';
 
 export default function LandingPage({
   onLaunchApp,
   onTriggerDemo,
   vaultUsdc,
+  vaultYieldUsdc = 0,
   vaultWeth,
-  savedPct,
+  savedStablePct = 50,
+  savedYieldPct = 30,
   loopPhase,
 }) {
   const [copiedKey, setCopiedKey] = useState(null);
+  const savedKeepPct = Math.max(0, 100 - savedStablePct - savedYieldPct);
+  const totalRunwayStables = vaultUsdc + vaultYieldUsdc;
 
   const handleCopy = (key, text) => {
     navigator.clipboard?.writeText(text);
@@ -29,23 +33,26 @@ export default function LandingPage({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           
           {/* ========================================================== */}
-          {/* LEFT COLUMN: Seamless <CursorGrid /> Interactive Canvas    */}
+          {/* LEFT COLUMN: Seamless <MicroSlats /> Interactive Canvas    */}
           {/* ========================================================== */}
           <div className="lg:col-span-5">
             <div className="relative w-full h-[380px] sm:h-[460px] lg:h-[620px] bg-black overflow-hidden">
-              <CursorGrid
-                cellSize={48}
-                color="#ffffff"
-                highlight="area"
-                gridStyle="lines"
-                radius={140}
-                holdTime={400}
-                fadeDuration={800}
-                fillOpacity={0.06}
-                gridOpacity={0.08}
-                spotlight={0.6}
-                edgeFade={0.32}
-                clickPulse
+              <MicroSlats
+                preset="swell"
+                color="#2756FC"
+                glintColor="#58A6FF"
+                backgroundColor="#000000"
+                slatWidth={10}
+                slatHeight={25}
+                gap={3}
+                roundness={0.75}
+                interactive
+                cursorStrength={1}
+                cursorSize={40}
+                swirl={0}
+                trail={1.4}
+                lean={0}
+                intro
               />
             </div>
           </div>
@@ -69,7 +76,7 @@ export default function LandingPage({
               {/* REACT BITS: SplitFlapText Mechanical Departure Board */}
               <div className="py-1 overflow-x-auto">
                 <SplitFlapText
-                  words={['PAYCHECKVAULT', 'CROSS-CHAIN', 'AUTO-INVEST', 'ZERO-KEEPERS', 'SIGNAL-LIVE']}
+                  words={['PAYCHECKVAULT', 'STABLE-SHIELD', 'MULTI-BUCKET', 'ZERO-KEEPERS', 'SIGNAL-LIVE']}
                   flipDuration={0.10}
                   stagger={0.05}
                   cycleDelay={2200}
@@ -93,7 +100,7 @@ export default function LandingPage({
 
               {/* Monospace Subtitle Tag in Square Brackets */}
               <div className="font-mono text-xs sm:text-sm font-semibold tracking-wider text-zinc-400">
-                ON-CHAIN IF-THIS-THEN-THAT FOR SMART CONTRACTS
+                AUTONOMOUS CROSS-CHAIN STABLECOIN RUNWAY &amp; GUARDRAILS
               </div>
             </div>
 
@@ -103,7 +110,7 @@ export default function LandingPage({
                 Smart contracts need to react across chains. Today that means off-chain bots, custom infrastructure, and constant maintenance.
               </p>
               <p className="text-zinc-300">
-                <strong className="text-white">PaycheckVault</strong> replaces all of it with a single on-chain automation layer: the moment USDC enters your wallet on Ethereum Sepolia, Reactive Lasna detects the event and executes auto-DCA into WETH on Base Sepolia.
+                <strong className="text-white">PaycheckVault</strong> replaces all of it with a single cross-chain treasury layer: when volatile WETH enters your wallet on Ethereum Sepolia, Reactive Lasna enforces dust and cooldown guardrails and splits reserves into USDC, sUSDC yield, and operating WETH on Base Sepolia.
               </p>
             </div>
 
@@ -238,14 +245,16 @@ export default function LandingPage({
                     <div className="text-xs font-bold text-white mt-0.5">~1.2s</div>
                   </div>
                   <div>
-                    <div className="text-[9px] uppercase text-zinc-500">Vault USDC</div>
-                    <div className="text-xs font-bold text-[#58A6FF] mt-0.5">
-                      ${vaultUsdc.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    <div className="text-[9px] uppercase text-zinc-500">Stable Runway</div>
+                    <div className="text-xs font-bold text-[#10B981] mt-0.5">
+                      ${totalRunwayStables.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                     </div>
                   </div>
                   <div>
-                    <div className="text-[9px] uppercase text-zinc-500">Bots</div>
-                    <div className="text-xs font-bold text-[#10B981] mt-0.5">0 Keepers</div>
+                    <div className="text-[9px] uppercase text-zinc-500">Operating</div>
+                    <div className="text-xs font-bold text-[#58A6FF] mt-0.5">
+                      {vaultWeth.toFixed(2)} WETH
+                    </div>
                   </div>
                 </div>
               </div>
@@ -291,10 +300,10 @@ export default function LandingPage({
                 <span className="whitespace-nowrap">Sepolia &bull; 11155111</span>
               </div>
               <h3 className="font-display text-base font-bold text-white mb-1.5">
-                Salary Deposit Inflow
+                Volatile WETH Inflow
               </h3>
               <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-                Employer deposits USDC to recipient's wallet. An ERC-20 <code className="text-[#58A6FF]">Transfer(from, to, value)</code> event is emitted on Ethereum Sepolia.
+                Client or protocol streams volatile WETH to recipient's wallet. An ERC-20 <code className="text-[#58A6FF]">Transfer(from, to, value)</code> event fires on Ethereum Sepolia.
               </p>
               <div className="p-2.5 rounded-md bg-black border border-white/10 font-mono text-[10px] text-zinc-300">
                 <span className="text-zinc-500">Filter: </span>
@@ -317,10 +326,10 @@ export default function LandingPage({
                 <span className="whitespace-nowrap">Lasna &bull; 5318007</span>
               </div>
               <h3 className="font-display text-base font-bold text-white mb-1.5">
-                On-Chain Inversion of Control
+                Dust + Cooldown Guardrails
               </h3>
               <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-                Reactive Network RVM ingests the event, evaluates <code className="text-zinc-200">react(LogRecord)</code>, applies the &ge; 10 USDC threshold, and dispatches a cross-chain callback.
+                Reactive RVM evaluates <code className="text-zinc-200">react(LogRecord)</code>, enforces &ge; 0.01 WETH dust floor and 30s cooldown, and dispatches a cross-chain callback.
               </p>
               <div className="p-2.5 rounded-md bg-black border border-white/10 font-mono text-[10px] text-zinc-300">
                 <span className="text-zinc-500">RSC: </span>
@@ -343,10 +352,10 @@ export default function LandingPage({
                 <span className="whitespace-nowrap">Base &bull; 84532</span>
               </div>
               <h3 className="font-display text-base font-bold text-white mb-1.5">
-                Autonomous DCA Execution
+                3-Bucket Stablecoin Reserve
               </h3>
               <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-                The vault receives the callback, verifies authorized caller, and swaps {savedPct}% USDC into WETH via MockDEX; funds remain liquid and auto-compounded.
+                Vault enforces cap and slippage limits, then splits inflows across {savedStablePct}% USDC Reserve, {savedYieldPct}% sUSDC Yield, and {savedKeepPct}% Retained WETH.
               </p>
               <div className="p-2.5 rounded-md bg-black border border-white/10 font-mono text-[10px] text-zinc-300">
                 <span className="text-zinc-500">Vault: </span>
@@ -371,37 +380,37 @@ export default function LandingPage({
               Built for Autonomous Settlement
             </h2>
           </div>
-          <span className="text-xs font-mono text-zinc-500">PROTOCOL SPECIFICATIONS &bull; V1</span>
+          <span className="text-xs font-mono text-zinc-500">PROTOCOL SPECIFICATIONS &bull; V2</span>
         </div>
 
         <div className="border-y border-white/10 divide-y divide-white/10">
           {[
             {
               index: '01',
-              tag: 'INVERSION OF CONTROL',
-              title: 'Zero-Click Autonomous Execution',
-              desc: 'No Gelato, Chainlink Automation, or server-side cron jobs. The trigger originates directly from the Ethereum Sepolia block header and executes on Base via the Reactive relayer network.',
+              tag: 'MULTI-BUCKET SPLIT',
+              title: '3-Way Stablecoin Treasury Reserve',
+              desc: 'Every Sepolia inflow triggers an automated Base Sepolia split across Core USDC Reserve (50% tax and runway), sUSDC Yield Vault (30% savings), and liquid operating WETH (20%).',
               accent: 'text-[#58A6FF]',
             },
             {
               index: '02',
-              tag: 'VM ISOLATION',
-              title: 'Dual-Environment State Isolation',
-              desc: 'Sepolia state stays on Sepolia. Lasna handles detection and authorization. Base Sepolia handles vault swaps. A vulnerability on one chain cannot compromise the others.',
+              tag: 'LASNA GUARDRAILS',
+              title: 'Dust Floor & Cooldown Rate-Limiter',
+              desc: 'PaycheckReactive filters spam below 0.01 WETH and rate-limits rapid repeat transfers inside a configurable cooldown window, emitting InflowSuppressed while protecting relayer gas.',
               accent: 'text-zinc-200',
             },
             {
               index: '03',
-              tag: 'GAS GUARDRAIL',
-              title: 'Anti-Dust Filtering Threshold',
-              desc: 'The Reactive contract enforces a >= 10 USDC threshold. Phishing dust transfers and micro-transactions are silently filtered on Lasna without burning gas on Base Sepolia.',
+              tag: 'BASE SAFETY FLOOR',
+              title: 'Per-Callback Cap & Slippage Shield',
+              desc: 'PaycheckVault enforces maxSingleAllocation circuit breakers and minStableOutPerInput output floors atomically before executing any stablecoin conversion on Base Sepolia.',
               accent: 'text-[#10B981]',
             },
             {
               index: '04',
-              tag: 'ATOMIC EXECUTION',
-              title: 'Pre-Funded Vault Liquidity',
-              desc: 'The destination vault is pre-seeded with 5,000 USDC and 0.004 ETH for callback proxy gas. Swaps execute atomically on MockDEX at 1 USDC = 0.5 WETH instantly.',
+              tag: 'ZERO-KEEPER CUSTODY',
+              title: 'Verified RVM-Only Settlement',
+              desc: 'No Gelato, Chainlink Automation, or off-chain cron jobs. Dual authorizedSenderOnly and rvmIdOnly gates restrict execution to your ReactVM identity with owner-only withdraw() control.',
               accent: 'text-[#58A6FF]',
             },
           ].map((spec) => (

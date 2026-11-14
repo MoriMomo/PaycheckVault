@@ -46,17 +46,26 @@ export default function App() {
   const [isConnecting, setIsConnecting] = useState(false);
 
   // Live On-Chain Balances & Liveness Tracking
-  const [vaultUsdc, setVaultUsdc] = useState(5000.0);
-  const [vaultWeth, setVaultWeth] = useState(0.0);
-  const [userSepoliaUsdc, setUserSepoliaUsdc] = useState(1000000.0);
+  const [vaultUsdc, setVaultUsdc] = useState(2500.0);
+  const [vaultYieldUsdc, setVaultYieldUsdc] = useState(1500.0);
+  const [vaultWeth, setVaultWeth] = useState(4.0);
+  const [userSepoliaWeth, setUserSepoliaWeth] = useState(10.0);
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(Date.now());
   const [secondsAgo, setSecondsAgo] = useState(0);
 
-  // Policy Settings
-  const [allocationPct, setAllocationPct] = useState(50);
-  const [savedPct, setSavedPct] = useState(50);
+  // Multi-Bucket Policy Settings (Total <= 100%, remainder kept as Operating WETH)
+  const [stablePct, setStablePct] = useState(50);
+  const [yieldPct, setYieldPct] = useState(30);
+  const [savedStablePct, setSavedStablePct] = useState(50);
+  const [savedYieldPct, setSavedYieldPct] = useState(30);
   const [isUpdatingPolicy, setIsUpdatingPolicy] = useState(false);
+
+  // On-Chain Guardrails State
+  const [minThresholdWeth] = useState(0.01);
+  const [cooldownSecs] = useState(30);
+  const [maxCapWeth, setMaxCapWeth] = useState(5.0);
+  const [slippageFloorUsd, setSlippageFloorUsd] = useState(2000);
 
   // Signal Flow Phase: 'idle' | 'sepolia' | 'lasna' | 'base' | 'blocked'
   const [loopPhase, setLoopPhase] = useState('idle');
@@ -69,16 +78,17 @@ export default function App() {
     {
       id: 1,
       time: 'Ready',
-      inflow: '+500.00 USDC',
+      inflow: '+1.00 WETH ($2,500)',
       originTx: '0x9dad...3674',
-      lasnaSignal: 'Lasna Active (≥ $10)',
-      destSwap: 'Swapped 250 USDC → 125.00 WETH (+250 USDC liquid)',
+      lasnaSignal: 'Guardrails Passed (≥ 0.01 WETH)',
+      destSwap: '+1,250 USDC Reserve • +750 sUSDC Yield • +0.20 WETH Kept',
       destTx: '0x68fe...0142',
       status: 'success',
     },
   ]);
 
   const animatedUSDC = useAnimatedNumber(vaultUsdc);
+  const animatedYieldUSDC = useAnimatedNumber(vaultYieldUsdc);
   const animatedWETH = useAnimatedNumber(vaultWeth);
 
   const showToastMsg = (title, subtitle, type = 'success') => {
@@ -91,26 +101,39 @@ export default function App() {
     setIsLoadingBalances(true);
     try {
       const sepProvider = new ethers.JsonRpcProvider(CONFIG.sepolia.rpcUrl);
-      const sepUsdc = new ethers.Contract(CONFIG.sepolia.usdcAddress, ERC20_ABI, sepProvider);
+      const sepToken = new ethers.Contract(CONFIG.sepolia.usdcAddress, ERC20_ABI, sepProvider);
       const targetUser = userAddr || walletAddress || CONFIG.deployerRvmId;
-      const sepBal = await sepUsdc.balanceOf(targetUser);
-      setUserSepoliaUsdc(Number(ethers.formatEther(sepBal)));
+      const sepBal = await sepToken.balanceOf(targetUser);
+      setUserSepoliaWeth(Number(ethers.formatEther(sepBal)));
 
       const baseProvider = new ethers.JsonRpcProvider(CONFIG.baseSepolia.rpcUrl);
       const baseUsdc = new ethers.Contract(CONFIG.baseSepolia.usdcAddress, ERC20_ABI, baseProvider);
       const baseWeth = new ethers.Contract(CONFIG.baseSepolia.wethAddress, ERC20_ABI, baseProvider);
       const vaultContract = new ethers.Contract(CONFIG.baseSepolia.vaultAddress, VAULT_ABI, baseProvider);
 
-      const [bUsdcBal, bWethBal, onChainBps] = await Promise.all([
+      const yieldPromise = CONFIG.baseSepolia.sUsdcAddress
+        ? new ethers.Contract(CONFIG.baseSepolia.sUsdcAddress, ERC20_ABI, baseProvider)
+            .balanceOf(CONFIG.baseSepolia.vaultAddress)
+            .catch(() => null)
+        : Promise.resolve(null);
+
+      const [bUsdcBal, bYieldBal, bWethBal, onChainStableBps, onChainYieldBps] = await Promise.all([
         baseUsdc.balanceOf(CONFIG.baseSepolia.vaultAddress),
+        yieldPromise,
         baseWeth.balanceOf(CONFIG.baseSepolia.vaultAddress),
-        vaultContract.allocationBps().catch(() => 5000n),
+        vaultContract.stableBps().catch(() => null),
+        vaultContract.yieldBps().catch(() => null),
       ]);
 
       setVaultUsdc(Number(ethers.formatEther(bUsdcBal)));
+      if (bYieldBal !== null) {
+        setVaultYieldUsdc(Number(ethers.formatEther(bYieldBal)));
+      }
       setVaultWeth(Number(ethers.formatEther(bWethBal)));
-      const onChainPct = Number(onChainBps) / 100;
-      setSavedPct(onChainPct);
+      if (onChainStableBps !== null && onChainYieldBps !== null) {
+        setSavedStablePct(Number(onChainStableBps) / 100);
+        setSavedYieldPct(Number(onChainYieldBps) / 100);
+      }
       setLastUpdated(Date.now());
       setSecondsAgo(0);
     } catch (err) {
@@ -239,11 +262,16 @@ export default function App() {
     }
   };
 
-  // Save Policy On-Chain (Base Sepolia)
+  // Save Multi-Bucket Policy & Guardrails On-Chain (Base Sepolia)
   const savePolicyOnChain = async () => {
+    const keepPct = Math.max(0, 100 - stablePct - yieldPct);
     if (!window.ethereum || !walletAddress) {
-      setSavedPct(allocationPct);
-      showToastMsg('Policy Updated (Demo Mode)', `${allocationPct}% auto-swap applied locally`);
+      setSavedStablePct(stablePct);
+      setSavedYieldPct(yieldPct);
+      showToastMsg(
+        'Multi-Bucket Policy Applied (Demo Mode)',
+        `${stablePct}% USDC Reserve • ${yieldPct}% sUSDC Yield • ${keepPct}% WETH Operating`
+      );
       return;
     }
 
@@ -259,17 +287,31 @@ export default function App() {
       const signer = await provider.getSigner();
       const vault = new ethers.Contract(CONFIG.baseSepolia.vaultAddress, VAULT_ABI, signer);
 
-      const targetBps = allocationPct * 100;
-      showToastMsg('Broadcasting Transaction', 'Confirming policy update in MetaMask...');
-      const tx = await vault.setConfig(
-        CONFIG.baseSepolia.dexAddress,
-        CONFIG.baseSepolia.usdcAddress,
-        CONFIG.baseSepolia.wethAddress,
-        targetBps
+      showToastMsg('Broadcasting Transaction', 'Confirming multi-bucket allocation in MetaMask...');
+      let tx;
+      if (CONFIG.baseSepolia.sUsdcAddress) {
+        tx = await vault.setBuckets(stablePct * 100, yieldPct * 100);
+        await tx.wait();
+        const guardTx = await vault.setGuardrails(
+          ethers.parseEther(maxCapWeth.toString()),
+          ethers.parseEther(slippageFloorUsd.toString())
+        );
+        await guardTx.wait();
+      } else {
+        tx = await vault.setConfig(
+          CONFIG.baseSepolia.dexAddress,
+          CONFIG.baseSepolia.usdcAddress,
+          CONFIG.baseSepolia.wethAddress,
+          (stablePct + yieldPct) * 100
+        );
+        await tx.wait();
+      }
+      setSavedStablePct(stablePct);
+      setSavedYieldPct(yieldPct);
+      showToastMsg(
+        'Policy Confirmed On-Chain',
+        `Vault set to ${stablePct}% USDC Reserve • ${yieldPct}% sUSDC Yield • ${keepPct}% Retained`
       );
-      await tx.wait();
-      setSavedPct(allocationPct);
-      showToastMsg('Policy Confirmed On-Chain', `Vault set to ${allocationPct}% WETH on Base Sepolia!`);
     } catch (err) {
       showToastMsg('Update Failed', err.reason || err.message, 'warn');
     } finally {
@@ -277,8 +319,8 @@ export default function App() {
     }
   };
 
-  // Instant Visual Simulation Fallback
-  const runSimulatedLoop = async (amount = 500) => {
+  // Instant Visual Simulation Fallback (Multi-Bucket + Cap Guardrail)
+  const runSimulatedLoop = async (wethAmount = 1.0) => {
     if (loopPhase !== 'idle') return;
 
     setLoopPhase('sepolia');
@@ -288,12 +330,16 @@ export default function App() {
     await new Promise((r) => setTimeout(r, 850));
 
     setLoopPhase('base');
-    const swappedUSDC = amount * (savedPct / 100);
-    const keptUSDC = amount - swappedUSDC;
-    const acquiredWETH = swappedUSDC * 0.5;
+    const effectiveWeth = Math.min(wethAmount, maxCapWeth);
+    const usdValue = effectiveWeth * CONFIG.ethUsdRate;
+    const stableOut = usdValue * (savedStablePct / 100);
+    const yieldOut = usdValue * (savedYieldPct / 100);
+    const keepPct = Math.max(0, 100 - savedStablePct - savedYieldPct);
+    const retainedWeth = effectiveWeth * (keepPct / 100);
 
-    setVaultUsdc((prev) => prev + keptUSDC);
-    setVaultWeth((prev) => prev + acquiredWETH);
+    setVaultUsdc((prev) => prev + stableOut);
+    setVaultYieldUsdc((prev) => prev + yieldOut);
+    setVaultWeth((prev) => prev + retainedWeth);
     setLastUpdated(Date.now());
     setSecondsAgo(0);
 
@@ -302,10 +348,10 @@ export default function App() {
       {
         id: Date.now(),
         time: 'Just now',
-        inflow: `+${amount.toFixed(2)} USDC`,
+        inflow: `+${effectiveWeth.toFixed(2)} WETH ($${usdValue.toLocaleString()})`,
         originTx: `0x${randHex()}...${randHex()}`,
-        lasnaSignal: 'Verified (≥ $10)',
-        destSwap: `Swapped ${swappedUSDC.toFixed(0)} USDC → ${acquiredWETH.toFixed(2)} WETH (+${keptUSDC.toFixed(0)} USDC liquid)`,
+        lasnaSignal: `Passed (≥ ${minThresholdWeth} WETH)`,
+        destSwap: `+${stableOut.toLocaleString()} USDC Reserve • +${yieldOut.toLocaleString()} sUSDC Yield • +${retainedWeth.toFixed(2)} WETH`,
         destTx: `0x${randHex()}...${randHex()}`,
         status: 'success',
       },
@@ -313,8 +359,8 @@ export default function App() {
     ]);
 
     showToastMsg(
-      'Callback Executed on Base',
-      `Swapped ${swappedUSDC} USDC → ${acquiredWETH.toFixed(2)} WETH (+${keptUSDC} USDC retained in liquid reserve)`
+      '3-Bucket Runway Executed on Base',
+      `+$${stableOut.toLocaleString()} USDC Reserve, +$${yieldOut.toLocaleString()} sUSDC Yield, +${retainedWeth.toFixed(2)} WETH kept`
     );
 
     await new Promise((r) => setTimeout(r, 1200));
@@ -322,11 +368,11 @@ export default function App() {
   };
 
   // Execute Live Real On-Chain Paycheck via MetaMask
-  const executeRealPaycheck = async (amount = 500) => {
+  const executeRealPaycheck = async (wethAmount = 1.0) => {
     if (loopPhase !== 'idle') return;
 
     if (!window.ethereum || !walletAddress) {
-      return runSimulatedLoop(amount);
+      return runSimulatedLoop(wethAmount);
     }
 
     if (currentChainId !== CONFIG.sepolia.chainId) {
@@ -339,42 +385,42 @@ export default function App() {
       setLoopPhase('sepolia');
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const sepUsdc = new ethers.Contract(CONFIG.sepolia.usdcAddress, ERC20_ABI, signer);
+      const sepToken = new ethers.Contract(CONFIG.sepolia.usdcAddress, ERC20_ABI, signer);
 
-      const transferAmount = ethers.parseUnits(amount.toString(), 18);
-      showToastMsg('Confirm Paycheck in MetaMask', `Sending ${amount} USDC on Sepolia to trigger Reactive loop...`);
+      const transferAmount = ethers.parseUnits(wethAmount.toString(), 18);
+      showToastMsg('Confirm Inflow in MetaMask', `Sending ${wethAmount} WETH on Sepolia to trigger Reactive loop...`);
 
-      const tx = await sepUsdc.transfer(walletAddress, transferAmount);
+      const tx = await sepToken.transfer(walletAddress, transferAmount);
       setActiveTxHash(tx.hash);
       showToastMsg('Sepolia Tx Broadcasted', `Tx: ${tx.hash.slice(0, 10)}... Waiting for confirmation...`);
 
       await tx.wait();
 
       setLoopPhase('lasna');
-      showToastMsg('Event Caught on Lasna', 'PaycheckReactive detected Sepolia Transfer! Relaying callback to Base...');
+      showToastMsg('Event Caught on Lasna', 'PaycheckReactive verified guardrails and emitted callback to Base...');
 
       await new Promise((r) => setTimeout(r, 4000));
 
       setLoopPhase('base');
-      showToastMsg('Executing on Base Sepolia', 'PaycheckVault receiving callback from proxy and auto-swapping to WETH...');
+      showToastMsg('Executing on Base Sepolia', 'PaycheckVault receiving callback and splitting across 3 buckets...');
 
       let attempts = 0;
-      const initialWeth = vaultWeth;
+      const initialUsdc = vaultUsdc;
       const pollInterval = setInterval(async () => {
         attempts++;
         try {
           const baseProv = new ethers.JsonRpcProvider(CONFIG.baseSepolia.rpcUrl);
-          const baseWeth = new ethers.Contract(CONFIG.baseSepolia.wethAddress, ERC20_ABI, baseProv);
-          const newWethBal = await baseWeth.balanceOf(CONFIG.baseSepolia.vaultAddress);
-          const numWeth = Number(ethers.formatEther(newWethBal));
+          const baseUsdc = new ethers.Contract(CONFIG.baseSepolia.usdcAddress, ERC20_ABI, baseProv);
+          const newUsdcBal = await baseUsdc.balanceOf(CONFIG.baseSepolia.vaultAddress);
+          const numUsdc = Number(ethers.formatEther(newUsdcBal));
 
-          if (numWeth > initialWeth || attempts >= 8) {
+          if (numUsdc !== initialUsdc || attempts >= 8) {
             clearInterval(pollInterval);
             await fetchLiveBalances();
             setLoopPhase('idle');
             showToastMsg(
-              'Autonomous DCA Complete!',
-              'Swap verified on Base! Vault accumulated WETH autonomously with zero keepers.'
+              'Multi-Bucket Settlement Complete!',
+              '3-bucket stablecoin split verified on Base Sepolia with zero keepers.'
             );
           }
         } catch {
@@ -382,14 +428,20 @@ export default function App() {
         }
       }, 3000);
 
+      const usdValue = wethAmount * CONFIG.ethUsdRate;
+      const stableOut = usdValue * (savedStablePct / 100);
+      const yieldOut = usdValue * (savedYieldPct / 100);
+      const keepPct = Math.max(0, 100 - savedStablePct - savedYieldPct);
+      const retainedWeth = wethAmount * (keepPct / 100);
+
       setActivities((prev) => [
         {
           id: Date.now(),
           time: 'Just now',
-          inflow: `+${amount.toFixed(2)} USDC`,
+          inflow: `+${wethAmount.toFixed(2)} WETH ($${usdValue.toLocaleString()})`,
           originTx: `${tx.hash.slice(0, 6)}...${tx.hash.slice(-4)}`,
-          lasnaSignal: 'Lasna Omni Catch (≥ $10)',
-          destSwap: `Swapped ${amount * (savedPct / 100)} USDC → WETH`,
+          lasnaSignal: 'Lasna Omni Catch (Guardrails OK)',
+          destSwap: `+${stableOut.toLocaleString()} USDC Reserve • +${yieldOut.toLocaleString()} sUSDC • +${retainedWeth.toFixed(2)} WETH`,
           destTx: 'Autonomous Relay',
           status: 'success',
         },
@@ -401,7 +453,7 @@ export default function App() {
     }
   };
 
-  // Dust Test Simulation
+  // Dust Test Simulation (Guardrail 1: Anti-Dust Threshold)
   const simulateDust = async () => {
     if (loopPhase !== 'idle') return;
 
@@ -414,10 +466,10 @@ export default function App() {
       {
         id: Date.now(),
         time: 'Just now',
-        inflow: '5.00 USDC (Dust)',
+        inflow: '0.002 WETH ($5 Dust)',
         originTx: `0x${randHex()}...${randHex()}`,
-        lasnaSignal: 'Dust Ignored (< $10)',
-        destSwap: 'Callback Suppressed (Gas Protected)',
+        lasnaSignal: `Dust Blocked (< ${minThresholdWeth} WETH)`,
+        destSwap: 'Callback Suppressed (Relayer Gas Protected)',
         destTx: '-',
         status: 'filtered',
       },
@@ -425,8 +477,41 @@ export default function App() {
     ]);
 
     showToastMsg(
-      'Spam Inflow Blocked on Lasna',
-      '$5.00 transfer ignored (< $10 threshold). Relayer gas 100% protected.',
+      'Anti-Dust Shield Triggered on Lasna',
+      `0.002 WETH ($5.00) ignored (< ${minThresholdWeth} WETH floor). Callback suppressed.`,
+      'warn'
+    );
+
+    await new Promise((r) => setTimeout(r, 1400));
+    setLoopPhase('idle');
+  };
+
+  // Cooldown Rate-Limiter Simulation (Guardrail 2: Cooldown Shield)
+  const simulateCooldown = async () => {
+    if (loopPhase !== 'idle') return;
+
+    setLoopPhase('sepolia');
+    await new Promise((r) => setTimeout(r, 600));
+
+    setLoopPhase('blocked');
+    const randHex = () => Math.floor(1000 + Math.random() * 9000).toString(16);
+    setActivities((prev) => [
+      {
+        id: Date.now(),
+        time: 'Just now',
+        inflow: '+0.50 WETH (Rapid Repeat)',
+        originTx: `0x${randHex()}...${randHex()}`,
+        lasnaSignal: `Cooldown Active (< ${cooldownSecs}s window)`,
+        destSwap: 'Callback Rate-Limited (InflowSuppressed)',
+        destTx: '-',
+        status: 'filtered',
+      },
+      ...prev.slice(0, 4),
+    ]);
+
+    showToastMsg(
+      'Cooldown Shield Triggered on Lasna',
+      `Rapid inflow suppressed within ${cooldownSecs}s cooldown window to stop fee drain.`,
       'warn'
     );
 
@@ -478,27 +563,40 @@ export default function App() {
         {activePage === 'landing' ? (
           <LandingPage
             onLaunchApp={() => setActivePage('app')}
-            onTriggerDemo={() => runSimulatedLoop(500)}
+            onTriggerDemo={() => runSimulatedLoop(1.0)}
             vaultUsdc={vaultUsdc}
+            vaultYieldUsdc={vaultYieldUsdc}
             vaultWeth={vaultWeth}
-            savedPct={savedPct}
+            savedStablePct={savedStablePct}
+            savedYieldPct={savedYieldPct}
             loopPhase={loopPhase}
           />
         ) : (
           <DashboardPage
             walletAddress={walletAddress}
             animatedUSDC={animatedUSDC}
+            animatedYieldUSDC={animatedYieldUSDC}
             animatedWETH={animatedWETH}
-            userSepoliaUsdc={userSepoliaUsdc}
-            allocationPct={allocationPct}
-            setAllocationPct={setAllocationPct}
-            savedPct={savedPct}
+            userSepoliaWeth={userSepoliaWeth}
+            stablePct={stablePct}
+            setStablePct={setStablePct}
+            yieldPct={yieldPct}
+            setYieldPct={setYieldPct}
+            savedStablePct={savedStablePct}
+            savedYieldPct={savedYieldPct}
+            minThresholdWeth={minThresholdWeth}
+            cooldownSecs={cooldownSecs}
+            maxCapWeth={maxCapWeth}
+            setMaxCapWeth={setMaxCapWeth}
+            slippageFloorUsd={slippageFloorUsd}
+            setSlippageFloorUsd={setSlippageFloorUsd}
             isUpdatingPolicy={isUpdatingPolicy}
             onSavePolicy={savePolicyOnChain}
             loopPhase={loopPhase}
             activeTxHash={activeTxHash}
             onExecutePaycheck={executeRealPaycheck}
             onSimulateDust={simulateDust}
+            onSimulateCooldown={simulateCooldown}
             isLoadingBalances={isLoadingBalances}
             secondsAgo={secondsAgo}
             onRefreshBalances={() => fetchLiveBalances()}
@@ -512,8 +610,8 @@ export default function App() {
         <MeadowRiseFooter
           name="PaycheckVault"
           brandHref="#"
-          heading="Autonomous cross-chain *inflow* automation."
-          subheading="Recipient-side autonomous DCA from Ethereum Sepolia to Base Sepolia powered by Reactive Network."
+          heading="Autonomous cross-chain *stablecoin* treasury."
+          subheading="Multi-bucket stablecoin allocation and on-chain guardrails triggered across chains by Reactive Network."
           cta={{
             label: "Launch Vault App",
             href: "#vault-app",

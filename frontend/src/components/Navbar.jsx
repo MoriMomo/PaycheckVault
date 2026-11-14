@@ -289,7 +289,7 @@ export default function Navbar({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 font-mono">
               <div className="bg-black border border-white/10 p-3.5 rounded-lg space-y-1.5">
                 <div className="flex justify-between items-center text-[11px] text-zinc-400">
-                  <span className="font-semibold text-zinc-200">1. Sepolia (Origin USDC)</span>
+                  <span className="font-semibold text-zinc-200">1. Sepolia (Origin Inflow)</span>
                   <span>11155111</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
