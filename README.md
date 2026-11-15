@@ -1,138 +1,118 @@
-# PaycheckVault — Autonomous Inflow Rebalancer
+# PaycheckVault v2 — Autonomous Cross-Chain Stablecoin Runway
 
-> **Track:** Set It and Forget It  
-> **Built for:** DoraHacks × Reactive Network Omni Buildathon  
-> **Architecture:** Ethereum Sepolia (Origin) $\rightarrow$ Reactive Network Lasna (Event Layer) $\rightarrow$ Base Sepolia (Destination Vault)
+**Set It and Forget It · Powered by Reactive Network Omni (`5318007`)**
 
----
-
-## 💡 Overview
-
-**PaycheckVault** is a recipient-side, cross-chain autonomous smart vault powered by **Reactive Network**.
-
-Instead of relying on off-chain keeper bots, centralized cron jobs, or manual transactions, **PaycheckVault** directly connects your incoming income on **Sepolia** (salary, freelance payments, grants) to your long-term wealth portfolio on **Base Sepolia**.
-
-The moment a standard ERC-20 `Transfer` reaches your wallet address on Sepolia:
-1. **PaycheckReactive (Lasna Testnet):** Autonomously catches the event in real time (~1s Omni finality) and verifies the inflow exceeds the anti-dust threshold ($\ge \$10$).
-2. **Cross-Chain Relay:** Reactive Network dispatches an authenticated callback to **Base Sepolia**.
-3. **PaycheckVault (Base Sepolia):** Verifies the relayer proxy and RVM ID, then automatically swaps the user's pre-configured percentage (e.g. 50% USDC $\rightarrow$ WETH) via the on-chain DEX router.
+PaycheckVault turns volatile cross-chain crypto inflows into a structured multi-bucket stablecoin runway with zero user signatures after setup. Whenever your monitored wallet receives **WETH** on **Ethereum Sepolia**, **Reactive Network Omni** verifies on-chain guardrails and automatically dispatches a trustless callback to **Base Sepolia**, splitting the inflow across a **Core USDC Reserve**, a **Yield-Bearing sUSDC Vault**, and an **Operating WETH Buffer**.
 
 ---
 
-## 🔄 Cross-Chain Architecture
+## Architecture (`Sepolia -> Lasna Omni -> Base Sepolia`)
 
-```
-┌──────────────────────────────────────┐
-│     1. Origin Chain (Sepolia)        │
-│                                      │
-│   Employer / Client transfers USDC   │
-│                 │                    │
-│                 ▼                    │
-│      USDC.transfer(recipient)       │
-│                 │                    │
-│       emits Transfer(..., user)      │
-└─────────────────┬────────────────────┘
-                  │
-                  │ (Cross-chain Event Subscription)
-                  ▼
-┌──────────────────────────────────────┐
-│     2. Reactive Omni Layer (Lasna)   │
-│                                      │
-│        PaycheckReactive.react()      │
-│                 │                    │
-│      Filters minInflowThreshold      │
-│                 │                    │
-│      emits Callback(Base, payload)   │
-└─────────────────┬────────────────────┘
-                  │
-                  │ (Authenticated Relayer Callback)
-                  ▼
-┌──────────────────────────────────────┐
-│     3. Target Chain (Base Sepolia)   │
-│                                      │
-│     PaycheckVault.sol                │
-│     - authorizedSenderOnly (Proxy)   │
-│     - rvmIdOnly (Deployer)           │
-│                 │                    │
-│                 ▼                    │
-│          MockDEX.swap()              │
-│       50% USDC auto-swapped to WETH  │
-└──────────────────────────────────────┘
+```text
++-------------------------------------------------------------------+
+| 1. ORIGIN: Ethereum Sepolia (Chain ID: 11155111)                  |
+|    WETH Transfer(from, monitoredWallet, amount)                   |
+|    -> Observed trustlessly by Reactive Network Omni               |
++-------------------------------------------------------------------+
+                                  |
+                                  v
++-------------------------------------------------------------------+
+| 2. REACTIVE LAYER: Reactive Lasna Omni (Chain ID: 5318007)        |
+|    PaycheckReactive (SYSTEM: 0x8888...8888, onlySystem)           |
+|    - Anti-Dust Filter: ignores inflows < minInflowThreshold       |
+|      (default 0.01 WETH) via InflowSuppressed                     |
+|    - Cooldown Guardrail: enforces cooldownSeconds between sweeps  |
+|    - Dispatches: SYSTEM.requestCallbackV_1_0(84532, vault, ...)   |
++-------------------------------------------------------------------+
+                                  |
+                                  v
++-------------------------------------------------------------------+
+| 3. DESTINATION: Base Sepolia (Chain ID: 84532)                    |
+|    PaycheckVault (Omni Proxy: 0x476F...3585, onlyServiceProvider) |
+|    - Verifies authorized caller via onlyCallbackSender            |
+|    - Circuit Breakers: maxSingleAllocation + minStableOutPerInput |
+|    - Executes Multi-Bucket Split:                                 |
+|      * 50% -> Core Reserve (USDC) via MockDEX                     |
+|      * 30% -> Yield Runway (sUSDC) via MockDEX                    |
+|      * 20% -> Operating Buffer (WETH kept)                        |
+|      * Emits MultiBucketAllocated(...)                            |
++-------------------------------------------------------------------+
 ```
 
 ---
 
-## 🛠️ Contracts & Deployments
+## Why PaycheckVault v2 Stands Out
 
-- **`PaycheckVault.sol`** (Base Sepolia): Recipient-side vault enforcing strict callback authorization (`rvmIdOnly`).
-- **`PaycheckReactive.sol`** (Lasna Testnet): Subscribes to Sepolia `Transfer` events and triggers Base Sepolia execution.
-- **`MockDEX.sol` & `MockERC20.sol`**: Deterministic testnet token and swap routers ensuring zero slippage and 100% callback reliability.
+- **Reactive Network Omni Native (`0x8888...8888`)**: Built directly on `reactive-lib-omni` (`onlySystem`, `SYSTEM.subscribe`, `SYSTEM.requestCallbackV_1_0`, and Base Sepolia Omni Proxy `0x476F44b11F5C942c58f4c8E3d0300E5710743585`).
+- **True Cross-Chain State & Execution**: Watches Sepolia `11155111` `Transfer` logs and automatically settles balances inside a separate vault on Base Sepolia `84532`.
+- **3-Bucket Stablecoin Allocation**: Routes volatile inflows into `USDC` (tax/rent/runway), `sUSDC` (yield reserve), and retained `WETH` (operating buffer) in a single atomic callback.
+- **Defense-in-Depth On-Chain Guardrails**:
+  - **Origin-side (`PaycheckReactive`)**: Dust threshold (`minInflowThreshold`) and execution cooldown (`cooldownSeconds`) suppress spam without reverting inside `react()`.
+  - **Destination-side (`PaycheckVault`)**: Allocation cap (`maxSingleAllocation`) and minimum output floor (`minStableOutPerInput`) protect swaps on Base Sepolia.
 
 ---
 
-## 🧪 Testing
+## Live Deployed Contracts (Testnet v2 Omni)
 
-Run the full end-to-end integration suite:
+| Chain | Contract / Role | Address | Explorer |
+| :--- | :--- | :--- | :--- |
+| **Ethereum Sepolia (`11155111`)** | Origin `WETH` (`MockERC20`) | `0xC56bffDC6d87222128e60D617221AeC584e9F643` | [Sepolia Etherscan](https://sepolia.etherscan.io/address/0xC56bffDC6d87222128e60D617221AeC584e9F643) |
+| **Ethereum Sepolia (`11155111`)** | Monitored Wallet | `0x18634B5266369a482836328b8954E67918e5255a` | [Sepolia Etherscan](https://sepolia.etherscan.io/address/0x18634B5266369a482836328b8954E67918e5255a) |
+| **Reactive Lasna (`5318007`)** | `PaycheckReactive` (Omni) | `0xC56bffDC6d87222128e60D617221AeC584e9F643` | [ReactScan Lasna](https://lasna.reactscan.net/address/0xC56bffDC6d87222128e60D617221AeC584e9F643) |
+| **Reactive Lasna (`5318007`)** | Omni `SYSTEM` Contract | `0x8888888888888888888888888888888888888888` | [ReactScan Lasna](https://lasna.reactscan.net/address/0x8888888888888888888888888888888888888888) |
+| **Base Sepolia (`84532`)** | `PaycheckVault` (Omni) | `0xf51084Ac7aECC4689bb8d906F6900c8070c489D2` | [BaseScan](https://sepolia.basescan.org/address/0xf51084Ac7aECC4689bb8d906F6900c8070c489D2) |
+| **Base Sepolia (`84532`)** | Omni Callback Proxy | `0x476F44b11F5C942c58f4c8E3d0300E5710743585` | [BaseScan](https://sepolia.basescan.org/address/0x476F44b11F5C942c58f4c8E3d0300E5710743585) |
+| **Base Sepolia (`84532`)** | `WETH` (Operating Buffer) | `0xbBAD7e94D7E3950da3F365Cc9E715f834A59C35f` | [BaseScan](https://sepolia.basescan.org/address/0xbBAD7e94D7E3950da3F365Cc9E715f834A59C35f) |
+| **Base Sepolia (`84532`)** | `USDC` (Core Reserve) | `0x30A2A3AcD2E5118F50E34A0Ee2e464C5EF8614B0` | [BaseScan](https://sepolia.basescan.org/address/0x30A2A3AcD2E5118F50E34A0Ee2e464C5EF8614B0) |
+| **Base Sepolia (`84532`)** | `sUSDC` (Yield Vault) | `0x58aB359b4aA491C45dd013B580aE0be50Bf4fE14` | [BaseScan](https://sepolia.basescan.org/address/0x58aB359b4aA491C45dd013B580aE0be50Bf4fE14) |
+| **Base Sepolia (`84532`)** | `MockDEX` | `0xE4BF9404aA3A6aE552EaD8F91CCC8b68269c4841` | [BaseScan](https://sepolia.basescan.org/address/0xE4BF9404aA3A6aE552EaD8F91CCC8b68269c4841) |
+
+---
+
+## Verified End-to-End Cross-Chain Proofs (`1.0 WETH` Paycheck)
+
+| Step | Network | Action / Event | Transaction Hash |
+| :--- | :--- | :--- | :--- |
+| **0. Bind Vault** | Reactive Lasna (`5318007`) | `setDestinationVault(0xf510...89D2)` | [`0xefe7c9b1b214ab04fac9c218204caef8800dc1e98c63502130bb44979bf01c21`](https://lasna.reactscan.net/tx/0xefe7c9b1b214ab04fac9c218204caef8800dc1e98c63502130bb44979bf01c21) |
+| **1. Origin Inflow** | Ethereum Sepolia (`11155111`) | `WETH.transfer(..., 1.0 WETH)` | [`0xa1f1431b11f4e4a9dd7a8c845a5d54c06cc9acbb001b741571fe8f0541b75ce8`](https://sepolia.etherscan.io/tx/0xa1f1431b11f4e4a9dd7a8c845a5d54c06cc9acbb001b741571fe8f0541b75ce8) |
+| **2. Reactive Execution** | Reactive Lasna (`5318007`) | `react()` -> `PaycheckTriggered` + `Callback` | [`0xd59280937a9ee6641a66f08c3aa7dfb482ede92a32f2c5060ed22cdbfdd867ea`](https://lasna.reactscan.net/tx/0xd59280937a9ee6641a66f08c3aa7dfb482ede92a32f2c5060ed22cdbfdd867ea) |
+| **3. Base Settlement** | Base Sepolia (`84532`) | `MultiBucketAllocated` (`+1,250 USDC`, `+750 sUSDC`, `0.2 WETH` kept) | [`0x61d00cabfd65d8c421d30f51432939dedd1d7f1d8e64dcbc377441e60c955746`](https://sepolia.basescan.org/tx/0x61d00cabfd65d8c421d30f51432939dedd1d7f1d8e64dcbc377441e60c955746) |
+
+---
+
+## Local Development & Verification
+
+### 1. Run Smart Contract Tests
 ```bash
-npx hardhat test
+npm install
+npx hardhat compile
+npm test
 ```
 
-Expected output:
-```
-  PaycheckVault Cross-Chain Architecture Suite (Sepolia -> Lasna -> Base Sepolia)
-    ✔ Should verify that rvm_id matches deployer wallet address
-    ✔ Should emit Callback in PaycheckReactive.react() when valid Sepolia Transfer log arrives
-    ✔ Should ignore dust transfers below minInflowThreshold in PaycheckReactive.react()
-    ✔ Should process cross-chain callback from Reactive relayer and execute allocation on Base
-    ✔ Should reimburse callback proxy gas via pay() from PaycheckVault ETH reserve
-    ✔ Should reject invalid allocationBps > 10000 in setConfig
-    ✔ Should strictly reject callback from unauthorized relayer
-    ✔ Should strictly reject callback with unauthorized RVM ID
-
-  8 passing (880ms)
-```
-
----
-
-## 🖥️ Live Visual Dashboard
-
-A dedicated visual frontend is included in `dashboard/index.html` to clearly demonstrate the 3-chain signal flow during the video demo.
-
-To view:
-Double-click `dashboard/index.html` in your browser or run:
+### 2. Run the Web Dashboard
 ```bash
-npx serve dashboard
+cd frontend
+npm install
+npm run dev
 ```
 
----
-
-## 🚀 Deployment Walkthrough
-
-### 1. Setup Environment
+### 3. Deploy & Reproduce Cross-Chain Flow
 ```bash
 cp .env.example .env
-```
-Fill in your `PRIVATE_KEY` and RPC URLs.
+# Fill PRIVATE_KEY and testnet RPCs in .env
 
-### 2. Deploy Sepolia Token (Origin)
-```bash
+# Step 1: Deploy Origin WETH on Ethereum Sepolia
 npx hardhat run scripts/deploy-sepolia.js --network sepolia
-```
 
-### 3. Deploy Base Sepolia Vault & DEX (Destination)
-```bash
-npx hardhat run scripts/deploy-base.js --network baseSepolia
-```
-
-### 4. Deploy PaycheckReactive on Lasna
-```bash
+# Step 2: Deploy PaycheckReactive on Reactive Lasna (Omni)
 npx hardhat run scripts/deploy-reactive.js --network lasna
-```
 
-Both contracts share the same deployer address (`rvm_id`), completing the trustless on-chain loop!
+# Step 3: Deploy PaycheckVault & MockDEX on Base Sepolia (Omni Proxy)
+npx hardhat run scripts/deploy-base.js --network baseSepolia
 
-### 5. Trigger a Live Test Paycheck (Sepolia $\rightarrow$ Lasna $\rightarrow$ Base)
-```bash
+# Step 4: Bind Lasna PaycheckReactive to Base PaycheckVault
+npx hardhat run scripts/bind-vault.js --network lasna
+
+# Step 5: Trigger a 1.0 WETH cross-chain paycheck
 npx hardhat run scripts/send-paycheck.js --network sepolia
 ```
-This sends 500 Mock USDC on Sepolia to your monitored address, firing the live Reactive cross-chain automation in ~5–15 seconds!

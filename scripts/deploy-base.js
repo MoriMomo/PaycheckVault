@@ -9,54 +9,72 @@ async function main() {
   }
   const deployer = signers[0];
   console.log("========================================================");
-  console.log("Deploying Multi-Bucket PaycheckVault on Base Sepolia (Chain ID: 84532)");
+  console.log("Deploying Multi-Bucket PaycheckVault on Base Sepolia (Omni, Chain ID: 84532)");
   console.log("Deployer Address:", deployer.address);
-  console.log("Balance:", (await deployer.provider.getBalance(deployer.address)).toString());
+  const deployerBalance = await deployer.provider.getBalance(deployer.address);
+  console.log("Balance:", deployerBalance.toString());
 
   const BASE_SEPOLIA_CALLBACK_PROXY =
-    process.env.BASE_SEPOLIA_CALLBACK_PROXY || "0xa6eA49Ed671B8a4dfCDd34E36b7a75Ac79B8A5a6";
-
-  // 1. Deploy Mocks on Base Sepolia
-  console.log("\n--- Deploying Treasury Assets & MockDEX on Base Sepolia ---");
-  const MockERC20 = await ethers.getContractFactory("MockERC20");
-  const weth = await MockERC20.deploy("Base Wrapped Ether", "WETH");
-  await weth.waitForDeployment();
-  const wethAddress = await weth.getAddress();
-  console.log("Base WETH (Input) deployed to:", wethAddress);
-
-  const usdc = await MockERC20.deploy("Base USD Coin", "USDC");
-  await usdc.waitForDeployment();
-  const usdcAddress = await usdc.getAddress();
-  console.log("Base USDC (Core Reserve) deployed to:", usdcAddress);
-
-  const susdc = await MockERC20.deploy("Base Savings USD Coin", "sUSDC");
-  await susdc.waitForDeployment();
-  const susdcAddress = await susdc.getAddress();
-  console.log("Base sUSDC (Yield Vault) deployed to:", susdcAddress);
-
-  const ethUsdcRate = ethers.parseEther("2500"); // 1 WETH = 2,500 USDC / sUSDC
-  const MockDEX = await ethers.getContractFactory("MockDEX");
-  const dex = await MockDEX.deploy(ethUsdcRate);
-  await dex.waitForDeployment();
-  const dexAddress = await dex.getAddress();
-  console.log("Base MockDEX deployed to:", dexAddress);
-
-  await (await dex.setPairRate(wethAddress, usdcAddress, ethUsdcRate)).wait();
-  await (await dex.setPairRate(wethAddress, susdcAddress, ethUsdcRate)).wait();
-  await (await usdc.mint(dexAddress, ethers.parseUnits("5000000", 18))).wait();
-  await (await susdc.mint(dexAddress, ethers.parseUnits("5000000", 18))).wait();
-  console.log("Seeded MockDEX with 5,000,000 USDC and 5,000,000 sUSDC liquidity");
-
-  // 2. Deploy Multi-Bucket PaycheckVault
-  const deployerBalance = await deployer.provider.getBalance(deployer.address);
-  let vaultFundValue = ethers.parseEther("0.004");
-  if (deployerBalance < ethers.parseEther("0.008")) {
-    vaultFundValue = ethers.parseEther("0.002");
+    process.env.BASE_SEPOLIA_CALLBACK_PROXY || "0x476F44b11F5C942c58f4c8E3d0300E5710743585";
+  const LASNA_REACTIVE_ADDRESS = process.env.LASNA_REACTIVE_ADDRESS;
+  if (!LASNA_REACTIVE_ADDRESS) {
+    throw new Error("Missing LASNA_REACTIVE_ADDRESS in .env — deploy PaycheckReactive on Lasna first.");
   }
 
+  let wethAddress = process.env.BASE_WETH_ADDRESS;
+  let usdcAddress = process.env.BASE_USDC_ADDRESS;
+  let susdcAddress = process.env.BASE_SUSDC_ADDRESS;
+  let dexAddress = process.env.BASE_DEX_ADDRESS;
+
+  const MockERC20 = await ethers.getContractFactory("MockERC20");
+  if (!wethAddress || !usdcAddress || !susdcAddress || !dexAddress) {
+    console.log("\n--- Deploying Treasury Assets & MockDEX on Base Sepolia ---");
+    const weth = await MockERC20.deploy("Base Wrapped Ether", "WETH");
+    await weth.waitForDeployment();
+    wethAddress = await weth.getAddress();
+    console.log("Base WETH (Input) deployed to:", wethAddress);
+
+    const usdc = await MockERC20.deploy("Base USD Coin", "USDC");
+    await usdc.waitForDeployment();
+    usdcAddress = await usdc.getAddress();
+    console.log("Base USDC (Core Reserve) deployed to:", usdcAddress);
+
+    const susdc = await MockERC20.deploy("Base Savings USD Coin", "sUSDC");
+    await susdc.waitForDeployment();
+    susdcAddress = await susdc.getAddress();
+    console.log("Base sUSDC (Yield Vault) deployed to:", susdcAddress);
+
+    const ethUsdcRate = ethers.parseEther("2500");
+    const MockDEX = await ethers.getContractFactory("MockDEX");
+    const dex = await MockDEX.deploy(ethUsdcRate);
+    await dex.waitForDeployment();
+    dexAddress = await dex.getAddress();
+    console.log("Base MockDEX deployed to:", dexAddress);
+
+    await (await dex.setPairRate(wethAddress, usdcAddress, ethUsdcRate)).wait();
+    await (await dex.setPairRate(wethAddress, susdcAddress, ethUsdcRate)).wait();
+    await (await usdc.mint(dexAddress, ethers.parseUnits("5000000", 18))).wait();
+    await (await susdc.mint(dexAddress, ethers.parseUnits("5000000", 18))).wait();
+    console.log("Seeded MockDEX with 5,000,000 USDC and 5,000,000 sUSDC liquidity");
+  } else {
+    console.log("Reusing existing Base Sepolia WETH/USDC/sUSDC/MockDEX:", {
+      wethAddress,
+      usdcAddress,
+      susdcAddress,
+      dexAddress,
+    });
+  }
+
+  let vaultFundValue = ethers.parseEther("0.004");
+  if (deployerBalance < ethers.parseEther("0.008")) {
+    vaultFundValue = ethers.parseEther("0.0025");
+  }
+
+  console.log(`\nDeploying PaycheckVault bound to CallbackProxy=${BASE_SEPOLIA_CALLBACK_PROXY} and ReactiveSender=${LASNA_REACTIVE_ADDRESS}`);
   const PaycheckVault = await ethers.getContractFactory("PaycheckVault");
   const vault = await PaycheckVault.deploy(
     BASE_SEPOLIA_CALLBACK_PROXY,
+    LASNA_REACTIVE_ADDRESS,
     dexAddress,
     wethAddress,
     usdcAddress,
@@ -69,27 +87,23 @@ async function main() {
   const vaultAddress = await vault.getAddress();
   console.log("Multi-Bucket PaycheckVault deployed to:", vaultAddress);
 
-  // Set default guardrails: 5 WETH single-callback cap, 2000 USDC/WETH slippage floor
   await (
     await vault.setGuardrails(ethers.parseUnits("5", 18), ethers.parseUnits("2000", 18))
   ).wait();
   console.log("Configured Guardrails: Max 5 WETH/callback, Min 2,000 USDC/WETH floor");
 
-  // Seed initial vault reserves (10 WETH operating + 2,500 USDC reserve + 1,500 sUSDC yield)
-  await (await weth.mint(vaultAddress, ethers.parseUnits("10", 18))).wait();
-  await (await usdc.mint(vaultAddress, ethers.parseUnits("2500", 18))).wait();
-  await (await susdc.mint(vaultAddress, ethers.parseUnits("1500", 18))).wait();
+  const wethToken = await ethers.getContractAt("MockERC20", wethAddress);
+  const usdcToken = await ethers.getContractAt("MockERC20", usdcAddress);
+  const susdcToken = await ethers.getContractAt("MockERC20", susdcAddress);
+  await (await wethToken.mint(vaultAddress, ethers.parseUnits("10", 18))).wait();
+  await (await usdcToken.mint(vaultAddress, ethers.parseUnits("2500", 18))).wait();
+  await (await susdcToken.mint(vaultAddress, ethers.parseUnits("1500", 18))).wait();
   console.log("Seeded Vault initial buckets: 10 WETH, 2,500 USDC, 1,500 sUSDC");
 
   console.log("\n========================================================");
   console.log("NEXT STEPS:");
-  console.log("Update .env & frontend/src/config/contracts.js:");
   console.log(`BASE_VAULT_ADDRESS=${vaultAddress}`);
-  console.log(`BASE_WETH_ADDRESS=${wethAddress}`);
-  console.log(`BASE_USDC_ADDRESS=${usdcAddress}`);
-  console.log(`BASE_SUSDC_ADDRESS=${susdcAddress}`);
-  console.log(`BASE_DEX_ADDRESS=${dexAddress}`);
-  console.log("Then run: npx hardhat run scripts/deploy-reactive.js --network lasna");
+  console.log("Now run: npx hardhat run scripts/bind-vault.js --network lasna");
   console.log("========================================================");
 }
 

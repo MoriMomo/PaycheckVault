@@ -359,7 +359,9 @@ export default function LandingPage({
               </p>
               <div className="p-2.5 rounded-md bg-black border border-white/10 font-mono text-[10px] text-zinc-300">
                 <span className="text-zinc-500">Vault: </span>
-                <span className="text-[#10B981]">0x68FE...0142</span>
+                <span className="text-[#10B981]">
+                  {CONFIG.baseSepolia.vaultAddress.slice(0, 6)}...{CONFIG.baseSepolia.vaultAddress.slice(-4)}
+                </span>
               </div>
             </div>
 

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./reactive-lib/abstract-base/AbstractCallback.sol";
+import { IPayable } from "./reactive-lib-omni/interfaces/IPayable.sol";
+import { AbstractCallback } from "./reactive-lib-omni/base/AbstractCallback.sol";
 
 interface IMockDEX {
     function swap(
@@ -87,6 +88,7 @@ contract PaycheckVault is AbstractCallback {
     }
 
     constructor(
+        address _callbackProxy,
         address _callbackSender,
         address _dexRouter,
         address _inputToken,
@@ -94,7 +96,7 @@ contract PaycheckVault is AbstractCallback {
         address _yieldToken,
         uint256 _stableBps,
         uint256 _yieldBps
-    ) AbstractCallback(_callbackSender) payable {
+    ) payable AbstractCallback(IPayable(payable(_callbackProxy)), _callbackSender) {
         require(_stableBps + _yieldBps <= 10000, "Invalid bps");
         owner = msg.sender;
         dexRouter = _dexRouter;
@@ -120,15 +122,15 @@ contract PaycheckVault is AbstractCallback {
     }
 
     /**
-     * @notice Callback invoked exclusively by the Reactive Network relayer.
+     * @notice Callback invoked exclusively by the Reactive Omni Callback Proxy on Base Sepolia.
      *         Authentication is enforced by:
-     *         1. authorizedSenderOnly (must be the Base Sepolia Callback Proxy)
-     *         2. rvmIdOnly(sender) (must match the authorized deployer wallet RVM ID)
+     *         1. onlyServiceProvider (must be the Base Sepolia Omni Callback Proxy)
+     *         2. onlyCallbackSender(callbackSender) (injected Lasna reactive contract address)
      */
-    function executePaycheckAllocation(address sender, uint256 inflowAmount)
+    function executePaycheckAllocation(address callbackSender, uint256 inflowAmount)
         external
-        authorizedSenderOnly
-        rvmIdOnly(sender)
+        onlyServiceProvider
+        onlyCallbackSender(callbackSender)
     {
         uint256 balance = IERC20(inputToken).balanceOf(address(this));
         if (balance == 0 || inflowAmount == 0) return;
@@ -178,7 +180,7 @@ contract PaycheckVault is AbstractCallback {
         }
 
         emit MultiBucketAllocated(
-            sender,
+            callbackSender,
             effectiveInflow,
             stableOut,
             yieldOut,
@@ -186,7 +188,7 @@ contract PaycheckVault is AbstractCallback {
             block.timestamp
         );
         emit PaycheckAllocated(
-            sender,
+            callbackSender,
             stableIn + yieldIn,
             stableOut + yieldOut,
             block.timestamp
@@ -252,9 +254,16 @@ contract PaycheckVault is AbstractCallback {
     }
 
     /**
-     * @notice Returns the authorized Reactive VM ID bound to this callback contract.
+     * @notice Settles any outstanding debt to the Base Sepolia Callback Proxy.
      */
-    function getRvmId() external view returns (address) {
-        return rvm_id;
+    function coverDebt() external {
+        _coverDebt();
+    }
+
+    /**
+     * @notice Returns the authorized Reactive Lasna sender contract address.
+     */
+    function getCallbackSender() external view returns (address) {
+        return _CALLBACK_SENDER;
     }
 }

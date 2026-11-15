@@ -77,12 +77,12 @@ export default function App() {
   const [activities, setActivities] = useState([
     {
       id: 1,
-      time: 'Ready',
+      time: 'Verified',
       inflow: '+1.00 WETH ($2,500)',
-      originTx: '0x9dad...3674',
+      originTx: '0xa1f1...5ce8',
       lasnaSignal: 'Guardrails Passed (≥ 0.01 WETH)',
       destSwap: '+1,250 USDC Reserve • +750 sUSDC Yield • +0.20 WETH Kept',
-      destTx: '0x68fe...0142',
+      destTx: '0x61d0...5746',
       status: 'success',
     },
   ]);

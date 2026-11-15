@@ -1,13 +1,14 @@
 import { expect } from "chai";
 import hardhat from "hardhat";
-import { time } from "@nomicfoundation/hardhat-toolbox/network-helpers.js";
+import { time, setBalance, setCode, impersonateAccount } from "@nomicfoundation/hardhat-toolbox/network-helpers.js";
 const { ethers } = hardhat;
 
-describe("PaycheckVault Multi-Bucket Stablecoin & Guardrail Suite", function () {
-  let owner, employer, relayer, user;
+describe("PaycheckVault Multi-Bucket Stablecoin & Omni Guardrail Suite", function () {
+  let owner, employer, relayer, user, systemSigner;
   let mockWETH_Sepolia, mockWETH_Base, mockUSDC_Base, mockSUSDC_Base, mockDEX_Base;
-  let paycheckVault_Base, paycheckReactive_Lasna;
+  let paycheckVault_Base, paycheckReactive_Lasna, systemContract;
 
+  const SYSTEM_ADDRESS = "0x8888888888888888888888888888888888888888";
   const SEPOLIA_CHAIN_ID = 11155111n;
   const BASE_SEPOLIA_CHAIN_ID = 84532n;
   const STABLE_BPS = 5000; // 50% Core USDC Reserve
@@ -19,23 +20,33 @@ describe("PaycheckVault Multi-Bucket Stablecoin & Guardrail Suite", function () 
 
   function buildTransferLog(tokenAddr, from, to, amount, blockNum = 100n) {
     return {
-      chain_id: SEPOLIA_CHAIN_ID,
-      _contract: tokenAddr,
-      topic_0: BigInt(ethers.id("Transfer(address,address,uint256)")),
-      topic_1: BigInt(from),
-      topic_2: BigInt(to),
-      topic_3: 0n,
+      chainId: SEPOLIA_CHAIN_ID,
+      contractAddress: tokenAddr,
+      topic0: BigInt(ethers.id("Transfer(address,address,uint256)")),
+      topic1: BigInt(from),
+      topic2: BigInt(to),
+      topic3: 0n,
       data: ethers.AbiCoder.defaultAbiCoder().encode(["uint256"], [amount]),
-      block_number: blockNum,
-      op_code: 3n,
-      block_hash: 1n,
-      tx_hash: blockNum,
-      log_index: 0n,
+      blockNumber: blockNum,
+      opCode: 3n,
+      blockHash: 1n,
+      txHash: blockNum,
+      logIndex: 0n,
     };
   }
 
   beforeEach(async function () {
     [owner, employer, relayer, user] = await ethers.getSigners();
+
+    // Install MockSystemContract at Reactive Omni SYSTEM address (0x8888...8888)
+    const MockSystem = await ethers.getContractFactory("MockSystemContract");
+    const deployedMockSys = await MockSystem.deploy();
+    const runtimeCode = await ethers.provider.getCode(await deployedMockSys.getAddress());
+    await setCode(SYSTEM_ADDRESS, runtimeCode);
+    await setBalance(SYSTEM_ADDRESS, ethers.parseEther("10"));
+    await impersonateAccount(SYSTEM_ADDRESS);
+    systemSigner = await ethers.getSigner(SYSTEM_ADDRESS);
+    systemContract = await ethers.getContractAt("MockSystemContract", SYSTEM_ADDRESS);
 
     const MockERC20 = await ethers.getContractFactory("MockERC20");
 
@@ -65,10 +76,23 @@ describe("PaycheckVault Multi-Bucket Stablecoin & Guardrail Suite", function () 
     await mockUSDC_Base.mint(await mockDEX_Base.getAddress(), ethers.parseUnits("5000000", 18));
     await mockSUSDC_Base.mint(await mockDEX_Base.getAddress(), ethers.parseUnits("5000000", 18));
 
-    // 4. Deploy Multi-Bucket PaycheckVault on Base Sepolia
+    // 4. Deploy PaycheckReactive on Lasna Omni first (destination set after vault deploys)
+    const PaycheckReactive = await ethers.getContractFactory("PaycheckReactive");
+    paycheckReactive_Lasna = await PaycheckReactive.deploy(
+      await mockWETH_Sepolia.getAddress(),
+      user.address,
+      ethers.ZeroAddress,
+      MIN_INFLOW_THRESHOLD,
+      COOLDOWN_SECONDS,
+      { value: ethers.parseEther("0.1") }
+    );
+    const reactiveAddr = await paycheckReactive_Lasna.getAddress();
+
+    // 5. Deploy Multi-Bucket PaycheckVault on Base Sepolia bound to reactiveAddr
     const PaycheckVault = await ethers.getContractFactory("PaycheckVault");
     paycheckVault_Base = await PaycheckVault.deploy(
       relayer.address,
+      reactiveAddr,
       await mockDEX_Base.getAddress(),
       await mockWETH_Base.getAddress(),
       await mockUSDC_Base.getAddress(),
@@ -78,26 +102,21 @@ describe("PaycheckVault Multi-Bucket Stablecoin & Guardrail Suite", function () 
       { value: ethers.parseEther("0.02") }
     );
 
-    // 5. Deploy PaycheckReactive on Lasna with Dust & Cooldown Guardrails
-    const PaycheckReactive = await ethers.getContractFactory("PaycheckReactive");
-    paycheckReactive_Lasna = await PaycheckReactive.deploy(
-      await mockWETH_Sepolia.getAddress(),
-      user.address,
-      await paycheckVault_Base.getAddress(),
-      MIN_INFLOW_THRESHOLD,
-      COOLDOWN_SECONDS
-    );
+    // 6. Bind vault destination on Lasna PaycheckReactive
+    await paycheckReactive_Lasna.setDestinationVault(await paycheckVault_Base.getAddress());
 
     // Pre-fund Base Vault with operating WETH balance
     await mockWETH_Base.mint(await paycheckVault_Base.getAddress(), ethers.parseUnits("10", 18));
   });
 
-  it("Should verify that rvm_id matches deployer wallet address", async function () {
-    expect(await paycheckVault_Base.getRvmId()).to.equal(owner.address);
+  it("Should verify _CALLBACK_SENDER matches Lasna PaycheckReactive address", async function () {
+    expect(await paycheckVault_Base.getCallbackSender()).to.equal(
+      await paycheckReactive_Lasna.getAddress()
+    );
     expect(await paycheckVault_Base.allocationBps()).to.equal(8000n);
   });
 
-  it("Should emit Callback in PaycheckReactive.react() when valid Sepolia inflow arrives", async function () {
+  it("Should request cross-chain callback via Omni SYSTEM in PaycheckReactive.react()", async function () {
     const inflowAmount = ethers.parseUnits("1", 18); // 1 WETH
     const logRecord = buildTransferLog(
       await mockWETH_Sepolia.getAddress(),
@@ -106,18 +125,19 @@ describe("PaycheckVault Multi-Bucket Stablecoin & Guardrail Suite", function () 
       inflowAmount
     );
 
-    const expectedPayload = new ethers.Interface([
-      "function executePaycheckAllocation(address,uint256)",
-    ]).encodeFunctionData("executePaycheckAllocation", [ethers.ZeroAddress, inflowAmount]);
-
-    await expect(paycheckReactive_Lasna.react(logRecord))
-      .to.emit(paycheckReactive_Lasna, "Callback")
+    const tx = paycheckReactive_Lasna.connect(systemSigner).react(logRecord);
+    await expect(tx)
+      .to.emit(systemContract, "CallbackRequest")
       .withArgs(
         BASE_SEPOLIA_CHAIN_ID,
+        await paycheckReactive_Lasna.getAddress(),
         await paycheckVault_Base.getAddress(),
-        1000000,
-        expectedPayload
+        0,
+        (cfg) => cfg && cfg.length > 0
       );
+    await expect(tx)
+      .to.emit(paycheckReactive_Lasna, "PaycheckTriggered")
+      .withArgs(inflowAmount, await paycheckVault_Base.getAddress(), (v) => v > 0);
 
     expect(await paycheckReactive_Lasna.totalCallbacksEmitted()).to.equal(1n);
   });
@@ -132,8 +152,8 @@ describe("PaycheckVault Multi-Bucket Stablecoin & Guardrail Suite", function () 
       101n
     );
 
-    const tx = paycheckReactive_Lasna.react(logRecord);
-    await expect(tx).to.not.emit(paycheckReactive_Lasna, "Callback");
+    const tx = paycheckReactive_Lasna.connect(systemSigner).react(logRecord);
+    await expect(tx).to.not.emit(systemContract, "CallbackRequest");
     await expect(tx)
       .to.emit(paycheckReactive_Lasna, "InflowSuppressed")
       .withArgs(dustAmount, "DUST_THRESHOLD", (v) => v > 0);
@@ -144,39 +164,41 @@ describe("PaycheckVault Multi-Bucket Stablecoin & Guardrail Suite", function () 
     const inflowAmount = ethers.parseUnits("0.5", 18);
     const tokenAddr = await mockWETH_Sepolia.getAddress();
 
-    // First valid inflow triggers Callback
     await expect(
-      paycheckReactive_Lasna.react(buildTransferLog(tokenAddr, employer.address, user.address, inflowAmount, 200n))
-    ).to.emit(paycheckReactive_Lasna, "Callback");
+      paycheckReactive_Lasna
+        .connect(systemSigner)
+        .react(buildTransferLog(tokenAddr, employer.address, user.address, inflowAmount, 200n))
+    ).to.emit(systemContract, "CallbackRequest");
 
-    // Immediate second inflow within 30s cooldown is suppressed
-    const blockedTx = paycheckReactive_Lasna.react(
-      buildTransferLog(tokenAddr, employer.address, user.address, inflowAmount, 201n)
-    );
-    await expect(blockedTx).to.not.emit(paycheckReactive_Lasna, "Callback");
+    const blockedTx = paycheckReactive_Lasna
+      .connect(systemSigner)
+      .react(buildTransferLog(tokenAddr, employer.address, user.address, inflowAmount, 201n));
+    await expect(blockedTx).to.not.emit(systemContract, "CallbackRequest");
     await expect(blockedTx)
       .to.emit(paycheckReactive_Lasna, "InflowSuppressed")
       .withArgs(inflowAmount, "COOLDOWN", (v) => v > 0);
     expect(await paycheckReactive_Lasna.totalCooldownBlocked()).to.equal(1n);
 
-    // Advance chain timestamp past 30s cooldown
     await time.increase(35);
 
     await expect(
-      paycheckReactive_Lasna.react(buildTransferLog(tokenAddr, employer.address, user.address, inflowAmount, 202n))
-    ).to.emit(paycheckReactive_Lasna, "Callback");
+      paycheckReactive_Lasna
+        .connect(systemSigner)
+        .react(buildTransferLog(tokenAddr, employer.address, user.address, inflowAmount, 202n))
+    ).to.emit(systemContract, "CallbackRequest");
     expect(await paycheckReactive_Lasna.totalCallbacksEmitted()).to.equal(2n);
   });
 
   it("Should split Base Sepolia callback into 3 buckets: 50% USDC Reserve, 30% sUSDC Yield, 20% retained WETH", async function () {
     const inflowAmount = ethers.parseUnits("1", 18); // 1 WETH ($2,500)
+    const reactiveAddr = await paycheckReactive_Lasna.getAddress();
 
     await expect(
-      paycheckVault_Base.connect(relayer).executePaycheckAllocation(owner.address, inflowAmount)
+      paycheckVault_Base.connect(relayer).executePaycheckAllocation(reactiveAddr, inflowAmount)
     )
       .to.emit(paycheckVault_Base, "MultiBucketAllocated")
       .withArgs(
-        owner.address,
+        reactiveAddr,
         ethers.parseUnits("1", 18),
         ethers.parseUnits("1250", 18), // 50% = 0.5 WETH -> 1,250 USDC
         ethers.parseUnits("750", 18),  // 30% = 0.3 WETH -> 750 sUSDC
@@ -184,7 +206,6 @@ describe("PaycheckVault Multi-Bucket Stablecoin & Guardrail Suite", function () 
         (val) => val > 0
       );
 
-    // Initial 10 WETH - 0.8 WETH swapped = 9.2 WETH remaining in operating bucket
     expect(await mockWETH_Base.balanceOf(await paycheckVault_Base.getAddress())).to.equal(
       ethers.parseUnits("9.2", 18)
     );
@@ -197,45 +218,45 @@ describe("PaycheckVault Multi-Bucket Stablecoin & Guardrail Suite", function () 
   });
 
   it("Should cap oversized callbacks using maxSingleAllocation guardrail", async function () {
-    const cap = ethers.parseUnits("2", 18); // Cap at 2 WETH max per callback
+    const cap = ethers.parseUnits("2", 18);
     await paycheckVault_Base.connect(owner).setGuardrails(cap, 0);
+    const reactiveAddr = await paycheckReactive_Lasna.getAddress();
 
     const hugeInflow = ethers.parseUnits("8", 18);
     await expect(
-      paycheckVault_Base.connect(relayer).executePaycheckAllocation(owner.address, hugeInflow)
+      paycheckVault_Base.connect(relayer).executePaycheckAllocation(reactiveAddr, hugeInflow)
     )
       .to.emit(paycheckVault_Base, "MultiBucketAllocated")
       .withArgs(
-        owner.address,
+        reactiveAddr,
         cap,
-        ethers.parseUnits("2500", 18), // 50% of 2 WETH = 1 WETH -> 2,500 USDC
-        ethers.parseUnits("1500", 18), // 30% of 2 WETH = 0.6 WETH -> 1,500 sUSDC
-        ethers.parseUnits("0.4", 18),  // 20% of 2 WETH retained
+        ethers.parseUnits("2500", 18),
+        ethers.parseUnits("1500", 18),
+        ethers.parseUnits("0.4", 18),
         (val) => val > 0
       );
   });
 
   it("Should revert swap if DEX output drops below minStableOutPerInput slippage guardrail", async function () {
-    // Require at least 2,200 USDC per WETH
     await paycheckVault_Base
       .connect(owner)
       .setGuardrails(0, ethers.parseUnits("2200", 18));
 
-    // Simulate DEX price crash to 1,800 USDC per WETH
     await mockDEX_Base.setPairRate(
       await mockWETH_Base.getAddress(),
       await mockUSDC_Base.getAddress(),
       ethers.parseEther("1800")
     );
 
+    const reactiveAddr = await paycheckReactive_Lasna.getAddress();
     await expect(
       paycheckVault_Base
         .connect(relayer)
-        .executePaycheckAllocation(owner.address, ethers.parseUnits("1", 18))
+        .executePaycheckAllocation(reactiveAddr, ethers.parseUnits("1", 18))
     ).to.be.revertedWith("Slippage exceeded");
   });
 
-  it("Should allow owner to update bucket splits, withdraw reserves, and reimburse relayer gas", async function () {
+  it("Should allow owner to update bucket splits, withdraw reserves, and reimburse proxy gas", async function () {
     await expect(paycheckVault_Base.connect(owner).setBuckets(7000, 2000))
       .to.emit(paycheckVault_Base, "BucketsUpdated")
       .withArgs(7000n, 2000n, 1000n);
@@ -258,15 +279,26 @@ describe("PaycheckVault Multi-Bucket Stablecoin & Guardrail Suite", function () 
       .withArgs(await mockWETH_Base.getAddress(), owner.address, withdrawAmt);
   });
 
-  it("Should strictly reject callback from unauthorized relayer or unauthorized RVM ID", async function () {
+  it("Should strictly reject unauthorized relayer, unauthorized reactive sender, or non-SYSTEM react call", async function () {
     const inflowAmount = ethers.parseUnits("1", 18);
+    const reactiveAddr = await paycheckReactive_Lasna.getAddress();
 
     await expect(
-      paycheckVault_Base.connect(user).executePaycheckAllocation(owner.address, inflowAmount)
-    ).to.be.revertedWith("Authorized sender only");
+      paycheckVault_Base.connect(user).executePaycheckAllocation(reactiveAddr, inflowAmount)
+    ).to.be.revertedWithCustomError(paycheckVault_Base, "NotAuthorized");
 
     await expect(
       paycheckVault_Base.connect(relayer).executePaycheckAllocation(user.address, inflowAmount)
-    ).to.be.revertedWith("Authorized RVM ID only");
+    ).to.be.revertedWithCustomError(paycheckVault_Base, "CallbackNotAuthorized");
+
+    const logRecord = buildTransferLog(
+      await mockWETH_Sepolia.getAddress(),
+      employer.address,
+      user.address,
+      inflowAmount
+    );
+    await expect(
+      paycheckReactive_Lasna.connect(user).react(logRecord)
+    ).to.be.revertedWithCustomError(paycheckReactive_Lasna, "NotAuthorized");
   });
 });

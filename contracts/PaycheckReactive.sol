@@ -1,27 +1,28 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0;
+pragma solidity ^0.8.24;
 
-import "./reactive-lib/interfaces/IReactive.sol";
-import "./reactive-lib/abstract-base/AbstractReactive.sol";
-import "./reactive-lib/interfaces/ISystemContract.sol";
+import { IReactive } from "./reactive-lib-omni/interfaces/IReactive.sol";
+import { ISystemContract } from "./reactive-lib-omni/interfaces/ISystemContract.sol";
+import { AbstractReactive } from "./reactive-lib-omni/base/AbstractReactive.sol";
 
 /**
  * @title PaycheckReactive
- * @notice Deployed on Lasna testnet (Chain ID 5318007).
+ * @notice Deployed on Reactive Network Lasna (Chain ID 5318007, Omni architecture).
  *         Subscribes to ERC-20 Transfer events on Sepolia (Chain ID 11155111) targeting user's wallet,
- *         enforces anti-dust threshold and callback cooldown guardrails, and fires an authenticated
- *         cross-chain callback to PaycheckVault on Base Sepolia (Chain ID 84532).
+ *         enforces anti-dust threshold and callback cooldown guardrails, and requests an authenticated
+ *         cross-chain callback to PaycheckVault on Base Sepolia (Chain ID 84532) via SYSTEM.
  */
-contract PaycheckReactive is IReactive, AbstractReactive {
+contract PaycheckReactive is AbstractReactive {
     uint256 public constant SEPOLIA_CHAIN_ID = 11155111;
     uint256 public constant BASE_SEPOLIA_CHAIN_ID = 84532;
 
-    address public originToken;             // e.g. Sepolia WETH (volatile inflow asset)
+    address public owner;
+    address public originToken;             // Sepolia volatile inflow asset (e.g. WETH)
     address public monitoredRecipient;      // User's inflow receiving wallet on Sepolia
     address public destinationVault;        // PaycheckVault on Base Sepolia
     uint256 public minInflowThreshold;      // Anti-dust guardrail threshold
     uint256 public cooldownPeriod;          // Minimum seconds between callbacks (0 = disabled)
-    uint256 public lastTriggeredAt;         // Timestamp of most recent callback dispatch
+    uint256 public lastTriggeredAt;         // Timestamp of most recent callback request
     uint256 public totalCallbacksEmitted;
     uint256 public totalDustBlocked;
     uint256 public totalCooldownBlocked;
@@ -44,6 +45,14 @@ contract PaycheckReactive is IReactive, AbstractReactive {
         uint256 timestamp
     );
 
+    event DestinationVaultUpdated(address indexed previousVault, address indexed newVault);
+    event GuardrailsUpdated(uint256 minInflowThreshold, uint256 cooldownPeriod);
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner");
+        _;
+    }
+
     constructor(
         address _originToken,
         address _monitoredRecipient,
@@ -51,39 +60,64 @@ contract PaycheckReactive is IReactive, AbstractReactive {
         uint256 _minInflowThreshold,
         uint256 _cooldownPeriod
     ) payable {
+        owner = msg.sender;
         originToken = _originToken;
         monitoredRecipient = _monitoredRecipient;
         destinationVault = _destinationVault;
         minInflowThreshold = _minInflowThreshold;
         cooldownPeriod = _cooldownPeriod;
 
-        if (!vm) {
-            // Subscribe to ERC-20 Transfer(from, to, amount) events on Sepolia
-            service.subscribe(
-                SEPOLIA_CHAIN_ID,
-                originToken,
-                ERC20_TRANSFER_TOPIC_0,
-                REACTIVE_IGNORE,
-                uint256(uint160(monitoredRecipient)),
-                REACTIVE_IGNORE
-            );
-        }
+        SYSTEM.subscribe(
+            SEPOLIA_CHAIN_ID,
+            originToken,
+            ERC20_TRANSFER_TOPIC_0,
+            REACTIVE_IGNORE,
+            uint256(uint160(monitoredRecipient)),
+            REACTIVE_IGNORE
+        );
     }
 
     /**
-     * @notice Invoked by ReactVM when an event matching subscription is detected on Sepolia.
+     * @notice Set destination vault on Base Sepolia after deploying PaycheckVault with this contract as _CALLBACK_SENDER.
      */
-    function react(LogRecord calldata log) external vmOnly {
+    function setDestinationVault(address _destinationVault) external onlyOwner {
+        require(_destinationVault != address(0), "Zero vault");
+        emit DestinationVaultUpdated(destinationVault, _destinationVault);
+        destinationVault = _destinationVault;
+    }
+
+    /**
+     * @notice Update anti-dust floor and cooldown rate-limiter parameters.
+     */
+    function setGuardrails(uint256 _minInflowThreshold, uint256 _cooldownPeriod) external onlyOwner {
+        minInflowThreshold = _minInflowThreshold;
+        cooldownPeriod = _cooldownPeriod;
+        emit GuardrailsUpdated(_minInflowThreshold, _cooldownPeriod);
+    }
+
+    /**
+     * @notice Settles any outstanding debt to the Reactive SYSTEM contract.
+     */
+    function coverDebt() external {
+        _coverDebt();
+    }
+
+    /**
+     * @inheritdoc IReactive
+     * @notice Invoked by Reactive Omni SYSTEM (0x8888...8888) when a matching Sepolia Transfer occurs.
+     */
+    function react(LogRecord calldata log_) external onlySystem {
         if (
-            log.chain_id != SEPOLIA_CHAIN_ID ||
-            log._contract != originToken ||
-            log.topic_0 != ERC20_TRANSFER_TOPIC_0 ||
-            log.topic_2 != uint256(uint160(monitoredRecipient))
+            log_.chainId != SEPOLIA_CHAIN_ID ||
+            log_.contractAddress != originToken ||
+            log_.topic0 != ERC20_TRANSFER_TOPIC_0 ||
+            log_.topic2 != uint256(uint160(monitoredRecipient)) ||
+            destinationVault == address(0)
         ) {
             return;
         }
 
-        uint256 amount = abi.decode(log.data, (uint256));
+        uint256 amount = abi.decode(log_.data, (uint256));
 
         // Guardrail 1: Anti-dust spam filter
         if (amount < minInflowThreshold) {
@@ -112,7 +146,15 @@ contract PaycheckReactive is IReactive, AbstractReactive {
             amount
         );
 
-        emit Callback(BASE_SEPOLIA_CHAIN_ID, destinationVault, GAS_LIMIT, payload);
+        SYSTEM.requestCallbackV_1_0(
+            ISystemContract.CallbackConfiguration_V_1_0({
+                chainId: BASE_SEPOLIA_CHAIN_ID,
+                recipient: destinationVault,
+                gasLimit: GAS_LIMIT,
+                payload: payload
+            })
+        );
+
         emit PaycheckTriggered(amount, destinationVault, block.timestamp);
     }
 }
