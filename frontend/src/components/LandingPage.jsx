@@ -277,7 +277,6 @@ export default function LandingPage({
           <h2 className="font-display text-[28px] sm:text-[32px] leading-[1.15] font-medium text-[#ededed] tracking-[-0.02em]">
             What the contracts enforce
           </h2>
-          {/* <span className="text-xs font-mono text-[#8e8999]">Reactive Omni v2</span> */}
         </div>
 
         <div className="border-y border-white/[0.08] divide-y divide-white/[0.08]">
@@ -287,7 +286,7 @@ export default function LandingPage({
               icon: Layers,
               tag: 'Split rules',
               title: 'Three buckets in one callback',
-              desc: `Each Base Sepolia callback swaps ${savedStablePct}% into USDC for near-term expenses, moves ${savedYieldPct}% into sUSDC for yield, and leaves ${savedKeepPct}% as liquid WETH.`,
+              desc: 'Each Base Sepolia callback splits payouts into USDC for near-term expenses, sUSDC for yield, and liquid WETH using your configured percentages (50% / 30% / 20% by default).',
               tagClass: 'text-[#FAEB92]',
             },
             {
