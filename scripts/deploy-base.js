@@ -67,7 +67,7 @@ async function main() {
 
   let vaultFundValue = ethers.parseEther("0.004");
   if (deployerBalance < ethers.parseEther("0.008")) {
-    vaultFundValue = ethers.parseEther("0.0025");
+    vaultFundValue = ethers.parseEther("0.0005");
   }
 
   console.log(`\nDeploying PaycheckVault bound to CallbackProxy=${BASE_SEPOLIA_CALLBACK_PROXY} and ReactiveSender=${LASNA_REACTIVE_ADDRESS}`);
@@ -85,20 +85,18 @@ async function main() {
   );
   await vault.waitForDeployment();
   const vaultAddress = await vault.getAddress();
-  console.log("Multi-Bucket PaycheckVault deployed to:", vaultAddress);
+  console.log("Multi-User PaycheckVault deployed to:", vaultAddress);
 
   await (
-    await vault.setGuardrails(ethers.parseUnits("5", 18), ethers.parseUnits("2000", 18))
+    await vault.setDefaultGuardrails(ethers.parseUnits("5", 18), ethers.parseUnits("2000", 18))
   ).wait();
-  console.log("Configured Guardrails: Max 5 WETH/callback, Min 2,000 USDC/WETH floor");
+  console.log("Configured Default Guardrails: Max 5 WETH/callback, Min 2,000 USDC/WETH floor");
 
   const wethToken = await ethers.getContractAt("MockERC20", wethAddress);
-  const usdcToken = await ethers.getContractAt("MockERC20", usdcAddress);
-  const susdcToken = await ethers.getContractAt("MockERC20", susdcAddress);
-  await (await wethToken.mint(vaultAddress, ethers.parseUnits("10", 18))).wait();
-  await (await usdcToken.mint(vaultAddress, ethers.parseUnits("2500", 18))).wait();
-  await (await susdcToken.mint(vaultAddress, ethers.parseUnits("1500", 18))).wait();
-  console.log("Seeded Vault initial buckets: 10 WETH, 2,500 USDC, 1,500 sUSDC");
+  await (await wethToken.mint(deployer.address, ethers.parseUnits("10", 18))).wait();
+  await (await wethToken.approve(vaultAddress, ethers.parseUnits("10", 18))).wait();
+  await (await vault.deposit(ethers.parseUnits("10", 18))).wait();
+  console.log("Deposited 10 WETH into deployer vault slice:", deployer.address);
 
   console.log("\n========================================================");
   console.log("NEXT STEPS:");

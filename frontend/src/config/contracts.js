@@ -12,8 +12,8 @@ export const CONFIG = {
     chainIdHex: '0x512577',
     chainName: 'Reactive Lasna Testnet',
     rpcUrl: 'https://lasna-rpc.rnk.dev',
-    explorer: 'https://lasna.reactivescan.net',
-    reactiveAddress: '0xC56bffDC6d87222128e60D617221AeC584e9F643',
+    explorer: 'https://lasna.reactscan.net',
+    reactiveAddress: '0x68FE8Ff67a3bF8bC3AdC78b4282bf79E6cbD0142',
   },
   baseSepolia: {
     chainId: 84532,
@@ -21,7 +21,7 @@ export const CONFIG = {
     chainName: 'Base Sepolia',
     rpcUrl: 'https://sepolia.base.org',
     explorer: 'https://sepolia.basescan.org',
-    vaultAddress: '0xf51084Ac7aECC4689bb8d906F6900c8070c489D2',
+    vaultAddress: '0x59EaBF6a64d01C4fD544aDcdEe6AB1C3ADe629e0',
     usdcAddress: '0x30A2A3AcD2E5118F50E34A0Ee2e464C5EF8614B0',
     sUsdcAddress: '0x58aB359b4aA491C45dd013B580aE0be50Bf4fE14',
     wethAddress: '0xbBAD7e94D7E3950da3F365Cc9E715f834A59C35f',
@@ -34,21 +34,25 @@ export const CONFIG = {
 
 export const ERC20_ABI = [
   'function balanceOf(address) view returns (uint256)',
+  'function allowance(address owner, address spender) view returns (uint256)',
+  'function approve(address spender, uint256 amount) returns (bool)',
   'function transfer(address to, uint256 amount) returns (bool)',
+  'function mint(address to, uint256 amount) external',
   'function decimals() view returns (uint8)',
 ];
 
 export const VAULT_ABI = [
   'function owner() view returns (address)',
   'function allocationBps() view returns (uint256)',
-  'function stableBps() view returns (uint256)',
-  'function yieldBps() view returns (uint256)',
-  'function maxSingleAllocation() view returns (uint256)',
-  'function minStableOutPerInput() view returns (uint256)',
-  'function setBuckets(uint256 _stableBps, uint256 _yieldBps) external',
-  'function setGuardrails(uint256 _maxSingleAllocation, uint256 _minStableOutPerInput) external',
-  'function setConfig(address _dexRouter, address _inputToken, address _targetToken, uint256 _allocationBps) external',
-  'event PaycheckAllocated(address indexed caller, uint256 amountIn, uint256 amountOut, uint256 timestamp)',
-  'event MultiBucketAllocated(address indexed caller, uint256 effectiveInflow, uint256 stableOut, uint256 yieldOut, uint256 retainedIn, uint256 timestamp)',
+  'function balances(address user) view returns (uint256 weth, uint256 usdc, uint256 sUsdc)',
+  'function getPolicy(address user) view returns (uint256 stableBps, uint256 yieldBps, uint256 maxSingleAllocation, uint256 minStableOutPerInput, bool configured)',
+  'function setMyBuckets(uint256 _stableBps, uint256 _yieldBps) external',
+  'function setMyGuardrails(uint256 _maxSingleAllocation, uint256 _minStableOutPerInput) external',
+  'function deposit(uint256 amount) external',
+  'function depositFor(address recipient, uint256 amount) external',
+  'function withdraw(address token, uint256 amount) external',
+  'event MultiBucketAllocated(address indexed recipient, address indexed caller, uint256 totalProcessed, uint256 stableOut, uint256 yieldOut, uint256 retainedIn, uint256 timestamp)',
+  'event PolicyUpdated(address indexed user, uint256 stableBps, uint256 yieldBps, uint256 retainedBps)',
+  'event Deposited(address indexed recipient, uint256 amount)',
+  'event Withdrawn(address indexed recipient, address indexed token, uint256 amount)',
 ];
-

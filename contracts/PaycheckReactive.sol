@@ -8,21 +8,22 @@ import { AbstractReactive } from "./reactive-lib-omni/base/AbstractReactive.sol"
 /**
  * @title PaycheckReactive
  * @notice Deployed on Reactive Network Lasna (Chain ID 5318007, Omni architecture).
- *         Subscribes to ERC-20 Transfer events on Sepolia (Chain ID 11155111) targeting user's wallet,
- *         enforces anti-dust threshold and callback cooldown guardrails, and requests an authenticated
- *         cross-chain callback to PaycheckVault on Base Sepolia (Chain ID 84532) via SYSTEM.
+ *         Subscribes to ERC-20 Transfer events on Sepolia (Chain ID 11155111) across all recipients
+ *         (or a single recipient when non-zero), enforces per-user anti-dust and cooldown guardrails,
+ *         and requests an authenticated cross-chain callback to PaycheckVault on Base Sepolia (84532).
  */
 contract PaycheckReactive is AbstractReactive {
     uint256 public constant SEPOLIA_CHAIN_ID = 11155111;
     uint256 public constant BASE_SEPOLIA_CHAIN_ID = 84532;
 
     address public owner;
-    address public originToken;             // Sepolia volatile inflow asset (e.g. WETH)
-    address public monitoredRecipient;      // User's inflow receiving wallet on Sepolia
+    address public originToken;             // Sepolia inflow asset (e.g. WETH)
+    address public monitoredRecipient;      // Optional single recipient filter; address(0) = wildcard multi-user
     address public destinationVault;        // PaycheckVault on Base Sepolia
     uint256 public minInflowThreshold;      // Anti-dust guardrail threshold
-    uint256 public cooldownPeriod;          // Minimum seconds between callbacks (0 = disabled)
-    uint256 public lastTriggeredAt;         // Timestamp of most recent callback request
+    uint256 public cooldownPeriod;          // Minimum seconds between callbacks per recipient (0 = disabled)
+
+    mapping(address => uint256) public lastTriggeredAt;
     uint256 public totalCallbacksEmitted;
     uint256 public totalDustBlocked;
     uint256 public totalCooldownBlocked;
@@ -34,12 +35,14 @@ contract PaycheckReactive is AbstractReactive {
         uint256(keccak256("Transfer(address,address,uint256)"));
 
     event PaycheckTriggered(
+        address indexed recipient,
         uint256 indexed amount,
         address indexed destinationVault,
         uint256 timestamp
     );
 
     event InflowSuppressed(
+        address indexed recipient,
         uint256 indexed amount,
         string reason,
         uint256 timestamp
@@ -67,12 +70,16 @@ contract PaycheckReactive is AbstractReactive {
         minInflowThreshold = _minInflowThreshold;
         cooldownPeriod = _cooldownPeriod;
 
+        uint256 topic2Filter = _monitoredRecipient == address(0)
+            ? REACTIVE_IGNORE
+            : uint256(uint160(_monitoredRecipient));
+
         SYSTEM.subscribe(
             SEPOLIA_CHAIN_ID,
             originToken,
             ERC20_TRANSFER_TOPIC_0,
             REACTIVE_IGNORE,
-            uint256(uint160(monitoredRecipient)),
+            topic2Filter,
             REACTIVE_IGNORE
         );
     }
@@ -111,9 +118,16 @@ contract PaycheckReactive is AbstractReactive {
             log_.chainId != SEPOLIA_CHAIN_ID ||
             log_.contractAddress != originToken ||
             log_.topic0 != ERC20_TRANSFER_TOPIC_0 ||
-            log_.topic2 != uint256(uint160(monitoredRecipient)) ||
             destinationVault == address(0)
         ) {
+            return;
+        }
+
+        address recipient = address(uint160(log_.topic2));
+        if (recipient == address(0)) {
+            return;
+        }
+        if (monitoredRecipient != address(0) && recipient != monitoredRecipient) {
             return;
         }
 
@@ -122,27 +136,29 @@ contract PaycheckReactive is AbstractReactive {
         // Guardrail 1: Anti-dust spam filter
         if (amount < minInflowThreshold) {
             totalDustBlocked += 1;
-            emit InflowSuppressed(amount, "DUST_THRESHOLD", block.timestamp);
+            emit InflowSuppressed(recipient, amount, "DUST_THRESHOLD", block.timestamp);
             return;
         }
 
-        // Guardrail 2: Cooldown rate limiter
+        // Guardrail 2: Per-recipient cooldown rate limiter
+        uint256 prevTriggered = lastTriggeredAt[recipient];
         if (
             cooldownPeriod > 0 &&
-            lastTriggeredAt != 0 &&
-            block.timestamp < lastTriggeredAt + cooldownPeriod
+            prevTriggered != 0 &&
+            block.timestamp < prevTriggered + cooldownPeriod
         ) {
             totalCooldownBlocked += 1;
-            emit InflowSuppressed(amount, "COOLDOWN", block.timestamp);
+            emit InflowSuppressed(recipient, amount, "COOLDOWN", block.timestamp);
             return;
         }
 
-        lastTriggeredAt = block.timestamp;
+        lastTriggeredAt[recipient] = block.timestamp;
         totalCallbacksEmitted += 1;
 
         bytes memory payload = abi.encodeWithSignature(
-            "executePaycheckAllocation(address,uint256)",
+            "executePaycheckAllocation(address,address,uint256)",
             address(0),
+            recipient,
             amount
         );
 
@@ -155,6 +171,6 @@ contract PaycheckReactive is AbstractReactive {
             })
         );
 
-        emit PaycheckTriggered(amount, destinationVault, block.timestamp);
+        emit PaycheckTriggered(recipient, amount, destinationVault, block.timestamp);
     }
 }

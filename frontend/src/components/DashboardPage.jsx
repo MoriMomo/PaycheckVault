@@ -1,18 +1,40 @@
 import React from 'react';
+import {
+  ArrowDownToLine,
+  ArrowUpRight,
+  Ban,
+  CheckCircle2,
+  Clock,
+  Coins,
+  RefreshCw,
+  Send,
+  ShieldAlert,
+  Wallet,
+} from 'lucide-react';
 import { CONFIG } from '../config/contracts';
 
 const STRATEGY_PRESETS = [
   { id: 'conservative', label: 'Conservative', sub: '70 / 20 / 10', stable: 70, yieldVal: 20 },
-  { id: 'balanced', label: 'Balanced Runway', sub: '50 / 30 / 20', stable: 50, yieldVal: 30 },
-  { id: 'yield', label: 'Yield Focus', sub: '20 / 70 / 10', stable: 20, yieldVal: 70 },
+  { id: 'balanced', label: 'Balanced runway', sub: '50 / 30 / 20', stable: 50, yieldVal: 30 },
+  { id: 'yield', label: 'Yield focus', sub: '20 / 70 / 10', stable: 20, yieldVal: 70 },
 ];
 
 export default function DashboardPage({
   walletAddress,
+  currentChainId,
   animatedUSDC,
   animatedYieldUSDC,
   animatedWETH,
+  vaultUsdc,
+  vaultYieldUsdc,
+  vaultWeth,
   userSepoliaWeth,
+  userBaseWeth = 0,
+  isWalletActionBusy,
+  onMintTestWeth,
+  onDepositToVault,
+  onWithdrawBucket,
+  onSwitchNetwork,
   stablePct,
   setStablePct,
   yieldPct,
@@ -45,6 +67,13 @@ export default function DashboardPage({
   const previewYield = Math.round(previewUsd * (yieldPct / 100));
   const previewWeth = (1.0 * (keepPct / 100)).toFixed(2);
 
+  // Live Base Sepolia portfolio share calculation
+  const wethUsdValue = animatedWETH * CONFIG.ethUsdRate;
+  const totalPortfolioUsd = Math.max(1, animatedUSDC + animatedYieldUSDC + wethUsdValue);
+  const actualStableShare = Math.round((animatedUSDC / totalPortfolioUsd) * 100);
+  const actualYieldShare = Math.round((animatedYieldUSDC / totalPortfolioUsd) * 100);
+  const actualWethShare = Math.max(0, 100 - actualStableShare - actualYieldShare);
+
   const handleStableChange = (nextStable) => {
     setStablePct(nextStable);
     if (nextStable + yieldPct > 100) {
@@ -59,344 +88,542 @@ export default function DashboardPage({
     }
   };
 
-  return (
-    <div className="space-y-8 pb-12 bg-black text-white">
+  const phaseLabel =
+    loopPhase === 'idle'
+      ? 'Listening'
+      : loopPhase === 'blocked'
+      ? 'Suppressed'
+      : loopPhase === 'sepolia'
+      ? 'Sepolia inflow'
+      : loopPhase === 'lasna'
+      ? 'Lasna relay'
+      : 'Base settlement';
 
+  return (
+    <div className="space-y-6 text-[#ededed]">
       {/* 1. Top Command Header */}
-      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 pt-2">
-        <div className="space-y-1.5">
-          <div className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-[#58A6FF]">
-            <span className="w-1.5 h-1.5 rounded-[1px] bg-[#58A6FF]" />
-            <span>Autonomous Multi-Bucket Stablecoin Terminal</span>
-          </div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            PaycheckVault <span className="text-[#58A6FF]">Runway Shield</span>
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="font-display text-[32px] leading-[1.15] font-medium tracking-[-0.02em] text-[#ededed]">
+            Treasury
           </h1>
-          <p className="text-zinc-400 text-xs sm:text-sm max-w-xl">
-            Stream volatile WETH inflows on Sepolia. Reactive Lasna enforces dust and cooldown guardrails, then Base Sepolia splits funds into 3 stablecoin and operating buckets.
+          <p className="text-sm text-[#a8a4b3] max-w-2xl">
+            Send WETH on Sepolia. PaycheckReactive checks dust and cooldown limits on Lasna and triggers PaycheckVault on Base Sepolia to split funds into your three buckets.
           </p>
         </div>
 
         {/* Action Cluster */}
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
           <button
             onClick={() => onExecutePaycheck(1.0)}
             disabled={loopPhase !== 'idle'}
-            className="px-4 py-2.5 rounded-md font-display font-bold text-xs bg-[#2756FC] hover:bg-[#3260ff] text-white transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+            className="h-10 px-4 rounded-lg text-sm font-medium bg-[#FAEB92] hover:bg-[#fdf2b0] text-black transition-[background-color,transform] duration-150 active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92]"
           >
-            {loopPhase !== 'idle' ? (
-              <>
-                <span className="w-1.5 h-1.5 rounded-[1px] bg-[#58A6FF]" />
-                <span>Relaying Cross-Chain...</span>
-              </>
-            ) : (
-              <span>{walletAddress ? 'Send 1.0 WETH Inflow (MetaMask)' : 'Simulate 1.0 WETH ($2,500)'}</span>
-            )}
+            <Send className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+            <span>
+              {loopPhase !== 'idle'
+                ? 'Relaying'
+                : walletAddress
+                ? 'Send 1.0 WETH'
+                : 'Simulate 1.0 WETH'}
+            </span>
           </button>
 
           <button
             onClick={onSimulateDust}
             disabled={loopPhase !== 'idle'}
-            className="px-3.5 py-2.5 rounded-md text-xs font-medium text-zinc-300 hover:text-white bg-black hover:bg-zinc-900 border border-white/10 hover:border-amber-500/40 transition-colors disabled:opacity-50 cursor-pointer"
+            className="h-10 px-4 rounded-lg text-sm font-normal text-[#ededed] bg-[#1c1922] hover:bg-[#25212d] border border-white/[0.08] transition-[background-color,transform] duration-150 active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5FCF]"
             title={`Test < ${minThresholdWeth} WETH inflow suppressed by Lasna`}
           >
-            Test Dust Shield
+            <ShieldAlert className="w-4 h-4 shrink-0 text-[#a8a4b3]" strokeWidth={1.5} />
+            <span>Test small inflow</span>
           </button>
 
           <button
             onClick={onSimulateCooldown}
             disabled={loopPhase !== 'idle'}
-            className="px-3.5 py-2.5 rounded-md text-xs font-medium text-zinc-300 hover:text-white bg-black hover:bg-zinc-900 border border-white/10 hover:border-amber-500/40 transition-colors disabled:opacity-50 cursor-pointer"
+            className="h-10 px-4 rounded-lg text-sm font-normal text-[#ededed] bg-[#1c1922] hover:bg-[#25212d] border border-white/[0.08] transition-[background-color,transform] duration-150 active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5FCF]"
             title={`Test rapid inflow rate-limited inside ${cooldownSecs}s cooldown`}
           >
-            Test Cooldown Shield
+            <Clock className="w-4 h-4 shrink-0 text-[#a8a4b3]" strokeWidth={1.5} />
+            <span>Test repeat inflow</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Live 3-Node Signal Telemetry Circuit */}
-      <section aria-label="Event Pipeline" className="bg-black border border-white/12 p-5 sm:p-6 rounded-lg space-y-4">
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-[1px] bg-[#2756FC]" />
-            <span className="font-display font-bold text-zinc-200 uppercase tracking-wider text-[11px]">
-              Cross-Chain Signal Telemetry
-            </span>
-          </div>
+      {/* 2. Live 3-Node Signal Relay Strip */}
+      <section aria-label="Cross-chain signal relay" className="bg-[#121016] border border-white/[0.08] p-5 rounded-xl space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="text-sm font-medium text-[#ededed]">
+            Signal relay
+          </span>
           <div className="flex items-center gap-3">
             {activeTxHash && (
               <a
                 href={`${CONFIG.sepolia.explorer}/tx/${activeTxHash}`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-[#58A6FF] hover:underline font-mono text-[11px] truncate max-w-[160px]"
+                className="inline-flex items-center gap-1 text-[#FAEB92] hover:underline font-mono text-xs"
               >
-                Tx: {activeTxHash.slice(0, 10)}... ↗
+                <span>{activeTxHash.slice(0, 10)}...</span>
+                <ArrowUpRight className="w-4 h-4 shrink-0" strokeWidth={1.5} />
               </a>
             )}
-            <span className="text-zinc-400 font-mono text-[11px] px-2.5 py-0.5 rounded-[3px] bg-black border border-white/10">
-              State:{' '}
-              <span className={loopPhase === 'idle' ? 'text-[#10B981]' : loopPhase === 'blocked' ? 'text-amber-400 font-bold' : 'text-[#58A6FF] font-bold'}>
-                {loopPhase === 'idle' ? 'LISTENING' : loopPhase.toUpperCase()}
-              </span>
+            <span className="inline-flex items-center gap-2 text-xs font-mono px-3 py-1 rounded bg-[#1c1922] border border-white/[0.08] text-[#a8a4b3]">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  loopPhase === 'idle'
+                    ? 'bg-[#FAEB92]'
+                    : loopPhase === 'blocked'
+                    ? 'bg-[#FF5FCF]'
+                    : 'bg-[#9929EA]'
+                }`}
+              />
+              <span>{phaseLabel}</span>
             </span>
           </div>
         </div>
 
-        {/* 3-Step Circuit Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 relative">
-          {/* Step 1: Sepolia */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div
-            className={`p-4 rounded-md border transition-colors duration-200 ${
-              loopPhase === 'sepolia' ? 'border-zinc-300 bg-black' : 'border-white/10 bg-black'
+            className={`p-4 rounded-lg border transition-[background-color,border-color] duration-150 ${
+              loopPhase === 'sepolia'
+                ? 'border-[#FAEB92]/60 bg-[#1c1922]'
+                : 'border-white/[0.08] bg-black'
             }`}
           >
-            <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="font-display font-bold text-white">1. Sepolia (Origin)</span>
-              <span className="font-mono text-[10px] px-2 py-0.5 rounded-[3px] bg-black border border-white/10 text-zinc-300">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-sm font-medium text-[#ededed]">1. Sepolia origin</span>
+              <span className="font-mono text-xs px-2 py-0.5 rounded bg-[#1c1922] border border-white/[0.08] text-[#a8a4b3] tabular-nums">
                 11155111
               </span>
             </div>
-            <div className="text-xs text-zinc-400 font-mono truncate">
+            <div className="text-xs font-mono text-[#8e8999] truncate">
               {loopPhase === 'sepolia' ? (
-                <span className="text-zinc-100 font-semibold">WETH Transfer Log Caught</span>
+                <span className="text-[#ededed]">WETH transfer log caught</span>
               ) : (
                 'WETH.transfer(recipient, amount)'
               )}
             </div>
           </div>
 
-          {/* Step 2: Lasna Reactive */}
           <div
-            className={`p-4 rounded-md border transition-colors duration-200 ${
+            className={`p-4 rounded-lg border transition-[background-color,border-color] duration-150 ${
               loopPhase === 'blocked'
-                ? 'border-amber-500 bg-black'
+                ? 'border-[#FF5FCF]/60 bg-[#1c1922]'
                 : loopPhase === 'lasna'
-                ? 'border-[#58A6FF] bg-black'
-                : 'border-white/10 bg-black'
+                ? 'border-[#9929EA] bg-[#1c1922]'
+                : 'border-white/[0.08] bg-black'
             }`}
           >
-            <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="font-display font-bold text-white">2. Lasna (ReactVM)</span>
-              <span className="font-mono text-[10px] px-2 py-0.5 rounded-[3px] bg-black border border-white/10 text-[#58A6FF]">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-sm font-medium text-[#ededed]">2. Lasna Omni</span>
+              <span className="font-mono text-xs px-2 py-0.5 rounded bg-[#1c1922] border border-white/[0.08] text-[#FF5FCF] tabular-nums">
                 5318007
               </span>
             </div>
-            <div className="text-xs text-zinc-400 font-mono truncate">
+            <div className="text-xs font-mono text-[#8e8999] truncate">
               {loopPhase === 'blocked' ? (
-                <span className="text-amber-400 font-semibold">Guardrail Block (InflowSuppressed)</span>
+                <span className="text-[#FF5FCF]">Suppressed via InflowSuppressed</span>
               ) : loopPhase === 'lasna' ? (
-                <span className="text-[#58A6FF] font-semibold">Dust &amp; Cooldown OK &rarr; Callback</span>
+                <span className="text-[#FF5FCF]">Guardrails passed, callback sent</span>
               ) : (
-                `Dust ≥ ${minThresholdWeth} WETH • Cooldown ${cooldownSecs}s`
+                `Floor >= ${minThresholdWeth} WETH · ${cooldownSecs}s cooldown`
               )}
             </div>
           </div>
 
-          {/* Step 3: Base Sepolia */}
           <div
-            className={`p-4 rounded-md border transition-colors duration-200 ${
-              loopPhase === 'base' ? 'border-[#10B981] bg-black' : 'border-white/10 bg-black'
+            className={`p-4 rounded-lg border transition-[background-color,border-color] duration-150 ${
+              loopPhase === 'base'
+                ? 'border-[#FAEB92]/60 bg-[#1c1922]'
+                : 'border-white/[0.08] bg-black'
             }`}
           >
-            <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="font-display font-bold text-white">3. Base Sepolia (Vault)</span>
-              <span className="font-mono text-[10px] px-2 py-0.5 rounded-[3px] bg-black border border-white/10 text-[#10B981]">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-sm font-medium text-[#ededed]">3. Base Sepolia vault</span>
+              <span className="font-mono text-xs px-2 py-0.5 rounded bg-[#1c1922] border border-white/[0.08] text-[#FAEB92] tabular-nums">
                 84532
               </span>
             </div>
-            <div className="text-xs text-zinc-400 font-mono truncate">
+            <div className="text-xs font-mono text-[#8e8999] truncate">
               {loopPhase === 'base' ? (
-                <span className="text-[#10B981] font-semibold">
-                  Split {savedStablePct}% / {savedYieldPct}% / {savedKeepPct}%
+                <span className="text-[#FAEB92]">
+                  Settled {savedStablePct}% / {savedYieldPct}% / {savedKeepPct}%
                 </span>
               ) : (
-                `MultiBucket(${savedStablePct}% USDC, ${savedYieldPct}% sUSDC)`
+                `Split ${savedStablePct}% USDC · ${savedYieldPct}% sUSDC · ${savedKeepPct}% WETH`
               )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* 3. Main 2-Column Workspace Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
-        {/* Left 7 Columns: 3-Bucket Portfolio + Activity Ledger */}
-        <div className="lg:col-span-7 space-y-6">
-
-          {/* Header with Live Liveness Indicator */}
-          <div className="flex items-center justify-between px-1">
-            <span className="font-display text-xs font-bold text-zinc-300 uppercase tracking-wider">
-              Base Sepolia 3-Bucket Runway
-            </span>
-            <button
-              onClick={onRefreshBalances}
-              className="flex items-center gap-1.5 text-[11px] text-zinc-300 font-mono hover:text-white transition bg-black px-3 py-1 rounded-md border border-white/10 hover:border-[#58A6FF]/40 cursor-pointer"
-              title="Click to refresh on-chain balances"
-            >
-              <span className="w-1.5 h-1.5 rounded-[1px] bg-[#10B981]" />
-              <span>{isLoadingBalances ? 'Refreshing...' : `Updated ${secondsAgo}s ago`}</span>
-            </button>
-          </div>
-
-          {/* 3-Bucket Balance Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5" aria-busy={isLoadingBalances}>
-            {/* Bucket 1: Core Stable Reserve */}
-            <div className="bg-black border border-white/10 p-5 rounded-lg space-y-2">
-              <div className="flex items-center justify-between text-xs text-zinc-400 font-medium">
-                <span>1. Core Reserve</span>
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded-[3px] bg-black border border-[#10B981]/50 text-[#10B981]">
+      {/* 3. Main 12-Column Workspace Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+        {/* Left 7 Columns */}
+        <div className="xl:col-span-7 space-y-6">
+          {/* 3 Compact Stat Cards with Per-User Withdraw */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" aria-busy={isLoadingBalances}>
+            <div className="bg-[#121016] border border-white/[0.08] p-5 rounded-xl space-y-3">
+              <div className="flex items-center justify-between text-xs text-[#a8a4b3]">
+                <span>Core reserve</span>
+                <span className="font-mono text-xs px-2 py-0.5 rounded bg-[#1c1922] text-[#FAEB92]">
                   USDC
                 </span>
               </div>
               {isLoadingBalances ? (
-                <div className="pt-2 pb-1">
-                  <div className="h-7 w-28 bg-white/8 border border-white/10 rounded-[4px]" aria-label="Loading USDC balance" />
-                </div>
+                <div className="h-7 w-28 bg-[#1c1922] rounded" aria-label="Loading USDC balance" />
               ) : (
-                <div className="font-display text-2xl font-bold text-white font-mono tabular-nums pt-1">
+                <div className="text-[28px] leading-none font-mono font-medium tabular-nums text-[#ededed]">
                   ${animatedUSDC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               )}
-              <div className="text-[11px] text-zinc-400 flex items-center justify-between pt-1">
-                <span>{savedStablePct}% runway</span>
-                <span className="text-[#10B981] font-mono">Taxes / Ops</span>
+              <div className="flex items-center justify-between text-xs text-[#8e8999] font-mono tabular-nums">
+                <span>{savedStablePct}% target</span>
+                {walletAddress && vaultUsdc > 0 && (
+                  <button
+                    onClick={() => onWithdrawBucket('usdc')}
+                    disabled={isWalletActionBusy !== null}
+                    className="text-[#FAEB92] hover:underline disabled:opacity-50 cursor-pointer"
+                  >
+                    {isWalletActionBusy === 'withdraw-usdc' ? 'Withdrawing' : 'Withdraw'}
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Bucket 2: Treasury Yield Vault */}
-            <div className="bg-black border border-white/10 p-5 rounded-lg space-y-2">
-              <div className="flex items-center justify-between text-xs text-zinc-400 font-medium">
-                <span>2. Yield Vault</span>
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded-[3px] bg-black border border-[#58A6FF]/50 text-[#58A6FF]">
+            <div className="bg-[#121016] border border-white/[0.08] p-5 rounded-xl space-y-3">
+              <div className="flex items-center justify-between text-xs text-[#a8a4b3]">
+                <span>Yield vault</span>
+                <span className="font-mono text-xs px-2 py-0.5 rounded bg-[#1c1922] text-[#FF5FCF]">
                   sUSDC
                 </span>
               </div>
               {isLoadingBalances ? (
-                <div className="pt-2 pb-1">
-                  <div className="h-7 w-28 bg-white/8 border border-white/10 rounded-[4px]" aria-label="Loading sUSDC balance" />
-                </div>
+                <div className="h-7 w-28 bg-[#1c1922] rounded" aria-label="Loading sUSDC balance" />
               ) : (
-                <div className="font-display text-2xl font-bold text-[#58A6FF] font-mono tabular-nums pt-1">
+                <div className="text-[28px] leading-none font-mono font-medium tabular-nums text-[#ededed]">
                   ${animatedYieldUSDC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               )}
-              <div className="text-[11px] text-zinc-400 flex items-center justify-between pt-1">
-                <span>{savedYieldPct}% idle yield</span>
-                <span className="text-[#58A6FF] font-mono">Savings</span>
+              <div className="flex items-center justify-between text-xs text-[#8e8999] font-mono tabular-nums">
+                <span>{savedYieldPct}% target</span>
+                {walletAddress && vaultYieldUsdc > 0 && (
+                  <button
+                    onClick={() => onWithdrawBucket('sUsdc')}
+                    disabled={isWalletActionBusy !== null}
+                    className="text-[#FF5FCF] hover:underline disabled:opacity-50 cursor-pointer"
+                  >
+                    {isWalletActionBusy === 'withdraw-sUsdc' ? 'Withdrawing' : 'Withdraw'}
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Bucket 3: Retained Operating Asset */}
-            <div className="bg-black border border-white/10 p-5 rounded-lg space-y-2">
-              <div className="flex items-center justify-between text-xs text-zinc-400 font-medium">
-                <span>3. Operating</span>
+            <div className="bg-[#121016] border border-white/[0.08] p-5 rounded-xl space-y-3">
+              <div className="flex items-center justify-between text-xs text-[#a8a4b3]">
+                <span>Operating asset</span>
+                <span className="font-mono text-xs px-2 py-0.5 rounded bg-[#9929EA] text-white">
+                  WETH
+                </span>
+              </div>
+              {isLoadingBalances ? (
+                <div className="h-7 w-28 bg-[#1c1922] rounded" aria-label="Loading WETH balance" />
+              ) : (
+                <div className="text-[28px] leading-none font-mono font-medium tabular-nums text-[#ededed]">
+                  {animatedWETH.toFixed(4)}
+                  <span className="ml-1.5 text-xs text-[#8e8999] font-sans font-normal">WETH</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-xs text-[#8e8999] font-mono tabular-nums">
+                <span>{savedKeepPct}% kept</span>
+                {walletAddress && vaultWeth > 0 && (
+                  <button
+                    onClick={() => onWithdrawBucket('weth')}
+                    disabled={isWalletActionBusy !== null}
+                    className="text-[#ededed] hover:underline disabled:opacity-50 cursor-pointer"
+                  >
+                    {isWalletActionBusy === 'withdraw-weth' ? 'Withdrawing' : 'Withdraw'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Primary Data Moment: Runway Composition vs Policy Target */}
+          <section aria-label="Vault runway composition" className="bg-[#121016] border border-white/[0.08] p-6 rounded-xl space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-medium text-[#ededed]">Runway composition</h2>
+                <p className="text-xs text-[#8e8999] font-mono tabular-nums mt-1">
+                  ${Math.round(totalPortfolioUsd).toLocaleString('en-US')} total Base Sepolia vault slice
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
                 <a
                   href={`${CONFIG.baseSepolia.explorer}/address/${CONFIG.baseSepolia.vaultAddress}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-[10px] font-mono text-zinc-300 hover:text-white underline"
+                  className="h-8 px-3 rounded-lg bg-[#1c1922] hover:bg-[#25212d] border border-white/[0.08] text-xs font-mono text-[#FAEB92] inline-flex items-center gap-1.5 transition-[background-color,color] duration-150"
                 >
-                  BaseScan ↗
+                  <span>BaseScan</span>
+                  <ArrowUpRight className="w-4 h-4 shrink-0" strokeWidth={1.5} />
                 </a>
+                <button
+                  onClick={onRefreshBalances}
+                  className="h-8 px-3 rounded-lg bg-[#1c1922] hover:bg-[#25212d] border border-white/[0.08] text-xs font-mono text-[#a8a4b3] hover:text-[#ededed] inline-flex items-center gap-2 transition-[background-color,color] duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92]"
+                  title="Refresh on-chain balances"
+                >
+                  <RefreshCw className={`w-4 h-4 shrink-0 ${isLoadingBalances ? 'animate-spin text-[#FF5FCF]' : 'text-[#8e8999]'}`} strokeWidth={1.5} />
+                  <span>{isLoadingBalances ? 'Syncing' : `${secondsAgo}s ago`}</span>
+                </button>
               </div>
-              {isLoadingBalances ? (
-                <div className="pt-2 pb-1 flex items-center gap-2">
-                  <div className="h-7 w-24 bg-white/8 border border-white/10 rounded-[4px]" aria-label="Loading WETH balance" />
+            </div>
+
+            {/* Proportional Bar */}
+            <div className="h-3 w-full rounded bg-black p-0.5 border border-white/[0.08] flex gap-0.5 overflow-hidden">
+              <div style={{ width: `${actualStableShare}%` }} className="h-full rounded-[2px] bg-[#FAEB92]" />
+              <div style={{ width: `${actualYieldShare}%` }} className="h-full rounded-[2px] bg-[#FF5FCF]" />
+              <div style={{ width: `${actualWethShare}%` }} className="h-full rounded-[2px] bg-[#9929EA]" />
+            </div>
+
+            {/* Aligned Asset Share Table */}
+            <div className="divide-y divide-white/[0.08] text-xs">
+              <div className="pb-2 grid grid-cols-12 text-[#8e8999]">
+                <span className="col-span-4">Bucket</span>
+                <span className="col-span-4 text-right">On-chain value</span>
+                <span className="col-span-2 text-right">Actual</span>
+                <span className="col-span-2 text-right">Target</span>
+              </div>
+              <div className="py-3 grid grid-cols-12 items-center">
+                <span className="col-span-4 flex items-center gap-2 text-[#ededed]">
+                  <span className="w-2 h-2 rounded-full bg-[#FAEB92] shrink-0" />
+                  <span>USDC reserve</span>
+                </span>
+                <span className="col-span-4 text-right font-mono tabular-nums text-[#ededed]">
+                  ${animatedUSDC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <span className="col-span-2 text-right font-mono tabular-nums text-[#a8a4b3]">
+                  {actualStableShare}%
+                </span>
+                <span className="col-span-2 text-right font-mono tabular-nums text-[#8e8999]">
+                  {savedStablePct}%
+                </span>
+              </div>
+              <div className="py-3 grid grid-cols-12 items-center">
+                <span className="col-span-4 flex items-center gap-2 text-[#ededed]">
+                  <span className="w-2 h-2 rounded-full bg-[#FF5FCF] shrink-0" />
+                  <span>sUSDC yield</span>
+                </span>
+                <span className="col-span-4 text-right font-mono tabular-nums text-[#ededed]">
+                  ${animatedYieldUSDC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <span className="col-span-2 text-right font-mono tabular-nums text-[#a8a4b3]">
+                  {actualYieldShare}%
+                </span>
+                <span className="col-span-2 text-right font-mono tabular-nums text-[#8e8999]">
+                  {savedYieldPct}%
+                </span>
+              </div>
+              <div className="pt-3 grid grid-cols-12 items-center">
+                <span className="col-span-4 flex items-center gap-2 text-[#ededed]">
+                  <span className="w-2 h-2 rounded-full bg-[#9929EA] shrink-0" />
+                  <span>Operating WETH</span>
+                </span>
+                <span className="col-span-4 text-right font-mono tabular-nums text-[#ededed]">
+                  ${Math.round(wethUsdValue).toLocaleString('en-US')} ({animatedWETH.toFixed(2)})
+                </span>
+                <span className="col-span-2 text-right font-mono tabular-nums text-[#a8a4b3]">
+                  {actualWethShare}%
+                </span>
+                <span className="col-span-2 text-right font-mono tabular-nums text-[#8e8999]">
+                  {savedKeepPct}%
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* Interactive Wallet Onboarding & Balances Card */}
+          <div className="bg-[#121016] border border-white/[0.08] p-5 rounded-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3 min-w-0">
+                <Wallet className="w-4 h-4 shrink-0 text-[#8e8999] mt-0.5" strokeWidth={1.5} />
+                <div className="space-y-1 min-w-0">
+                  <div className="text-xs text-[#a8a4b3]">
+                    {walletAddress ? 'Your connected wallet' : 'Default demo wallet (connect yours in sidebar)'}
+                  </div>
+                  <div className="font-mono text-xs text-[#ededed] truncate">
+                    {walletAddress || CONFIG.deployerRvmId}
+                  </div>
                 </div>
-              ) : (
-                <div className="font-display text-2xl font-bold text-zinc-100 font-mono tabular-nums pt-1">
-                  {animatedWETH.toFixed(4)}
-                  <span className="ml-1 text-xs text-zinc-400 font-sans font-medium">WETH</span>
+              </div>
+              <div className="flex items-center gap-6 shrink-0">
+                <div>
+                  <div className="text-xs text-[#8e8999]">Sepolia WETH</div>
+                  <div className="font-mono text-sm font-medium text-[#FAEB92] tabular-nums mt-0.5">
+                    {userSepoliaWeth.toLocaleString('en-US', { maximumFractionDigits: 2 })} WETH
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-[#8e8999]">Base wallet WETH</div>
+                  <div className="font-mono text-sm font-medium text-[#ededed] tabular-nums mt-0.5">
+                    {userBaseWeth.toLocaleString('en-US', { maximumFractionDigits: 2 })} WETH
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Public Testnet Faucet & Deposit Actions */}
+            <div className="pt-3 border-t border-white/[0.08] flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => onMintTestWeth('sepolia', 5)}
+                  disabled={isWalletActionBusy !== null}
+                  className="h-8 px-3 rounded-lg bg-[#1c1922] hover:bg-[#25212d] border border-white/[0.08] text-xs font-mono text-[#ededed] inline-flex items-center gap-1.5 transition-[background-color] duration-150 disabled:opacity-50 cursor-pointer"
+                >
+                  <Coins className="w-3.5 h-3.5 text-[#FAEB92]" strokeWidth={1.5} />
+                  <span>{isWalletActionBusy === 'mint-sepolia' ? 'Minting' : 'Mint 5 Sepolia WETH'}</span>
+                </button>
+                <button
+                  onClick={() => onMintTestWeth('baseSepolia', 5)}
+                  disabled={isWalletActionBusy !== null}
+                  className="h-8 px-3 rounded-lg bg-[#1c1922] hover:bg-[#25212d] border border-white/[0.08] text-xs font-mono text-[#ededed] inline-flex items-center gap-1.5 transition-[background-color] duration-150 disabled:opacity-50 cursor-pointer"
+                >
+                  <Coins className="w-3.5 h-3.5 text-[#FF5FCF]" strokeWidth={1.5} />
+                  <span>{isWalletActionBusy === 'mint-baseSepolia' ? 'Minting' : 'Mint 5 Base WETH'}</span>
+                </button>
+                <button
+                  onClick={() => onDepositToVault(2)}
+                  disabled={isWalletActionBusy !== null}
+                  className="h-8 px-3 rounded-lg bg-[#1c1922] hover:bg-[#25212d] border border-white/[0.08] text-xs font-mono text-[#FAEB92] inline-flex items-center gap-1.5 transition-[background-color] duration-150 disabled:opacity-50 cursor-pointer"
+                >
+                  <ArrowDownToLine className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  <span>{isWalletActionBusy === 'deposit' ? 'Depositing' : 'Deposit 2 WETH to vault'}</span>
+                </button>
+              </div>
+
+              {walletAddress && currentChainId && (
+                <div className="flex items-center gap-2 text-xs font-mono">
+                  <button
+                    onClick={() => onSwitchNetwork(CONFIG.sepolia)}
+                    className={`px-2 py-0.5 rounded cursor-pointer ${
+                      currentChainId === CONFIG.sepolia.chainId
+                        ? 'bg-[#FAEB92] text-black'
+                        : 'bg-[#1c1922] text-[#a8a4b3] hover:text-white'
+                    }`}
+                  >
+                    Sepolia
+                  </button>
+                  <button
+                    onClick={() => onSwitchNetwork(CONFIG.baseSepolia)}
+                    className={`px-2 py-0.5 rounded cursor-pointer ${
+                      currentChainId === CONFIG.baseSepolia.chainId
+                        ? 'bg-[#FF5FCF] text-black'
+                        : 'bg-[#1c1922] text-[#a8a4b3] hover:text-white'
+                    }`}
+                  >
+                    Base
+                  </button>
                 </div>
               )}
-              <div className="text-[11px] text-zinc-400 flex items-center justify-between pt-1">
-                <span>{savedKeepPct}% retained</span>
-                <span className="text-zinc-300 font-mono">Liquid ETH</span>
-              </div>
             </div>
           </div>
 
-          {/* Monitored Sepolia Inflow Account Bar */}
-          <div className="bg-black border border-white/10 p-4 rounded-lg text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="space-y-0.5">
-              <div className="text-zinc-400 text-[11px]">
-                {walletAddress ? 'Connected Sepolia Inflow Wallet (RVM ID):' : 'Monitored Sepolia Recipient (RVM ID):'}
-              </div>
-              <div className="font-mono text-zinc-200 truncate">
-                {walletAddress || CONFIG.deployerRvmId}
-              </div>
+          {/* Execution Ledger */}
+          <section aria-label="Execution ledger" className="bg-[#121016] border border-white/[0.08] p-6 rounded-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-medium text-[#ededed]">Execution ledger</h2>
+              <span className="text-xs font-mono text-[#8e8999] tabular-nums">{activities.length} entries</span>
             </div>
-            <div className="sm:text-right">
-              <div className="text-zinc-400 text-[11px]">Sepolia Monitored Asset Balance:</div>
-              {isLoadingBalances ? (
-                <div className="mt-1 sm:ml-auto h-4 w-28 bg-white/8 border border-white/10 rounded-[3px]" aria-label="Loading Sepolia balance" />
-              ) : (
-                <div className="font-mono text-[#58A6FF] font-bold">
-                  {userSepoliaWeth.toLocaleString('en-US', { maximumFractionDigits: 2 })} WETH
+
+            <div className="divide-y divide-white/[0.08] text-xs">
+              {activities.length === 0 ? (
+                <div className="py-6 text-center text-xs text-[#8e8999]">
+                  No on-chain settlements for this wallet yet
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Cryptographic Activity Ledger */}
-          <div className="bg-black border border-white/10 p-5 sm:p-6 rounded-lg space-y-4">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-display font-bold text-zinc-200 uppercase tracking-wider text-[11px]">
-                Cryptographic Execution Ledger
-              </span>
-              <span className="text-[11px] font-mono text-zinc-400">{activities.length} Events</span>
-            </div>
-
-            <div className="divide-y divide-white/10 font-mono text-xs">
-              {activities.map((item) => (
+              ) : (
+                activities.map((item) => (
                 <div
                   key={item.id}
-                  className="py-3 flex items-center justify-between gap-3 hover:bg-zinc-950 px-2.5 rounded-md transition"
+                  className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
-                  <div className="space-y-1">
-                    <div className="text-white font-semibold flex flex-wrap items-center gap-2">
-                      <span>{item.inflow}</span>
-                      <span
-                        className={`text-[10px] px-2 py-0.5 rounded-[3px] font-sans font-medium ${
-                          item.status === 'filtered'
-                            ? 'bg-black text-amber-400 border border-amber-500'
-                            : 'bg-black text-[#10B981] border border-[#10B981]'
-                        }`}
-                      >
-                        {item.lasnaSignal}
-                      </span>
+                  <div className="flex items-start gap-3 min-w-0">
+                    {item.status === 'filtered' ? (
+                      <Ban className="w-4 h-4 shrink-0 text-[#FF5FCF] mt-0.5" strokeWidth={1.5} />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4 shrink-0 text-[#FAEB92] mt-0.5" strokeWidth={1.5} />
+                    )}
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono font-medium text-[#ededed] tabular-nums">{item.inflow}</span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded bg-[#1c1922] ${
+                            item.status === 'filtered' ? 'text-[#FF5FCF]' : 'text-[#FAEB92]'
+                          }`}
+                        >
+                          {item.lasnaSignal}
+                        </span>
+                      </div>
+                      <div className="text-xs text-[#a8a4b3]">{item.destSwap}</div>
                     </div>
-                    <div className="text-[11px] text-zinc-400 font-sans">{item.destSwap}</div>
                   </div>
-                  <div className="text-right text-[11px] text-zinc-500 font-sans shrink-0">
-                    {item.time}
+
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0 pl-7 sm:pl-0">
+                    <span className="text-xs text-[#8e8999]">{item.time}</span>
+                    <div className="flex items-center gap-2 font-mono text-xs">
+                      {item.originFullTx ? (
+                        <a
+                          href={`${CONFIG.sepolia.explorer}/tx/${item.originFullTx}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#1c1922] text-[#ededed] hover:text-[#FAEB92]"
+                        >
+                          <span>Sepolia</span>
+                          <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+                        </a>
+                      ) : (
+                        <span className="text-[#8e8999]">{item.originTx}</span>
+                      )}
+                      {item.destFullTx && (
+                        <a
+                          href={`${CONFIG.baseSepolia.explorer}/tx/${item.destFullTx}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#1c1922] text-[#FAEB92] hover:text-white"
+                        >
+                          <span>Base</span>
+                          <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ))}
+                ))
+              )}
             </div>
-          </div>
+          </section>
         </div>
 
         {/* Right 5 Columns: Multi-Bucket Policy & Guardrails */}
-        <div className="lg:col-span-5">
-          <div className="bg-black border border-white/10 p-6 sm:p-7 rounded-lg space-y-5">
-            <div className="flex items-center justify-between">
+        <div className="xl:col-span-5">
+          <section aria-label="Policy and guardrails" className="bg-[#121016] border border-white/[0.08] p-6 rounded-xl space-y-6">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="font-display text-sm font-bold text-white uppercase tracking-wider">
-                  Multi-Bucket &amp; Guardrails
+                <h2 className="text-base font-medium text-[#ededed]">
+                  Policy &amp; guardrails
                 </h2>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  Configure stablecoin splits &amp; risk ceilings
+                <p className="text-xs text-[#a8a4b3] mt-1">
+                  Configure stablecoin splits and risk limits for your address
                 </p>
               </div>
-              <span className="font-mono text-xs font-bold text-[#58A6FF] px-2.5 py-1 rounded-md bg-black border border-[#2756FC]">
+              <span className="font-mono text-xs font-medium text-[#FAEB92] px-3 py-1 rounded-md bg-[#1c1922] border border-white/[0.08] tabular-nums">
                 {stablePct}/{yieldPct}/{keepPct}
               </span>
             </div>
 
             {/* 3 Runway Strategy Presets */}
-            <div className="grid grid-cols-3 gap-2 text-xs font-semibold">
+            <div className="grid grid-cols-3 gap-3">
               {STRATEGY_PRESETS.map((preset) => {
                 const isSelected = stablePct === preset.stable && yieldPct === preset.yieldVal;
                 return (
@@ -406,98 +633,89 @@ export default function DashboardPage({
                       setStablePct(preset.stable);
                       setYieldPct(preset.yieldVal);
                     }}
-                    className={`py-2 px-2 rounded-md border text-center transition cursor-pointer ${
+                    className={`p-3 rounded-lg border text-left transition-[background-color,border-color,color] duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92] ${
                       isSelected
-                        ? 'bg-[#2756FC] border-[#58A6FF] text-white'
-                        : 'border-white/10 bg-black text-zinc-400 hover:text-white hover:border-white/25'
+                        ? 'bg-[#1c1922] border-[#FAEB92]/60 text-[#ededed] shadow-[inset_0_1px_0_rgba(237,237,237,0.08)]'
+                        : 'border-white/[0.08] bg-black text-[#a8a4b3] hover:text-[#ededed] hover:bg-[#1c1922]'
                     }`}
                   >
-                    <div className="text-[11px] font-display leading-tight">{preset.label}</div>
-                    <div className="text-[10px] font-mono opacity-80 mt-0.5">{preset.sub}</div>
+                    <div className="text-xs font-medium leading-tight">{preset.label}</div>
+                    <div className="text-xs font-mono text-[#8e8999] mt-1 tabular-nums">{preset.sub}</div>
                   </button>
                 );
               })}
             </div>
 
-            {/* 3-Band Solid-Color Split Track (ZERO GRADIENTS) */}
+            {/* Target Split Sliders */}
             <div className="space-y-4">
-              <div className="flex flex-wrap justify-between gap-2 text-[11px] font-mono">
-                <span className="text-[#10B981]">USDC Reserve: {stablePct}%</span>
-                <span className="text-[#58A6FF]">sUSDC Yield: {yieldPct}%</span>
-                <span className="text-zinc-300">WETH Kept: {keepPct}%</span>
+              <div className="flex flex-wrap justify-between gap-2 text-xs font-mono tabular-nums">
+                <span className="text-[#FAEB92]">USDC {stablePct}%</span>
+                <span className="text-[#FF5FCF]">sUSDC {yieldPct}%</span>
+                <span className="text-[#a8a4b3]">WETH {keepPct}%</span>
               </div>
 
-              <div className="h-2.5 w-full rounded-[3px] overflow-hidden flex bg-black p-px border border-white/10">
-                <div
-                  style={{ width: `${stablePct}%` }}
-                  className="bg-[#10B981] transition-all duration-150"
-                />
-                <div
-                  style={{ width: `${yieldPct}%` }}
-                  className="bg-[#2756FC] transition-all duration-150"
-                />
-                <div
-                  style={{ width: `${keepPct}%` }}
-                  className="bg-zinc-600 transition-all duration-150"
-                />
+              <div className="h-3 w-full rounded bg-black overflow-hidden flex gap-0.5 p-0.5 border border-white/[0.08]">
+                <div style={{ width: `${stablePct}%` }} className="h-full rounded-[2px] bg-[#FAEB92]" />
+                <div style={{ width: `${yieldPct}%` }} className="h-full rounded-[2px] bg-[#FF5FCF]" />
+                <div style={{ width: `${keepPct}%` }} className="h-full rounded-[2px] bg-[#9929EA]" />
               </div>
 
-              <div className="space-y-2.5">
-                <div>
-                  <div className="flex justify-between text-[11px] text-zinc-400 mb-1">
-                    <span>Bucket 1: Core USDC Reserve</span>
-                    <span className="font-mono text-[#10B981]">{stablePct}%</span>
+              <div className="space-y-4 pt-1">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs text-[#a8a4b3]">
+                    <label htmlFor="stable-range">Core USDC reserve</label>
+                    <span className="font-mono text-[#ededed] tabular-nums">{stablePct}%</span>
                   </div>
                   <input
+                    id="stable-range"
                     type="range"
                     min="0"
                     max="100"
                     step="5"
                     value={stablePct}
                     onChange={(e) => handleStableChange(Number(e.target.value))}
-                    aria-label="Core USDC Reserve Percentage"
-                    className="w-full h-1.5 bg-zinc-800 rounded-md appearance-none cursor-pointer"
+                    className="w-full unslop-range"
                   />
                 </div>
 
-                <div>
-                  <div className="flex justify-between text-[11px] text-zinc-400 mb-1">
-                    <span>Bucket 2: Treasury sUSDC Yield</span>
-                    <span className="font-mono text-[#58A6FF]">{yieldPct}%</span>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs text-[#a8a4b3]">
+                    <label htmlFor="yield-range">Treasury sUSDC yield</label>
+                    <span className="font-mono text-[#ededed] tabular-nums">{yieldPct}%</span>
                   </div>
                   <input
+                    id="yield-range"
                     type="range"
                     min="0"
                     max="100"
                     step="5"
                     value={yieldPct}
                     onChange={(e) => handleYieldChange(Number(e.target.value))}
-                    aria-label="Treasury sUSDC Yield Percentage"
-                    className="w-full h-1.5 bg-zinc-800 rounded-md appearance-none cursor-pointer"
+                    className="w-full unslop-range"
                   />
                 </div>
               </div>
             </div>
 
             {/* On-Chain Risk Guardrails */}
-            <div className="p-3.5 rounded-md bg-black border border-white/10 space-y-3 text-xs">
+            <div className="p-4 rounded-lg bg-black border border-white/[0.08] space-y-4">
               <div className="flex items-center justify-between">
-                <span className="font-display font-bold text-[11px] uppercase tracking-wider text-zinc-300">
-                  On-Chain Risk Guardrails
+                <span className="text-xs font-medium text-[#ededed]">
+                  On-chain risk guardrails
                 </span>
-                <span className="font-mono text-[10px] text-[#10B981]">ENFORCED</span>
+                <span className="font-mono text-xs text-[#FAEB92]">Enforced</span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="space-y-1">
-                  <label htmlFor="cap-select" className="block text-[10px] font-mono text-zinc-400">
-                    Max Callback Cap
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label htmlFor="cap-select" className="block text-xs text-[#a8a4b3]">
+                    Max callback cap
                   </label>
                   <select
                     id="cap-select"
                     value={maxCapWeth}
                     onChange={(e) => setMaxCapWeth(Number(e.target.value))}
-                    className="w-full bg-black border border-white/15 rounded-md px-2.5 py-1.5 font-mono text-xs text-white"
+                    className="w-full h-9 bg-[#1c1922] border border-white/[0.08] rounded-lg px-3 font-mono text-xs text-[#ededed] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92]"
                   >
                     <option value={2}>2.0 WETH</option>
                     <option value={5}>5.0 WETH</option>
@@ -505,15 +723,15 @@ export default function DashboardPage({
                   </select>
                 </div>
 
-                <div className="space-y-1">
-                  <label htmlFor="slippage-select" className="block text-[10px] font-mono text-zinc-400">
-                    Slippage Floor
+                <div className="space-y-1.5">
+                  <label htmlFor="slippage-select" className="block text-xs text-[#a8a4b3]">
+                    Slippage floor
                   </label>
                   <select
                     id="slippage-select"
                     value={slippageFloorUsd}
                     onChange={(e) => setSlippageFloorUsd(Number(e.target.value))}
-                    className="w-full bg-black border border-white/15 rounded-md px-2.5 py-1.5 font-mono text-xs text-white"
+                    className="w-full h-9 bg-[#1c1922] border border-white/[0.08] rounded-lg px-3 font-mono text-xs text-[#ededed] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92]"
                   >
                     <option value={1800}>$1,800 / ETH</option>
                     <option value={2000}>$2,000 / ETH</option>
@@ -522,19 +740,19 @@ export default function DashboardPage({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 pt-1 border-t border-white/10">
-                <span>Dust Floor: ≥ {minThresholdWeth} WETH</span>
-                <span>Cooldown: {cooldownSecs}s</span>
+              <div className="flex items-center justify-between text-xs font-mono text-[#8e8999] pt-3 border-t border-white/[0.08] tabular-nums">
+                <span>Dust limit &ge; {minThresholdWeth} WETH</span>
+                <span>Cooldown {cooldownSecs}s</span>
               </div>
             </div>
 
-            {/* 1.0 WETH ($2,500) Preview Box */}
-            <div className="p-3.5 rounded-md bg-black border border-white/10 space-y-1.5 text-xs">
-              <div className="text-zinc-400 font-medium">Simulated 1.0 WETH ($2,500) Split:</div>
-              <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] pt-0.5">
-                <span className="text-[#10B981]">+${previewStable.toLocaleString()} USDC</span>
-                <span className="text-[#58A6FF]">+${previewYield.toLocaleString()} sUSDC</span>
-                <span className="text-zinc-200">+{previewWeth} WETH</span>
+            {/* 1.0 WETH ($2,500) Output Preview */}
+            <div className="p-4 rounded-lg bg-black border border-white/[0.08] space-y-2">
+              <div className="text-xs text-[#a8a4b3]">Simulated 1.0 WETH ($2,500) split</div>
+              <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-xs tabular-nums">
+                <span className="text-[#FAEB92]">+${previewStable.toLocaleString()} USDC</span>
+                <span className="text-[#FF5FCF]">+${previewYield.toLocaleString()} sUSDC</span>
+                <span className="text-[#ededed]">+{previewWeth} WETH</span>
               </div>
             </div>
 
@@ -542,27 +760,23 @@ export default function DashboardPage({
             <button
               onClick={onSavePolicy}
               disabled={isUpdatingPolicy}
-              className="w-full py-3 rounded-md font-display font-bold text-xs bg-white hover:bg-zinc-200 text-black transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full h-11 rounded-lg font-medium text-sm bg-[#FAEB92] hover:bg-[#fdf2b0] text-black transition-[background-color,transform] duration-150 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92]"
             >
-              {isUpdatingPolicy ? (
-                <>
-                  <span className="w-1.5 h-1.5 rounded-[1px] bg-[#2756FC]" />
-                  <span>Confirming on Base Sepolia...</span>
-                </>
-              ) : (
-                <span>Apply Multi-Bucket Policy ({stablePct}/{yieldPct}/{keepPct})</span>
-              )}
+              <span>
+                {isUpdatingPolicy
+                  ? 'Confirming on Base Sepolia'
+                  : `Save ${stablePct}/${yieldPct}/${keepPct} policy`}
+              </span>
             </button>
 
-            <div className="text-[11px] font-mono text-zinc-500 text-center">
-              Active Policy:{' '}
-              <span className="text-zinc-300 font-semibold">
-                {savedStablePct}% USDC • {savedYieldPct}% sUSDC • {savedKeepPct}% WETH
+            <div className="text-xs font-mono text-[#8e8999] text-center tabular-nums">
+              On-chain policy{' '}
+              <span className="text-[#ededed]">
+                {savedStablePct}% USDC · {savedYieldPct}% sUSDC · {savedKeepPct}% WETH
               </span>
             </div>
-          </div>
+          </section>
         </div>
-
       </div>
     </div>
   );

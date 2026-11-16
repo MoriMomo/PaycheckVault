@@ -17,16 +17,27 @@ interface IMockDEX {
 
 /**
  * @title PaycheckVault
- * @notice Recipient-side autonomous Multi-Bucket Stablecoin & Treasury Vault on Base Sepolia.
- *         Receives authenticated cross-chain callbacks from Reactive Network (Lasna)
- *         when volatile inflows arrive on Sepolia, splitting value into:
- *           1. Core Stablecoin Reserve (e.g. USDC for tax/runway protection)
- *           2. Yield Stablecoin Vault (e.g. sUSDC for idle yield)
- *           3. Retained Operating Asset (kept liquid in inputToken)
- *         Enforces single-callback cap and slippage floor guardrails.
+ * @notice Multi-User Autonomous Stablecoin & Treasury Vault on Base Sepolia (Reactive Omni).
+ *         Isolates balances and allocation rules per wallet address so any connected user can
+ *         deposit WETH, customize their own split and risk limits, receive automated callbacks
+ *         from Lasna PaycheckReactive, and withdraw their own bucket tokens.
  */
 contract PaycheckVault is AbstractCallback {
     using SafeERC20 for IERC20;
+
+    struct Policy {
+        uint256 stableBps;
+        uint256 yieldBps;
+        uint256 maxSingleAllocation;
+        uint256 minStableOutPerInput;
+        bool configured;
+    }
+
+    struct UserLedger {
+        uint256 weth;
+        uint256 usdc;
+        uint256 sUsdc;
+    }
 
     address public owner;
     address public dexRouter;
@@ -34,22 +45,17 @@ contract PaycheckVault is AbstractCallback {
     address public stableToken;         // Bucket 1: Core stablecoin reserve (e.g. USDC)
     address public yieldToken;          // Bucket 2: Yield-bearing stablecoin (e.g. sUSDC)
 
-    uint256 public stableBps;           // e.g. 5000 = 50% swapped to Core Stablecoin
-    uint256 public yieldBps;            // e.g. 3000 = 30% swapped to Yield Stablecoin
-                                        // Remaining (10000 - stableBps - yieldBps) retained in inputToken
+    // Default split and guardrails applied for users who have not yet set custom rules
+    uint256 public defaultStableBps;
+    uint256 public defaultYieldBps;
+    uint256 public defaultMaxSingleAllocation;
+    uint256 public defaultMinStableOutPerInput;
 
-    // On-chain risk guardrails
-    uint256 public maxSingleAllocation; // Max inputToken processed per callback (0 = uncapped)
-    uint256 public minStableOutPerInput;// Minimum stable output per 1e18 inputToken (slippage floor, 0 = disabled)
-
-    event PaycheckAllocated(
-        address indexed caller,
-        uint256 amountIn,
-        uint256 amountOut,
-        uint256 timestamp
-    );
+    mapping(address => Policy) private userPolicies;
+    mapping(address => UserLedger) public balances;
 
     event MultiBucketAllocated(
+        address indexed recipient,
         address indexed caller,
         uint256 totalProcessed,
         uint256 stableOut,
@@ -58,29 +64,26 @@ contract PaycheckVault is AbstractCallback {
         uint256 timestamp
     );
 
-    event ConfigUpdated(
-        address indexed dexRouter,
-        address indexed inputToken,
-        address indexed targetToken,
-        uint256 allocationBps
-    );
-
-    event BucketsUpdated(
+    event PolicyUpdated(
+        address indexed user,
         uint256 stableBps,
         uint256 yieldBps,
         uint256 retainedBps
     );
 
-    event GuardrailsUpdated(
+    event UserGuardrailsUpdated(
+        address indexed user,
         uint256 maxSingleAllocation,
         uint256 minStableOutPerInput
     );
 
-    event Withdrawn(
-        address indexed token,
-        address indexed to,
-        uint256 amount
+    event DefaultGuardrailsUpdated(
+        uint256 maxSingleAllocation,
+        uint256 minStableOutPerInput
     );
+
+    event Deposited(address indexed recipient, uint256 amount);
+    event Withdrawn(address indexed recipient, address indexed token, uint256 amount);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner");
@@ -103,50 +106,89 @@ contract PaycheckVault is AbstractCallback {
         inputToken = _inputToken;
         stableToken = _stableToken;
         yieldToken = _yieldToken;
-        stableBps = _stableBps;
-        yieldBps = _yieldBps;
+        defaultStableBps = _stableBps;
+        defaultYieldBps = _yieldBps;
     }
 
     /**
-     * @notice Total basis points converted into stablecoin buckets (for compatibility with v1 readers).
+     * @notice Returns effective bucket policy and guardrails for `user`.
+     */
+    function getPolicy(address user)
+        public
+        view
+        returns (
+            uint256 stableBps,
+            uint256 yieldBps,
+            uint256 maxSingleAllocation,
+            uint256 minStableOutPerInput,
+            bool configured
+        )
+    {
+        Policy memory p = userPolicies[user];
+        if (!p.configured) {
+            return (
+                defaultStableBps,
+                defaultYieldBps,
+                defaultMaxSingleAllocation,
+                defaultMinStableOutPerInput,
+                false
+            );
+        }
+        return (
+            p.stableBps,
+            p.yieldBps,
+            p.maxSingleAllocation,
+            p.minStableOutPerInput,
+            true
+        );
+    }
+
+    /**
+     * @notice Compatibility view returning default total converted stablecoin bps.
      */
     function allocationBps() external view returns (uint256) {
-        return stableBps + yieldBps;
-    }
-
-    /**
-     * @notice Primary stablecoin reserve token (v1 compatibility view).
-     */
-    function targetToken() external view returns (address) {
-        return stableToken;
+        return defaultStableBps + defaultYieldBps;
     }
 
     /**
      * @notice Callback invoked exclusively by the Reactive Omni Callback Proxy on Base Sepolia.
-     *         Authentication is enforced by:
-     *         1. onlyServiceProvider (must be the Base Sepolia Omni Callback Proxy)
-     *         2. onlyCallbackSender(callbackSender) (injected Lasna reactive contract address)
+     *         Allocates ONLY `balances[recipient].weth` according to `recipient`'s own policy.
      */
-    function executePaycheckAllocation(address callbackSender, uint256 inflowAmount)
+    function executePaycheckAllocation(
+        address callbackSender,
+        address recipient,
+        uint256 inflowAmount
+    )
         external
         onlyServiceProvider
         onlyCallbackSender(callbackSender)
     {
-        uint256 balance = IERC20(inputToken).balanceOf(address(this));
-        if (balance == 0 || inflowAmount == 0) return;
+        if (recipient == address(0) || inflowAmount == 0) return;
 
-        // Guardrail 1: Circuit-breaker cap per callback
+        UserLedger storage acct = balances[recipient];
+        if (acct.weth == 0) return;
+
+        (
+            uint256 stableBps,
+            uint256 yieldBps,
+            uint256 cap,
+            uint256 slippageFloor,
+        ) = getPolicy(recipient);
+
         uint256 effectiveInflow = inflowAmount;
-        if (maxSingleAllocation > 0 && effectiveInflow > maxSingleAllocation) {
-            effectiveInflow = maxSingleAllocation;
+        if (cap > 0 && effectiveInflow > cap) {
+            effectiveInflow = cap;
         }
-        if (effectiveInflow > balance) {
-            effectiveInflow = balance;
+        if (effectiveInflow > acct.weth) {
+            effectiveInflow = acct.weth;
         }
+        if (effectiveInflow == 0) return;
 
         uint256 stableIn = (effectiveInflow * stableBps) / 10000;
         uint256 yieldIn = (effectiveInflow * yieldBps) / 10000;
         uint256 retainedIn = effectiveInflow - stableIn - yieldIn;
+
+        acct.weth -= (stableIn + yieldIn);
 
         uint256 stableOut = 0;
         uint256 yieldOut = 0;
@@ -159,10 +201,11 @@ contract PaycheckVault is AbstractCallback {
                 stableIn,
                 address(this)
             );
-            if (minStableOutPerInput > 0) {
-                uint256 minExpected = (stableIn * minStableOutPerInput) / 1e18;
+            if (slippageFloor > 0) {
+                uint256 minExpected = (stableIn * slippageFloor) / 1e18;
                 require(stableOut >= minExpected, "Slippage exceeded");
             }
+            acct.usdc += stableOut;
         }
 
         if (yieldIn > 0 && yieldToken != address(0)) {
@@ -173,13 +216,15 @@ contract PaycheckVault is AbstractCallback {
                 yieldIn,
                 address(this)
             );
-            if (minStableOutPerInput > 0) {
-                uint256 minExpectedYield = (yieldIn * minStableOutPerInput) / 1e18;
+            if (slippageFloor > 0) {
+                uint256 minExpectedYield = (yieldIn * slippageFloor) / 1e18;
                 require(yieldOut >= minExpectedYield, "Slippage exceeded");
             }
+            acct.sUsdc += yieldOut;
         }
 
         emit MultiBucketAllocated(
+            recipient,
             callbackSender,
             effectiveInflow,
             stableOut,
@@ -187,70 +232,94 @@ contract PaycheckVault is AbstractCallback {
             retainedIn,
             block.timestamp
         );
-        emit PaycheckAllocated(
-            callbackSender,
-            stableIn + yieldIn,
-            stableOut + yieldOut,
-            block.timestamp
-        );
     }
 
     /**
-     * @notice Allows user or employer to deposit inputToken directly on Base Sepolia.
+     * @notice Deposit `inputToken` (WETH) into the caller's own vault slice.
      */
     function deposit(uint256 amount) external {
+        depositFor(msg.sender, amount);
+    }
+
+    /**
+     * @notice Deposit `inputToken` (WETH) on behalf of `recipient`.
+     */
+    function depositFor(address recipient, uint256 amount) public {
+        require(recipient != address(0), "Zero recipient");
         require(amount > 0, "Zero deposit");
         IERC20(inputToken).safeTransferFrom(msg.sender, address(this), amount);
+        balances[recipient].weth += amount;
+        emit Deposited(recipient, amount);
     }
 
     /**
-     * @notice Update multi-bucket stablecoin allocation percentages (total <= 10000 bps).
+     * @notice Any connected user can configure their own stablecoin/yield split (total <= 10000 bps).
      */
-    function setBuckets(uint256 _stableBps, uint256 _yieldBps) external onlyOwner {
+    function setMyBuckets(uint256 _stableBps, uint256 _yieldBps) external {
         require(_stableBps + _yieldBps <= 10000, "Invalid bps");
-        stableBps = _stableBps;
-        yieldBps = _yieldBps;
-        emit BucketsUpdated(_stableBps, _yieldBps, 10000 - _stableBps - _yieldBps);
+        Policy storage p = userPolicies[msg.sender];
+        if (!p.configured) {
+            p.maxSingleAllocation = defaultMaxSingleAllocation;
+            p.minStableOutPerInput = defaultMinStableOutPerInput;
+            p.configured = true;
+        }
+        p.stableBps = _stableBps;
+        p.yieldBps = _yieldBps;
+        emit PolicyUpdated(msg.sender, _stableBps, _yieldBps, 10000 - _stableBps - _yieldBps);
     }
 
     /**
-     * @notice Configure on-chain per-callback cap and slippage floor guardrails.
+     * @notice Any connected user can configure their own callback cap and slippage floor.
      */
-    function setGuardrails(
+    function setMyGuardrails(
+        uint256 _maxSingleAllocation,
+        uint256 _minStableOutPerInput
+    ) external {
+        Policy storage p = userPolicies[msg.sender];
+        if (!p.configured) {
+            p.stableBps = defaultStableBps;
+            p.yieldBps = defaultYieldBps;
+            p.configured = true;
+        }
+        p.maxSingleAllocation = _maxSingleAllocation;
+        p.minStableOutPerInput = _minStableOutPerInput;
+        emit UserGuardrailsUpdated(msg.sender, _maxSingleAllocation, _minStableOutPerInput);
+    }
+
+    /**
+     * @notice Owner helper to update default guardrails for new unconfigured users.
+     */
+    function setDefaultGuardrails(
         uint256 _maxSingleAllocation,
         uint256 _minStableOutPerInput
     ) external onlyOwner {
-        maxSingleAllocation = _maxSingleAllocation;
-        minStableOutPerInput = _minStableOutPerInput;
-        emit GuardrailsUpdated(_maxSingleAllocation, _minStableOutPerInput);
+        defaultMaxSingleAllocation = _maxSingleAllocation;
+        defaultMinStableOutPerInput = _minStableOutPerInput;
+        emit DefaultGuardrailsUpdated(_maxSingleAllocation, _minStableOutPerInput);
     }
 
     /**
-     * @notice Legacy single-target configuration update (maps allocation to Core Stablecoin bucket).
+     * @notice Non-custodial withdrawal of the caller's own bucket tokens (`weth`, `usdc`, or `sUsdc`).
      */
-    function setConfig(
-        address _dexRouter,
-        address _inputToken,
-        address _targetToken,
-        uint256 _allocationBps
-    ) external onlyOwner {
-        require(_allocationBps <= 10000, "Invalid bps");
-        dexRouter = _dexRouter;
-        inputToken = _inputToken;
-        stableToken = _targetToken;
-        stableBps = _allocationBps;
-        yieldBps = 0;
-        emit ConfigUpdated(_dexRouter, _inputToken, _targetToken, _allocationBps);
-        emit BucketsUpdated(_allocationBps, 0, 10000 - _allocationBps);
-    }
-
-    /**
-     * @notice Non-custodial owner withdrawal of any bucket token from the vault.
-     */
-    function withdraw(address token, uint256 amount) external onlyOwner {
+    function withdraw(address token, uint256 amount) external {
         require(amount > 0, "Zero withdraw");
-        IERC20(token).safeTransfer(owner, amount);
-        emit Withdrawn(token, owner, amount);
+        UserLedger storage acct = balances[msg.sender];
+
+        if (token == inputToken) {
+            require(acct.weth >= amount, "Insufficient balance");
+            acct.weth -= amount;
+        } else if (token == stableToken) {
+            require(acct.usdc >= amount, "Insufficient balance");
+            acct.usdc -= amount;
+        } else if (token == yieldToken) {
+            require(acct.sUsdc >= amount, "Insufficient balance");
+            acct.sUsdc -= amount;
+        } else {
+            revert("Unsupported token");
+        }
+
+        IERC20(token).safeTransfer(msg.sender, amount);
+        emit Withdrawn(msg.sender, token, amount);
     }
 
     /**

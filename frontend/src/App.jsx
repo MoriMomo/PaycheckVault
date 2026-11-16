@@ -46,11 +46,13 @@ export default function App() {
   const [isConnecting, setIsConnecting] = useState(false);
 
   // Live On-Chain Balances & Liveness Tracking
-  const [vaultUsdc, setVaultUsdc] = useState(2500.0);
-  const [vaultYieldUsdc, setVaultYieldUsdc] = useState(1500.0);
-  const [vaultWeth, setVaultWeth] = useState(4.0);
+  const [vaultUsdc, setVaultUsdc] = useState(1250.0);
+  const [vaultYieldUsdc, setVaultYieldUsdc] = useState(750.0);
+  const [vaultWeth, setVaultWeth] = useState(9.2);
   const [userSepoliaWeth, setUserSepoliaWeth] = useState(10.0);
+  const [userBaseWeth, setUserBaseWeth] = useState(0.0);
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
+  const [isWalletActionBusy, setIsWalletActionBusy] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(Date.now());
   const [secondsAgo, setSecondsAgo] = useState(0);
 
@@ -79,10 +81,12 @@ export default function App() {
       id: 1,
       time: 'Verified',
       inflow: '+1.00 WETH ($2,500)',
-      originTx: '0xa1f1...5ce8',
-      lasnaSignal: 'Guardrails Passed (≥ 0.01 WETH)',
-      destSwap: '+1,250 USDC Reserve • +750 sUSDC Yield • +0.20 WETH Kept',
-      destTx: '0x61d0...5746',
+      originTx: '0x0430...fc68',
+      originFullTx: '0x043025677f893c2367986950c26c1cd0017bda08422adc26cc13d8f69359fc68',
+      lasnaSignal: 'Passed (≥ 0.01 WETH)',
+      destSwap: '+1,250 USDC reserve · +750 sUSDC yield · +0.20 WETH kept',
+      destTx: '0x3a2a...d9c6',
+      destFullTx: '0x3a2ad37d975ca1fae92b412f2ebed8c4c00f146a9d1a60fda2aa9a8f7416d9c6',
       status: 'success',
     },
   ]);
@@ -96,44 +100,82 @@ export default function App() {
     setTimeout(() => setToast(null), 4500);
   };
 
-  // 1. Fetch live balances directly from Sepolia & Base Sepolia RPCs
-  const fetchLiveBalances = useCallback(async (userAddr) => {
+  // 1. Fetch live per-user balances & policies directly from Sepolia & Base Sepolia RPCs
+  const fetchLiveBalances = useCallback(async (userAddr, syncControls = false) => {
     setIsLoadingBalances(true);
     try {
+      const targetUser = userAddr || walletAddress || CONFIG.deployerRvmId;
       const sepProvider = new ethers.JsonRpcProvider(CONFIG.sepolia.rpcUrl);
       const sepToken = new ethers.Contract(CONFIG.sepolia.usdcAddress, ERC20_ABI, sepProvider);
-      const targetUser = userAddr || walletAddress || CONFIG.deployerRvmId;
       const sepBal = await sepToken.balanceOf(targetUser);
       setUserSepoliaWeth(Number(ethers.formatEther(sepBal)));
 
       const baseProvider = new ethers.JsonRpcProvider(CONFIG.baseSepolia.rpcUrl);
-      const baseUsdc = new ethers.Contract(CONFIG.baseSepolia.usdcAddress, ERC20_ABI, baseProvider);
       const baseWeth = new ethers.Contract(CONFIG.baseSepolia.wethAddress, ERC20_ABI, baseProvider);
       const vaultContract = new ethers.Contract(CONFIG.baseSepolia.vaultAddress, VAULT_ABI, baseProvider);
 
-      const yieldPromise = CONFIG.baseSepolia.sUsdcAddress
-        ? new ethers.Contract(CONFIG.baseSepolia.sUsdcAddress, ERC20_ABI, baseProvider)
-            .balanceOf(CONFIG.baseSepolia.vaultAddress)
-            .catch(() => null)
-        : Promise.resolve(null);
-
-      const [bUsdcBal, bYieldBal, bWethBal, onChainStableBps, onChainYieldBps] = await Promise.all([
-        baseUsdc.balanceOf(CONFIG.baseSepolia.vaultAddress),
-        yieldPromise,
-        baseWeth.balanceOf(CONFIG.baseSepolia.vaultAddress),
-        vaultContract.stableBps().catch(() => null),
-        vaultContract.yieldBps().catch(() => null),
+      const [walletBaseWethBal, userVaultBal, policyTuple, latestBaseBlock] = await Promise.all([
+        baseWeth.balanceOf(targetUser),
+        vaultContract.balances(targetUser),
+        vaultContract.getPolicy(targetUser),
+        baseProvider.getBlockNumber().catch(() => null),
       ]);
 
-      setVaultUsdc(Number(ethers.formatEther(bUsdcBal)));
-      if (bYieldBal !== null) {
-        setVaultYieldUsdc(Number(ethers.formatEther(bYieldBal)));
+      setUserBaseWeth(Number(ethers.formatEther(walletBaseWethBal)));
+      setVaultWeth(Number(ethers.formatEther(userVaultBal.weth)));
+      setVaultUsdc(Number(ethers.formatEther(userVaultBal.usdc)));
+      setVaultYieldUsdc(Number(ethers.formatEther(userVaultBal.sUsdc)));
+
+      const nextStable = Number(policyTuple.stableBps) / 100;
+      const nextYield = Number(policyTuple.yieldBps) / 100;
+      setSavedStablePct(nextStable);
+      setSavedYieldPct(nextYield);
+      if (syncControls) {
+        setStablePct(nextStable);
+        setYieldPct(nextYield);
+        const capNum = Number(ethers.formatEther(policyTuple.maxSingleAllocation));
+        if (capNum > 0) setMaxCapWeth(capNum);
+        const floorNum = Number(ethers.formatEther(policyTuple.minStableOutPerInput));
+        if (floorNum > 0) setSlippageFloorUsd(floorNum);
       }
-      setVaultWeth(Number(ethers.formatEther(bWethBal)));
-      if (onChainStableBps !== null && onChainYieldBps !== null) {
-        setSavedStablePct(Number(onChainStableBps) / 100);
-        setSavedYieldPct(Number(onChainYieldBps) / 100);
+
+      // Query recent Base Sepolia allocation logs within RPC 200-block limit
+      if (latestBaseBlock !== null) {
+        try {
+          const fromBlock = Math.max(0, latestBaseBlock - 180);
+          const logs = await vaultContract.queryFilter(
+            vaultContract.filters.MultiBucketAllocated(targetUser),
+            fromBlock,
+            latestBaseBlock
+          );
+          if (logs.length > 0) {
+            const parsed = [...logs].reverse().slice(0, 5).map((log, idx) => {
+              const processed = Number(ethers.formatEther(log.args.totalProcessed));
+              const usdcOut = Number(ethers.formatEther(log.args.stableOut));
+              const yieldOut = Number(ethers.formatEther(log.args.yieldOut));
+              const keptWeth = Number(ethers.formatEther(log.args.retainedIn));
+              const usdVal = processed * CONFIG.ethUsdRate;
+              return {
+                id: `${log.transactionHash}-${idx}`,
+                time: 'On-chain',
+                inflow: `+${processed.toFixed(2)} WETH ($${usdVal.toLocaleString('en-US', { maximumFractionDigits: 0 })})`,
+                originTx: 'Sepolia Transfer',
+                lasnaSignal: 'Lasna Omni verified',
+                destSwap: `+${usdcOut.toLocaleString('en-US', { maximumFractionDigits: 0 })} USDC reserve · +${yieldOut.toLocaleString('en-US', { maximumFractionDigits: 0 })} sUSDC yield · +${keptWeth.toFixed(2)} WETH kept`,
+                destTx: `${log.transactionHash.slice(0, 6)}...${log.transactionHash.slice(-4)}`,
+                destFullTx: log.transactionHash,
+                status: 'success',
+              };
+            });
+            setActivities(parsed);
+          } else if (syncControls && targetUser.toLowerCase() !== CONFIG.deployerRvmId.toLowerCase()) {
+            setActivities([]);
+          }
+        } catch {
+          // Ignore transient RPC log-range errors
+        }
       }
+
       setLastUpdated(Date.now());
       setSecondsAgo(0);
     } catch (err) {
@@ -167,11 +209,12 @@ export default function App() {
     const handleAccountsChanged = (accounts) => {
       if (accounts.length > 0) {
         setWalletAddress(accounts[0]);
-        fetchLiveBalances(accounts[0]);
-        showToastMsg('Account Switched', `Connected: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`);
+        fetchLiveBalances(accounts[0], true);
+        showToastMsg('Account switched', `Connected as ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`);
       } else {
         setWalletAddress(null);
-        showToastMsg('Wallet Disconnected', 'Logged out from browser wallet', 'warn');
+        fetchLiveBalances(CONFIG.deployerRvmId, true);
+        showToastMsg('Wallet disconnected', 'Viewing default vault telemetry', 'warn');
       }
     };
 
@@ -185,7 +228,7 @@ export default function App() {
     window.ethereum.request({ method: 'eth_accounts' }).then((accounts) => {
       if (accounts && accounts.length > 0) {
         setWalletAddress(accounts[0]);
-        fetchLiveBalances(accounts[0]);
+        fetchLiveBalances(accounts[0], true);
       }
     });
     window.ethereum.request({ method: 'eth_chainId' }).then((hex) => {
@@ -202,14 +245,15 @@ export default function App() {
   const connectWallet = async () => {
     if (walletAddress) {
       setWalletAddress(null);
-      showToastMsg('Disconnected', 'Viewing public vault telemetry in observer mode');
+      fetchLiveBalances(CONFIG.deployerRvmId, true);
+      showToastMsg('Disconnected', 'Viewing default vault telemetry');
       return;
     }
 
     if (!window.ethereum) {
       setWalletAddress(CONFIG.deployerRvmId);
-      showToastMsg('Observer Mode', 'Viewing deployer RVM ID telemetry');
-      fetchLiveBalances(CONFIG.deployerRvmId);
+      showToastMsg('Observer mode', 'Install MetaMask or another browser wallet to transact');
+      fetchLiveBalances(CONFIG.deployerRvmId, true);
       return;
     }
 
@@ -222,11 +266,11 @@ export default function App() {
 
       setWalletAddress(user);
       setCurrentChainId(Number(network.chainId));
-      await fetchLiveBalances(user);
+      await fetchLiveBalances(user, true);
 
-      showToastMsg('Connected', `Authenticated as ${user.slice(0, 6)}...${user.slice(-4)}`);
+      showToastMsg('Wallet connected', `Loaded vault slice for ${user.slice(0, 6)}...${user.slice(-4)}`);
     } catch (err) {
-      showToastMsg('Connection Cancelled', err.message || 'User rejected connection', 'warn');
+      showToastMsg('Connection cancelled', err.message || 'User rejected connection', 'warn');
     } finally {
       setIsConnecting(false);
     }
@@ -262,21 +306,21 @@ export default function App() {
     }
   };
 
-  // Save Multi-Bucket Policy & Guardrails On-Chain (Base Sepolia)
+  // Save per-user Multi-Bucket Policy & Guardrails On-Chain (Base Sepolia)
   const savePolicyOnChain = async () => {
     const keepPct = Math.max(0, 100 - stablePct - yieldPct);
     if (!window.ethereum || !walletAddress) {
       setSavedStablePct(stablePct);
       setSavedYieldPct(yieldPct);
       showToastMsg(
-        'Multi-Bucket Policy Applied (Demo Mode)',
-        `${stablePct}% USDC Reserve • ${yieldPct}% sUSDC Yield • ${keepPct}% WETH Operating`
+        'Policy preview updated',
+        `${stablePct}% USDC reserve · ${yieldPct}% sUSDC yield · ${keepPct}% WETH kept`
       );
       return;
     }
 
     if (currentChainId !== CONFIG.baseSepolia.chainId) {
-      showToastMsg('Switching Network', 'Switching to Base Sepolia to update your on-chain vault policy', 'warn');
+      showToastMsg('Switch to Base Sepolia', 'Approve network switch to save your vault policy on Base Sepolia', 'warn');
       await switchNetwork(CONFIG.baseSepolia);
       return;
     }
@@ -287,35 +331,151 @@ export default function App() {
       const signer = await provider.getSigner();
       const vault = new ethers.Contract(CONFIG.baseSepolia.vaultAddress, VAULT_ABI, signer);
 
-      showToastMsg('Broadcasting Transaction', 'Confirming multi-bucket allocation in MetaMask...');
-      let tx;
-      if (CONFIG.baseSepolia.sUsdcAddress) {
-        tx = await vault.setBuckets(stablePct * 100, yieldPct * 100);
-        await tx.wait();
-        const guardTx = await vault.setGuardrails(
-          ethers.parseEther(maxCapWeth.toString()),
-          ethers.parseEther(slippageFloorUsd.toString())
-        );
-        await guardTx.wait();
-      } else {
-        tx = await vault.setConfig(
-          CONFIG.baseSepolia.dexAddress,
-          CONFIG.baseSepolia.usdcAddress,
-          CONFIG.baseSepolia.wethAddress,
-          (stablePct + yieldPct) * 100
-        );
-        await tx.wait();
-      }
+      showToastMsg('Saving split policy', 'Confirm setMyBuckets in your wallet');
+      const tx = await vault.setMyBuckets(stablePct * 100, yieldPct * 100);
+      await tx.wait();
+
+      showToastMsg('Saving risk guardrails', 'Confirm setMyGuardrails in your wallet');
+      const guardTx = await vault.setMyGuardrails(
+        ethers.parseEther(maxCapWeth.toString()),
+        ethers.parseEther(slippageFloorUsd.toString())
+      );
+      await guardTx.wait();
+
       setSavedStablePct(stablePct);
       setSavedYieldPct(yieldPct);
       showToastMsg(
-        'Policy Confirmed On-Chain',
-        `Vault set to ${stablePct}% USDC Reserve • ${yieldPct}% sUSDC Yield • ${keepPct}% Retained`
+        'Policy confirmed on-chain',
+        `Saved ${stablePct}% USDC · ${yieldPct}% sUSDC · ${keepPct}% WETH for your address`
       );
     } catch (err) {
-      showToastMsg('Update Failed', err.reason || err.message, 'warn');
+      showToastMsg('Policy update failed', err.reason || err.message, 'warn');
     } finally {
       setIsUpdatingPolicy(false);
+    }
+  };
+
+  // Public Testnet WETH Faucet (Sepolia or Base Sepolia)
+  const mintTestWeth = async (targetChain = 'sepolia', amountWeth = 5) => {
+    if (!window.ethereum || !walletAddress) {
+      showToastMsg('Connect wallet first', 'Connect MetaMask to mint test WETH tokens', 'warn');
+      return;
+    }
+    const net = targetChain === 'baseSepolia' ? CONFIG.baseSepolia : CONFIG.sepolia;
+    if (currentChainId !== net.chainId) {
+      showToastMsg(`Switching to ${net.chainName}`, `Approve switching to ${net.chainName} before minting test WETH`, 'warn');
+      await switchNetwork(net);
+      return;
+    }
+
+    const busyKey = `mint-${targetChain}`;
+    setIsWalletActionBusy(busyKey);
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const tokenAddr = targetChain === 'baseSepolia' ? CONFIG.baseSepolia.wethAddress : CONFIG.sepolia.usdcAddress;
+      const token = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
+      const tx = await token.mint(walletAddress, ethers.parseUnits(amountWeth.toString(), 18));
+      showToastMsg('Minting test WETH', `Confirmed tx ${tx.hash.slice(0, 10)}...`);
+      await tx.wait();
+      await fetchLiveBalances(walletAddress);
+      showToastMsg('Test WETH minted', `Added ${amountWeth} WETH on ${net.chainName}`);
+    } catch (err) {
+      showToastMsg('Mint cancelled', err.reason || err.message, 'warn');
+    } finally {
+      setIsWalletActionBusy(null);
+    }
+  };
+
+  // Deposit Base Sepolia WETH into User Vault Slice
+  const depositToVault = async (amountWeth = 2.0) => {
+    if (!window.ethereum || !walletAddress) {
+      showToastMsg('Connect wallet first', 'Connect MetaMask to deposit Base WETH into your vault slice', 'warn');
+      return;
+    }
+    if (currentChainId !== CONFIG.baseSepolia.chainId) {
+      showToastMsg('Switch to Base Sepolia', 'Approve switching to Base Sepolia before depositing', 'warn');
+      await switchNetwork(CONFIG.baseSepolia);
+      return;
+    }
+
+    setIsWalletActionBusy('deposit');
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const weth = new ethers.Contract(CONFIG.baseSepolia.wethAddress, ERC20_ABI, signer);
+      const vault = new ethers.Contract(CONFIG.baseSepolia.vaultAddress, VAULT_ABI, signer);
+      const amt = ethers.parseUnits(amountWeth.toString(), 18);
+
+      const currentAllowance = await weth.allowance(walletAddress, CONFIG.baseSepolia.vaultAddress);
+      if (currentAllowance < amt) {
+        showToastMsg('Approve Base WETH', 'Confirm token approval for PaycheckVault');
+        const approveTx = await weth.approve(CONFIG.baseSepolia.vaultAddress, amt);
+        await approveTx.wait();
+      }
+
+      showToastMsg('Depositing WETH', `Depositing ${amountWeth} WETH into your Base Sepolia vault slice`);
+      const tx = await vault.deposit(amt);
+      await tx.wait();
+      await fetchLiveBalances(walletAddress);
+      showToastMsg('Vault funded', `Deposited ${amountWeth} WETH into your vault slice`);
+    } catch (err) {
+      showToastMsg('Deposit cancelled', err.reason || err.message, 'warn');
+    } finally {
+      setIsWalletActionBusy(null);
+    }
+  };
+
+  // Withdraw User's Own Bucket Tokens from Base Sepolia Vault
+  const withdrawFromVault = async (bucket) => {
+    if (!window.ethereum || !walletAddress) {
+      showToastMsg('Connect wallet first', 'Connect MetaMask to withdraw from your vault slice', 'warn');
+      return;
+    }
+    if (currentChainId !== CONFIG.baseSepolia.chainId) {
+      showToastMsg('Switch to Base Sepolia', 'Approve switching to Base Sepolia before withdrawing', 'warn');
+      await switchNetwork(CONFIG.baseSepolia);
+      return;
+    }
+
+    setIsWalletActionBusy(`withdraw-${bucket}`);
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const vault = new ethers.Contract(CONFIG.baseSepolia.vaultAddress, VAULT_ABI, signer);
+      const userBal = await vault.balances(walletAddress);
+
+      let tokenAddress;
+      let rawAmt;
+      let label;
+      if (bucket === 'usdc') {
+        tokenAddress = CONFIG.baseSepolia.usdcAddress;
+        rawAmt = userBal.usdc;
+        label = 'USDC';
+      } else if (bucket === 'sUsdc') {
+        tokenAddress = CONFIG.baseSepolia.sUsdcAddress;
+        rawAmt = userBal.sUsdc;
+        label = 'sUSDC';
+      } else {
+        tokenAddress = CONFIG.baseSepolia.wethAddress;
+        rawAmt = userBal.weth;
+        label = 'WETH';
+      }
+
+      if (rawAmt <= 0n) {
+        showToastMsg('Nothing to withdraw', `Your ${label} vault balance is 0`, 'warn');
+        return;
+      }
+
+      showToastMsg(`Withdrawing ${label}`, `Confirm withdrawal in MetaMask`);
+      const tx = await vault.withdraw(tokenAddress, rawAmt);
+      await tx.wait();
+      await fetchLiveBalances(walletAddress);
+      showToastMsg('Withdrawal complete', `Sent ${Number(ethers.formatEther(rawAmt)).toFixed(2)} ${label} to your wallet`);
+    } catch (err) {
+      showToastMsg('Withdraw cancelled', err.reason || err.message, 'warn');
+    } finally {
+      setIsWalletActionBusy(null);
     }
   };
 
@@ -410,23 +570,23 @@ export default function App() {
         attempts++;
         try {
           const baseProv = new ethers.JsonRpcProvider(CONFIG.baseSepolia.rpcUrl);
-          const baseUsdc = new ethers.Contract(CONFIG.baseSepolia.usdcAddress, ERC20_ABI, baseProv);
-          const newUsdcBal = await baseUsdc.balanceOf(CONFIG.baseSepolia.vaultAddress);
-          const numUsdc = Number(ethers.formatEther(newUsdcBal));
+          const vaultContract = new ethers.Contract(CONFIG.baseSepolia.vaultAddress, VAULT_ABI, baseProv);
+          const userBal = await vaultContract.balances(walletAddress);
+          const numUsdc = Number(ethers.formatEther(userBal.usdc));
 
-          if (numUsdc !== initialUsdc || attempts >= 8) {
+          if (numUsdc !== initialUsdc || attempts >= 10) {
             clearInterval(pollInterval);
-            await fetchLiveBalances();
+            await fetchLiveBalances(walletAddress);
             setLoopPhase('idle');
             showToastMsg(
-              'Multi-Bucket Settlement Complete!',
-              '3-bucket stablecoin split verified on Base Sepolia with zero keepers.'
+              'Multi-bucket settlement complete',
+              '3-bucket split verified on Base Sepolia'
             );
           }
         } catch {
           // Keep polling
         }
-      }, 3000);
+      }, 2500);
 
       const usdValue = wethAmount * CONFIG.ethUsdRate;
       const stableOut = usdValue * (savedStablePct / 100);
@@ -440,9 +600,10 @@ export default function App() {
           time: 'Just now',
           inflow: `+${wethAmount.toFixed(2)} WETH ($${usdValue.toLocaleString()})`,
           originTx: `${tx.hash.slice(0, 6)}...${tx.hash.slice(-4)}`,
-          lasnaSignal: 'Lasna Omni Catch (Guardrails OK)',
-          destSwap: `+${stableOut.toLocaleString()} USDC Reserve • +${yieldOut.toLocaleString()} sUSDC • +${retainedWeth.toFixed(2)} WETH`,
-          destTx: 'Autonomous Relay',
+          originFullTx: tx.hash,
+          lasnaSignal: 'Lasna Omni verified',
+          destSwap: `+${stableOut.toLocaleString()} USDC reserve · +${yieldOut.toLocaleString()} sUSDC yield · +${retainedWeth.toFixed(2)} WETH kept`,
+          destTx: 'Relaying',
           status: 'success',
         },
         ...prev.slice(0, 5),
@@ -520,27 +681,31 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-dvh flex flex-col justify-between font-sans bg-black text-white">
+    <div
+      className={`min-h-dvh flex flex-col justify-between font-sans text-[#ededed] ${
+        activePage === 'app' ? 'bg-[#0a090d]' : 'bg-black'
+      }`}
+    >
       
       {/* Toast Notification */}
       {toast && (
         <div
           role="status"
           aria-live="polite"
-          className={`fixed bottom-6 right-6 z-50 max-w-sm p-4 rounded-lg border transition-colors flex items-start gap-3 ${
+          className={`fixed bottom-6 right-6 z-50 max-w-sm p-4 rounded-xl border bg-[#121016] transition-colors duration-150 flex items-start gap-3 ${
             toast.type === 'warn'
-              ? 'bg-black border-amber-500 text-amber-100'
-              : 'bg-black border-[#58A6FF] text-white'
+              ? 'border-[#FF5FCF]/60 text-[#ededed]'
+              : 'border-white/[0.12] text-[#ededed]'
           }`}
         >
           <span
-            className={`mt-1.5 w-2 h-2 rounded-[1px] shrink-0 ${
-              toast.type === 'warn' ? 'bg-amber-400' : 'bg-[#10B981]'
+            className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${
+              toast.type === 'warn' ? 'bg-[#FF5FCF]' : 'bg-[#FAEB92]'
             }`}
           />
-          <div className="text-xs space-y-0.5">
-            <div className="font-display font-bold text-sm text-white">{toast.title}</div>
-            <div className="text-slate-300 leading-relaxed">{toast.subtitle}</div>
+          <div className="text-xs space-y-1">
+            <div className="font-medium text-sm text-[#ededed]">{toast.title}</div>
+            <div className="text-[#a8a4b3] leading-relaxed">{toast.subtitle}</div>
           </div>
         </div>
       )}
@@ -559,7 +724,13 @@ export default function App() {
       {/* Main Content + Footer Wrapper (offset for fixed left sidebar on desktop) */}
       <div className="lg:pl-64 flex-1 flex flex-col min-w-0">
         {/* Main Content Container */}
-        <main className="max-w-6xl w-full mx-auto px-6 pt-20 lg:pt-10 pb-12 flex-1">
+        <main
+          className={`w-full mx-auto px-6 lg:px-8 flex-1 ${
+            activePage === 'app'
+              ? 'max-w-[1440px] pt-20 lg:pt-8 pb-12'
+              : 'max-w-6xl pt-20 lg:pt-10 pb-12'
+          }`}
+        >
         {activePage === 'landing' ? (
           <LandingPage
             onLaunchApp={() => setActivePage('app')}
@@ -574,10 +745,20 @@ export default function App() {
         ) : (
           <DashboardPage
             walletAddress={walletAddress}
+            currentChainId={currentChainId}
             animatedUSDC={animatedUSDC}
             animatedYieldUSDC={animatedYieldUSDC}
             animatedWETH={animatedWETH}
+            vaultUsdc={vaultUsdc}
+            vaultYieldUsdc={vaultYieldUsdc}
+            vaultWeth={vaultWeth}
             userSepoliaWeth={userSepoliaWeth}
+            userBaseWeth={userBaseWeth}
+            isWalletActionBusy={isWalletActionBusy}
+            onMintTestWeth={mintTestWeth}
+            onDepositToVault={depositToVault}
+            onWithdrawBucket={withdrawFromVault}
+            onSwitchNetwork={switchNetwork}
             stablePct={stablePct}
             setStablePct={setStablePct}
             yieldPct={yieldPct}
@@ -605,15 +786,16 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer Container with seamless blend into starry scene */}
+      {/* Footer Container shown only on the landing page */}
+      {activePage === 'landing' && (
       <div className="relative w-full mt-12 bg-black">
         <MeadowRiseFooter
           name="PaycheckVault"
           brandHref="#"
-          heading="Autonomous cross-chain *stablecoin* treasury."
-          subheading="Multi-bucket stablecoin allocation and on-chain guardrails triggered across chains by Reactive Network."
+          heading="Send crypto paychecks where they need to go"
+          subheading="Sepolia WETH inflows filtered on Reactive Lasna and split across Base Sepolia buckets"
           cta={{
-            label: "Launch Vault App",
+            label: "Open treasury",
             href: "#vault-app",
             onClick: (e) => {
               e.preventDefault();
@@ -621,30 +803,29 @@ export default function App() {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             },
           }}
-          tagline="The first recipient-side autonomous smart vault built for DoraHacks Omni Buildathon."
-          newsletter={true}
-          placeholder="Enter your email or wallet address"
+          tagline="Built for the Reactive Omni Buildathon"
+          newsletter={false}
           palette={{
             sky: ['#000000', '#000000'],
             haze: '#000000',
             glow: 'transparent',
             hills: [
-              ['#000000', '#000000'],
-              ['#000000', '#000000'],
-              ['#000000', '#000000'],
-              ['#000000', '#000000'],
-              ['#000000', '#000000'],
+              ['#0c0814', '#000000'],
+              ['#120b1f', '#000000'],
+              ['#180e29', '#000000'],
+              ['#130b20', '#000000'],
+              ['#09060f', '#000000'],
               ['#000000', '#000000'],
             ],
             ground: '#000000',
-            ink: '#FFFFFF',
-            muted: '#888888',
-            accent: '#58A6FF',
-            button: {
-              bg: '#2756FC',
-              text: '#FFFFFF',
-              hover: '#3260ff',
-            },
+            ink: '#ededed',
+            sub: '#a8a4b3',
+            pill: '#FAEB92',
+            pillInk: '#000000',
+            text: '#ededed',
+            muted: '#8e8999',
+            line: 'rgba(237, 237, 237, 0.1)',
+            night: true,
           }}
           columns={[
             {
@@ -658,31 +839,32 @@ export default function App() {
             {
               title: "Reactive Network",
               links: [
-                { label: "Documentation", href: "https://docs.reactive.network" },
-                { label: "Reactive Scan", href: "https://lasna.reactivescan.net" },
+                { label: "Documentation", href: "https://dev.reactive.network/" },
+                { label: "Lasna ReactScan", href: "https://lasna.reactscan.net/" },
                 { label: "Ecosystem", href: "https://reactive.network" },
-                { label: "GitHub Repository", href: "https://github.com/Reactive-Network" },
+                { label: "PaycheckVault Repo", href: "https://github.com/MoriMomo/PaycheckVault" },
               ],
             },
             {
               title: "Omni Buildathon",
               links: [
-                { label: "DoraHacks Hackathon", href: "https://dorahacks.io" },
-                { label: "Set It & Forget It Track", href: "https://dorahacks.io" },
+                { label: "DoraHacks Buildathon", href: "https://dorahacks.io/hackathon/reactive-omni-buildathon" },
+                { label: "Set It & Forget It Track", href: "https://dorahacks.io/hackathon/reactive-omni-buildathon" },
                 { label: "PaycheckReactive RSC", href: `${CONFIG.lasna.explorer}/address/${CONFIG.lasna.reactiveAddress}` },
               ],
             },
           ]}
-          copyright="© 2026 PaycheckVault • DoraHacks × Reactive Network Omni Buildathon."
+          copyright="2026 PaycheckVault, Reactive Omni Buildathon"
           legal={[
             { label: "Terms of Service", href: "#terms", onClick: (e) => { e.preventDefault(); setLegalModal('terms'); } },
             { label: "Privacy Policy", href: "#privacy", onClick: (e) => { e.preventDefault(); setLegalModal('privacy'); } },
             { label: "MIT License", href: "#license", onClick: (e) => { e.preventDefault(); setLegalModal('license'); } },
-            { label: "Reactive Lasna Testnet", href: "https://lasna.reactivescan.net" },
+            { label: "Reactive Lasna Testnet", href: "https://lasna.reactscan.net/" },
             { label: "Base Sepolia Testnet", href: "https://sepolia.basescan.org" },
           ]}
         />
       </div>
+      )}
       </div>
 
       {/* Legal & Protocol Disclosure Modal (Terms of Service, Privacy Policy, MIT License) */}
@@ -695,15 +877,15 @@ export default function App() {
           onClick={() => setLegalModal(null)}
         >
           <div
-            className="w-full max-w-lg bg-black border border-white/15 rounded-lg p-6 space-y-4 text-left"
+            className="w-full max-w-lg bg-[#121016] border border-white/[0.12] rounded-xl p-6 space-y-4 text-left"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-3">
+            <div className="flex items-start justify-between gap-4 border-b border-white/[0.08] pb-3">
               <div>
-                <div className="text-[10px] font-mono uppercase tracking-wider text-[#58A6FF]">
-                  Protocol Disclosure
+                <div className="text-xs font-mono text-[#FF5FCF]">
+                  Protocol disclosure
                 </div>
-                <h2 id="legal-modal-title" className="font-display text-lg font-bold text-white mt-0.5">
+                <h2 id="legal-modal-title" className="font-display text-lg font-medium text-[#ededed] mt-1">
                   {legalModal === 'terms'
                     ? 'Terms of Service'
                     : legalModal === 'privacy'
@@ -713,7 +895,7 @@ export default function App() {
               </div>
               <button
                 onClick={() => setLegalModal(null)}
-                className="px-2.5 py-1 rounded-md border border-white/12 text-xs font-mono text-zinc-400 hover:text-white hover:border-white/25 transition-colors cursor-pointer"
+                className="px-3 py-1 rounded-lg bg-[#1c1922] border border-white/[0.08] text-xs font-mono text-[#a8a4b3] hover:text-[#ededed] transition-colors cursor-pointer"
                 aria-label="Close disclosure modal"
               >
                 Close
@@ -721,54 +903,54 @@ export default function App() {
             </div>
 
             {legalModal === 'terms' && (
-              <div className="space-y-3 text-xs text-zinc-300 leading-relaxed">
+              <div className="space-y-3 text-xs text-[#a8a4b3] leading-relaxed">
                 <p>
                   PaycheckVault is an experimental open-source reactive smart contract prototype deployed on Ethereum Sepolia, Reactive Lasna Testnet, and Base Sepolia Testnet.
                 </p>
                 <p>
-                  All cross-chain event subscriptions, anti-dust thresholds (&ge; 10 USDC), and WETH swap dispatches operate autonomously via public on-chain transactions. Do not send mainnet funds to testnet contract addresses.
+                  All cross-chain event subscriptions, anti-dust thresholds (&ge; 0.01 WETH), and multi-bucket allocations operate autonomously via public on-chain transactions. Do not send mainnet funds to testnet contract addresses.
                 </p>
-                <p className="text-zinc-400">
+                <p className="text-[#8e8999]">
                   By connecting a Web3 wallet, you acknowledge sole responsibility for signing transactions, paying network gas fees, and verifying testnet contract addresses before execution.
                 </p>
               </div>
             )}
 
             {legalModal === 'privacy' && (
-              <div className="space-y-3 text-xs text-zinc-300 leading-relaxed">
+              <div className="space-y-3 text-xs text-[#a8a4b3] leading-relaxed">
                 <p>
                   PaycheckVault does not collect, store, or sell personal telemetry, IP logs, cookies, or off-chain user profiles.
                 </p>
                 <p>
-                  Wallet addresses connected via MetaMask or injected EIP-1193 providers are read strictly in client memory to query public RPC endpoints (`ethereum-sepolia-rpc.publicnode.com`, `lasna-rpc.rnk.dev`, `sepolia.base.org`).
+                  Wallet addresses connected via MetaMask or injected EIP-1193 providers are read strictly in client memory to query public RPC endpoints (Sepolia, Lasna, Base Sepolia).
                 </p>
-                <p className="text-zinc-400">
+                <p className="text-[#8e8999]">
                   All ERC-20 transfers, allocation policies, and callback receipts recorded by smart contracts are inherently public on their respective blockchain ledgers.
                 </p>
               </div>
             )}
 
             {legalModal === 'license' && (
-              <div className="space-y-3 text-xs text-zinc-300 leading-relaxed font-mono">
+              <div className="space-y-3 text-xs text-[#a8a4b3] leading-relaxed font-mono">
                 <p>Copyright (c) 2026 PaycheckVault Contributors</p>
-                <p className="font-sans text-zinc-400">
+                <p className="font-sans text-[#8e8999]">
                   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated smart contract files, to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, subject to standard MIT terms.
                 </p>
               </div>
             )}
 
-            <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-500">
-              <span>PaycheckVault &bull; Reactive Lasna / Base Sepolia</span>
+            <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between text-xs font-mono text-[#8e8999]">
+              <span>PaycheckVault · Reactive Lasna / Base Sepolia</span>
               <div className="flex gap-3">
                 <button
                   onClick={() => setLegalModal('terms')}
-                  className={`cursor-pointer ${legalModal === 'terms' ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
+                  className={`cursor-pointer ${legalModal === 'terms' ? 'text-[#FAEB92]' : 'text-[#a8a4b3] hover:text-[#ededed]'}`}
                 >
                   Terms
                 </button>
                 <button
                   onClick={() => setLegalModal('privacy')}
-                  className={`cursor-pointer ${legalModal === 'privacy' ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
+                  className={`cursor-pointer ${legalModal === 'privacy' ? 'text-[#FAEB92]' : 'text-[#a8a4b3] hover:text-[#ededed]'}`}
                 >
                   Privacy
                 </button>

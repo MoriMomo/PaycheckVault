@@ -1,4 +1,20 @@
 import React, { useState } from 'react';
+import {
+  ArrowRight,
+  ArrowUpRight,
+  BookOpen,
+  Compass,
+  FileCode2,
+  GitBranch,
+  Layers,
+  LayoutDashboard,
+  Menu,
+  Radar,
+  Trophy,
+  Wallet,
+  Workflow,
+  X,
+} from 'lucide-react';
 import { CONFIG } from '../config/contracts';
 
 export default function Navbar({
@@ -12,13 +28,15 @@ export default function Navbar({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showInspector, setShowInspector] = useState(false);
 
+  const isDashboard = activePage === 'app';
+
   const navLinks = [
-    { label: 'HOW IT WORKS', href: '#how-it-works', isInternal: true },
-    { label: 'CONTRACTS', href: '#contracts', isInternal: true },
-    { label: 'REACTIVE SCAN', href: 'https://kopli.reactscan.net/', isExternal: true },
-    { label: 'DOCS', href: 'https://dev.reactive.network/', isExternal: true },
-    { label: 'BUILDATHON', href: 'https://dorahacks.io/hackathon/reactive-omni/', isExternal: true },
-    { label: 'GITHUB', href: 'https://github.com/Reactive-Network/reactive-smart-contract-demos', isExternal: true },
+    { label: 'How it works', href: '#how-it-works', isInternal: true, icon: Workflow },
+    { label: 'Contracts', href: '#contracts', isInternal: true, icon: FileCode2 },
+    { label: 'Lasna Scan', href: 'https://lasna.reactscan.net/', isExternal: true, icon: Radar },
+    { label: 'Docs', href: 'https://dev.reactive.network/', isExternal: true, icon: BookOpen },
+    { label: 'Buildathon', href: 'https://dorahacks.io/hackathon/reactive-omni-buildathon', isExternal: true, icon: Trophy },
+    { label: 'GitHub', href: 'https://github.com/MoriMomo/PaycheckVault', isExternal: true, icon: GitBranch },
   ];
 
   const handleLinkClick = (e, item) => {
@@ -38,7 +56,7 @@ export default function Navbar({
     }
   };
 
-  const renderBrand = (compact = false) => (
+  const renderBrand = () => (
     <a
       href="#"
       onClick={(e) => {
@@ -47,142 +65,160 @@ export default function Navbar({
         onNavigate('landing');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }}
-      className="flex items-center gap-2.5 cursor-pointer select-none group"
-      title="PaycheckVault Home"
+      className="flex items-center gap-3 cursor-pointer select-none group focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92] rounded-lg"
+      title="PaycheckVault home"
     >
       <div className="h-6 w-6 shrink-0">
-        <svg className="h-full w-full" viewBox="0 0 84 84" fill="none">
+        <svg className="h-full w-full" viewBox="0 0 84 84" fill="none" aria-hidden="true">
           <path
             fillRule="evenodd"
             clipRule="evenodd"
             d="M42.0759 84C65.2719 84 84.0759 65.196 84.0759 42C84.0759 18.804 65.2719 0 42.0759 0C18.88 0 0.0759277 18.804 0.0759277 42C0.0759277 65.196 18.88 84 42.0759 84ZM42.076 73.5C59.473 73.5 73.576 59.397 73.576 42C73.576 24.603 59.473 10.5 42.076 10.5C24.679 10.5 10.576 24.603 10.576 42C10.576 59.397 24.679 73.5 42.076 73.5Z"
-            fill="#58A6FF"
+            fill="#9929EA"
           />
-          <path d="M18.4509 44.625L44.7009 18.375V39.375H65.7009L39.4509 65.625V44.625H18.4509Z" fill="white" />
+          <path d="M18.4509 44.625L44.7009 18.375V39.375H65.7009L39.4509 65.625V44.625H18.4509Z" fill="#FAEB92" />
         </svg>
       </div>
-      <div className="flex flex-col">
-        <span className="font-display font-bold text-base tracking-tight text-white group-hover:text-[#58A6FF] transition leading-none">
-          PaycheckVault
-        </span>
-        {!compact && (
-          <span className="mt-1 inline-block w-fit px-1.5 py-0.5 rounded-[3px] text-[9px] font-mono uppercase tracking-wider bg-white/8 text-[#58A6FF] border border-white/12 leading-none">
-            Reactive Omni
-          </span>
-        )}
-      </div>
+      <span className="font-display font-medium text-base tracking-tight text-[#ededed] group-hover:text-[#FAEB92] transition-colors duration-150 leading-none">
+        PaycheckVault
+      </span>
     </a>
   );
 
   const renderSidebarBody = () => (
     <>
-      {/* Navigation Sections */}
       <div className="flex-1 overflow-y-auto px-3 py-5 space-y-6">
-        {/* Workspace Switcher */}
-        <div className="space-y-1.5">
-          <div className="px-3 text-[10px] font-mono uppercase tracking-widest text-zinc-500">
+        {/* Workspace Group */}
+        <div>
+          <div className="px-3 pb-2 text-xs text-[#8e8999]">
             Workspace
           </div>
-          <button
-            onClick={() => {
-              setMobileMenuOpen(false);
-              onNavigate('landing');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-md font-mono text-xs transition cursor-pointer ${
-              activePage === 'landing'
-                ? 'bg-white/10 text-white border border-white/15'
-                : 'text-zinc-400 hover:text-white hover:bg-white/5 border border-transparent'
-            }`}
-          >
-            <span>OVERVIEW</span>
-            {activePage === 'landing' && <span className="w-1.5 h-1.5 rounded-[1px] bg-[#58A6FF]" />}
-          </button>
-          <button
-            onClick={() => {
-              setMobileMenuOpen(false);
-              onNavigate('app');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-md font-mono text-xs transition cursor-pointer ${
-              activePage === 'app'
-                ? 'bg-[#2756FC] text-white border border-[#2756FC]'
-                : 'text-zinc-400 hover:text-white hover:bg-white/5 border border-transparent'
-            }`}
-          >
-            <span>VAULT APP</span>
-            <span className={`w-1.5 h-1.5 rounded-[1px] ${activePage === 'app' ? 'bg-white' : 'bg-[#10B981]'}`} />
-          </button>
+          <div className="space-y-1">
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onNavigate('landing');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`w-full h-9 flex items-center justify-between px-3 rounded-lg text-sm transition-[background-color,color] duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92] ${
+                activePage === 'landing'
+                  ? 'bg-[#1c1922] text-[#ededed] font-medium shadow-[inset_0_1px_0_rgba(237,237,237,0.08)]'
+                  : 'text-[#a8a4b3] hover:text-[#ededed] hover:bg-[#121016]'
+              }`}
+            >
+              <span className="flex items-center gap-2.5">
+                <Compass
+                  className={`w-4 h-4 shrink-0 ${activePage === 'landing' ? 'text-[#FF5FCF]' : 'text-[#8e8999]'}`}
+                  strokeWidth={1.5}
+                />
+                <span>Overview</span>
+              </span>
+              {activePage === 'landing' && <span className="w-1.5 h-1.5 rounded-full bg-[#FF5FCF]" />}
+            </button>
+
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onNavigate('app');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`w-full h-9 flex items-center justify-between px-3 rounded-lg text-sm transition-[background-color,color] duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92] ${
+                isDashboard
+                  ? 'bg-[#1c1922] text-[#ededed] font-medium shadow-[inset_0_1px_0_rgba(237,237,237,0.08)]'
+                  : 'text-[#a8a4b3] hover:text-[#ededed] hover:bg-[#121016]'
+              }`}
+            >
+              <span className="flex items-center gap-2.5">
+                <LayoutDashboard
+                  className={`w-4 h-4 shrink-0 ${isDashboard ? 'text-[#FAEB92]' : 'text-[#8e8999]'}`}
+                  strokeWidth={1.5}
+                />
+                <span>Treasury</span>
+              </span>
+              {isDashboard && <span className="w-1.5 h-1.5 rounded-full bg-[#FAEB92]" />}
+            </button>
+          </div>
         </div>
 
-        {/* Protocol Links */}
-        <div className="space-y-1">
-          <div className="px-3 pb-1 text-[10px] font-mono uppercase tracking-widest text-zinc-500">
+        {/* Protocol Links Group */}
+        <div>
+          <div className="px-3 pb-2 text-xs text-[#8e8999]">
             Protocol
           </div>
-          {navLinks.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              target={item.isExternal ? '_blank' : undefined}
-              rel={item.isExternal ? 'noreferrer' : undefined}
-              onClick={(e) => handleLinkClick(e, item)}
-              className="flex items-center justify-between px-3 py-2 rounded-md font-mono text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition cursor-pointer group"
-            >
-              <span>{item.label}</span>
-              <span className="text-[10px] text-zinc-600 group-hover:text-zinc-300 transition">
-                {item.isExternal ? '↗' : '→'}
-              </span>
-            </a>
-          ))}
+          <div className="space-y-1">
+            {navLinks.map((item) => {
+              const Icon = item.icon;
+              return (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  target={item.isExternal ? '_blank' : undefined}
+                  rel={item.isExternal ? 'noreferrer' : undefined}
+                  onClick={(e) => handleLinkClick(e, item)}
+                  className="h-9 flex items-center justify-between px-3 rounded-lg text-sm text-[#a8a4b3] hover:text-[#ededed] hover:bg-[#121016] transition-[background-color,color] duration-150 cursor-pointer group focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92]"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Icon className="w-4 h-4 shrink-0 text-[#8e8999] group-hover:text-[#a8a4b3]" strokeWidth={1.5} />
+                    <span>{item.label}</span>
+                  </span>
+                  {item.isExternal && (
+                    <ArrowUpRight className="w-4 h-4 shrink-0 text-[#8e8999] group-hover:text-[#FAEB92]" strokeWidth={1.5} />
+                  )}
+                </a>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Bottom Controls: Network, Contracts Inspector, Wallet & App CTA */}
-      <div className="p-4 border-t border-white/10 space-y-2.5 bg-black">
+      {/* Bottom Controls */}
+      <div className={`p-4 border-t border-white/[0.08] space-y-2 ${isDashboard ? 'bg-[#0a090d]' : 'bg-black'}`}>
         {walletAddress && currentChainId === CONFIG.sepolia.chainId && (
-          <div className="flex items-center gap-2 text-[11px] font-mono px-3 py-1.5 rounded-md bg-black text-[#58A6FF] border border-[#2756FC]/60">
-            <span className="w-1.5 h-1.5 rounded-[1px] bg-[#58A6FF] shrink-0" />
-            <span className="truncate">Sepolia (Origin)</span>
+          <div className="h-8 flex items-center justify-between px-3 rounded-lg bg-[#121016] border border-white/[0.08] text-xs text-[#a8a4b3]">
+            <span className="truncate">Sepolia origin</span>
+            <span className="font-mono text-[#ededed]">11155111</span>
           </div>
         )}
 
         {walletAddress && currentChainId === CONFIG.baseSepolia.chainId && (
-          <div className="flex items-center gap-2 text-[11px] font-mono px-3 py-1.5 rounded-md bg-black text-zinc-200 border border-[#2756FC]/60">
-            <span className="w-1.5 h-1.5 rounded-[1px] bg-[#58A6FF] shrink-0" />
-            <span className="truncate">Base Sepolia (Vault)</span>
+          <div className="h-8 flex items-center justify-between px-3 rounded-lg bg-[#121016] border border-white/[0.08] text-xs text-[#a8a4b3]">
+            <span className="truncate">Base vault</span>
+            <span className="font-mono text-[#FAEB92]">84532</span>
           </div>
         )}
 
         <button
           onClick={() => setShowInspector(!showInspector)}
-          className="w-full text-xs font-mono text-zinc-400 hover:text-white transition px-3 py-2 rounded-md border border-white/10 hover:bg-white/5 flex items-center justify-between cursor-pointer"
+          className="w-full h-9 text-xs text-[#a8a4b3] hover:text-[#ededed] bg-[#121016] hover:bg-[#1c1922] border border-white/[0.08] px-3 rounded-lg flex items-center justify-between transition-[background-color,color] duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92]"
         >
-          <span>{showInspector ? 'Hide Contracts' : 'Contracts'}</span>
-          <span className="text-[10px] text-zinc-500">{showInspector ? '×' : '3'}</span>
+          <span className="flex items-center gap-2">
+            <Layers className="w-4 h-4 shrink-0 text-[#8e8999]" strokeWidth={1.5} />
+            <span>{showInspector ? 'Hide contracts' : 'Deployments'}</span>
+          </span>
+          <span className="font-mono text-xs text-[#8e8999]">{showInspector ? 'Close' : '3'}</span>
         </button>
 
         <button
           onClick={onConnectWallet}
           disabled={isConnecting}
-          className={`w-full px-3.5 py-2 rounded-md font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer ${
+          className={`w-full h-9 px-3 rounded-lg text-xs font-medium transition-[background-color,color] duration-150 flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92] ${
             walletAddress
-              ? 'bg-black text-[#10B981] border border-[#10B981]/60 hover:bg-zinc-950'
-              : 'bg-white hover:bg-zinc-200 text-black font-bold'
+              ? 'bg-[#121016] text-[#ededed] border border-white/[0.08] hover:bg-[#1c1922]'
+              : 'bg-[#FAEB92] hover:bg-[#fdf2b0] text-black'
           }`}
         >
           {isConnecting ? (
-            <>
-              <span className="w-1.5 h-1.5 rounded-[1px] bg-[#58A6FF]" />
-              <span>Connecting...</span>
-            </>
+            <span>Connecting</span>
           ) : walletAddress ? (
             <>
-              <span className="w-1.5 h-1.5 rounded-[1px] bg-[#10B981]" />
-              <span className="font-mono">{`${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`}</span>
+              <span className="w-2 h-2 rounded-full bg-[#FAEB92]" />
+              <span className="font-mono tabular-nums">{`${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`}</span>
             </>
           ) : (
-            'Connect Wallet'
+            <>
+              <Wallet className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+              <span>Connect wallet</span>
+            </>
           )}
         </button>
 
@@ -193,10 +229,10 @@ export default function Navbar({
               onNavigate('app');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className="w-full py-2 rounded-md bg-[#2756FC] hover:bg-[#3260ff] text-white font-sans font-semibold text-xs text-center transition cursor-pointer flex items-center justify-center gap-1.5"
+            className="w-full h-9 rounded-lg bg-[#1c1922] hover:bg-[#25212d] text-[#ededed] border border-white/[0.08] text-xs font-medium flex items-center justify-center gap-2 transition-[background-color] duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92]"
           >
-            <span>Launch Vault App</span>
-            <span>→</span>
+            <span>Open treasury</span>
+            <ArrowRight className="w-4 h-4 shrink-0" strokeWidth={1.5} />
           </button>
         )}
       </div>
@@ -206,34 +242,42 @@ export default function Navbar({
   return (
     <>
       {/* Desktop Fixed Left Sidebar */}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 z-50 w-64 bg-black border-r border-white/10 flex-col">
-        <div className="px-5 py-5 border-b border-white/10">
-          {renderBrand(false)}
+      <aside
+        className={`hidden lg:flex fixed inset-y-0 left-0 z-50 w-64 border-r border-white/[0.08] flex-col ${
+          isDashboard ? 'bg-[#0a090d]' : 'bg-black'
+        }`}
+      >
+        <div className="px-5 py-5 border-b border-white/[0.08]">
+          {renderBrand()}
         </div>
         {renderSidebarBody()}
       </aside>
 
-      {/* Mobile / Tablet Top Header + Slide-down Drawer */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-black border-b border-white/10">
+      {/* Mobile / Tablet Top Header */}
+      <header
+        className={`lg:hidden fixed top-0 left-0 right-0 z-50 border-b border-white/[0.08] ${
+          isDashboard ? 'bg-[#0a090d]' : 'bg-black'
+        }`}
+      >
         <div className="px-4 h-14 flex items-center justify-between gap-3">
-          {renderBrand(true)}
+          {renderBrand()}
 
           <div className="flex items-center gap-2">
             {activePage === 'landing' ? (
               <button
                 onClick={() => onNavigate('app')}
-                className="px-3 py-1.5 rounded-md bg-[#2756FC] hover:bg-[#3260ff] text-white font-sans font-medium text-xs transition cursor-pointer"
+                className="h-8 px-3 rounded-lg bg-[#FAEB92] hover:bg-[#fdf2b0] text-black font-medium text-xs transition-[background-color] duration-150 cursor-pointer"
               >
-                Launch App →
+                Open treasury
               </button>
             ) : (
               <button
                 onClick={onConnectWallet}
                 disabled={isConnecting}
-                className={`px-3 py-1.5 rounded-md font-semibold text-xs transition cursor-pointer ${
+                className={`h-8 px-3 rounded-lg font-medium text-xs transition-[background-color] duration-150 cursor-pointer ${
                   walletAddress
-                    ? 'bg-black text-[#10B981] border border-[#10B981]/60'
-                    : 'bg-white text-black font-bold'
+                    ? 'bg-[#121016] text-[#ededed] border border-white/[0.08] font-mono tabular-nums'
+                    : 'bg-[#FAEB92] text-black'
                 }`}
               >
                 {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Connect'}
@@ -242,101 +286,95 @@ export default function Navbar({
 
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="h-8 w-8 flex justify-center items-center text-zinc-400 hover:text-white cursor-pointer"
+              className="h-8 w-8 flex justify-center items-center rounded-lg text-[#a8a4b3] hover:text-[#ededed] hover:bg-[#121016] cursor-pointer"
               aria-label="Toggle navigation sidebar"
             >
-              <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 20 20" className="h-5 w-5">
-                {mobileMenuOpen ? (
-                  <path
-                    fillRule="evenodd"
-                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                ) : (
-                  <path
-                    fillRule="evenodd"
-                    d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10zm0 5.25a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75z"
-                    clipRule="evenodd"
-                  />
-                )}
-              </svg>
+              {mobileMenuOpen ? (
+                <X className="w-4 h-4" strokeWidth={1.5} />
+              ) : (
+                <Menu className="w-4 h-4" strokeWidth={1.5} />
+              )}
             </button>
           </div>
         </div>
 
         {mobileMenuOpen && (
-          <div className="bg-black border-t border-white/10 max-h-[calc(100dvh-3.5rem)] flex flex-col overflow-y-auto">
+          <div className={`border-t border-white/[0.08] max-h-[calc(100dvh-3.5rem)] flex flex-col overflow-y-auto ${isDashboard ? 'bg-[#0a090d]' : 'bg-black'}`}>
             {renderSidebarBody()}
           </div>
         )}
       </header>
 
-      {/* Contracts Inspector Panel (Floating next to sidebar on desktop, below header on mobile) */}
+      {/* Deployments Inspector Panel */}
       {showInspector && (
-        <div className="fixed inset-x-0 lg:left-64 bottom-0 lg:bottom-auto lg:top-0 z-40 bg-black border-t lg:border-t-0 lg:border-b border-white/10 px-6 py-4 text-xs">
-          <div className="max-w-5xl mx-auto space-y-3">
+        <div className="fixed inset-x-0 lg:left-64 bottom-0 lg:bottom-auto lg:top-0 z-40 border-t lg:border-t-0 lg:border-b border-white/[0.08] bg-[#121016] px-6 py-4 text-xs">
+          <div className="max-w-[1440px] mx-auto space-y-3">
             <div className="flex items-center justify-between">
-              <span className="font-mono text-[11px] uppercase tracking-wider text-zinc-400">
-                Verified Multi-Chain Deployments
+              <span className="text-xs font-medium text-[#ededed]">
+                Verified multi-chain deployments
               </span>
               <button
                 onClick={() => setShowInspector(false)}
-                className="font-mono text-xs text-zinc-400 hover:text-white cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-xs text-[#a8a4b3] hover:text-[#ededed] cursor-pointer"
               >
-                Close ×
+                <span>Close</span>
+                <X className="w-4 h-4" strokeWidth={1.5} />
               </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 font-mono">
-              <div className="bg-black border border-white/10 p-3.5 rounded-lg space-y-1.5">
-                <div className="flex justify-between items-center text-[11px] text-zinc-400">
-                  <span className="font-semibold text-zinc-200">1. Sepolia (Origin Inflow)</span>
-                  <span>11155111</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono">
+              <div className="bg-black border border-white/[0.08] p-4 rounded-lg space-y-2">
+                <div className="flex justify-between items-center text-xs text-[#a8a4b3]">
+                  <span className="font-sans font-medium text-[#ededed]">Sepolia origin WETH</span>
+                  <span className="px-2 py-0.5 rounded bg-[#1c1922] text-xs text-[#8e8999]">11155111</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-zinc-200 truncate">{CONFIG.sepolia.usdcAddress}</span>
+                  <span className="text-xs text-[#a8a4b3] truncate">{CONFIG.sepolia.usdcAddress}</span>
                   <a
                     href={`${CONFIG.sepolia.explorer}/address/${CONFIG.sepolia.usdcAddress}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[#58A6FF] hover:underline text-[10px] shrink-0"
+                    className="inline-flex items-center gap-1 text-[#FAEB92] hover:underline text-xs shrink-0"
                   >
-                    Etherscan ↗
+                    <span>Etherscan</span>
+                    <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
                   </a>
                 </div>
               </div>
 
-              <div className="bg-black border border-white/10 p-3.5 rounded-lg space-y-1.5">
-                <div className="flex justify-between items-center text-[11px] text-zinc-400">
-                  <span className="font-semibold text-[#58A6FF]">2. Lasna (Reactive RSC)</span>
-                  <span>5318007</span>
+              <div className="bg-black border border-white/[0.08] p-4 rounded-lg space-y-2">
+                <div className="flex justify-between items-center text-xs text-[#a8a4b3]">
+                  <span className="font-sans font-medium text-[#ededed]">Lasna PaycheckReactive</span>
+                  <span className="px-2 py-0.5 rounded bg-[#1c1922] text-xs text-[#FF5FCF]">5318007</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-zinc-200 truncate">{CONFIG.lasna.reactiveAddress}</span>
+                  <span className="text-xs text-[#a8a4b3] truncate">{CONFIG.lasna.reactiveAddress}</span>
                   <a
                     href={`${CONFIG.lasna.explorer}/address/${CONFIG.lasna.reactiveAddress}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[#58A6FF] hover:underline text-[10px] shrink-0"
+                    className="inline-flex items-center gap-1 text-[#FAEB92] hover:underline text-xs shrink-0"
                   >
-                    ReactScan ↗
+                    <span>ReactScan</span>
+                    <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
                   </a>
                 </div>
               </div>
 
-              <div className="bg-black border border-white/10 p-3.5 rounded-lg space-y-1.5">
-                <div className="flex justify-between items-center text-[11px] text-zinc-400">
-                  <span className="font-semibold text-[#2756FC]">3. Base Sepolia (Vault)</span>
-                  <span>84532</span>
+              <div className="bg-black border border-white/[0.08] p-4 rounded-lg space-y-2">
+                <div className="flex justify-between items-center text-xs text-[#a8a4b3]">
+                  <span className="font-sans font-medium text-[#ededed]">Base Sepolia vault</span>
+                  <span className="px-2 py-0.5 rounded bg-[#1c1922] text-xs text-[#FAEB92]">84532</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-zinc-200 truncate">{CONFIG.baseSepolia.vaultAddress}</span>
+                  <span className="text-xs text-[#a8a4b3] truncate">{CONFIG.baseSepolia.vaultAddress}</span>
                   <a
                     href={`${CONFIG.baseSepolia.explorer}/address/${CONFIG.baseSepolia.vaultAddress}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[#58A6FF] hover:underline text-[10px] shrink-0"
+                    className="inline-flex items-center gap-1 text-[#FAEB92] hover:underline text-xs shrink-0"
                   >
-                    BaseScan ↗
+                    <span>BaseScan</span>
+                    <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
                   </a>
                 </div>
               </div>

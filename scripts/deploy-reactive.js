@@ -13,8 +13,11 @@ async function main() {
   console.log("Deployer Address:", deployer.address);
 
   const SEPOLIA_TOKEN_ADDRESS = process.env.SEPOLIA_TOKEN_ADDRESS;
-  const SEPOLIA_MONITORED_RECIPIENT = process.env.SEPOLIA_MONITORED_RECIPIENT || deployer.address;
-  const BASE_VAULT_ADDRESS = process.env.BASE_VAULT_ADDRESS || ethers.ZeroAddress;
+  const SEPOLIA_MONITORED_RECIPIENT =
+    process.env.WILDCARD_MODE === "false" && process.env.SEPOLIA_MONITORED_RECIPIENT
+      ? process.env.SEPOLIA_MONITORED_RECIPIENT
+      : ethers.ZeroAddress;
+  const BASE_VAULT_ADDRESS = ethers.ZeroAddress;
   const MIN_THRESHOLD = process.env.MIN_INFLOW_THRESHOLD || ethers.parseUnits("0.01", 18);
   const COOLDOWN_SECONDS = BigInt(process.env.COOLDOWN_SECONDS || "30");
 
@@ -35,7 +38,7 @@ async function main() {
     BASE_VAULT_ADDRESS,
     MIN_THRESHOLD,
     COOLDOWN_SECONDS,
-    { value: ethers.parseEther("0.05") }
+    { value: ethers.parseEther("0.15") }
   );
 
   await reactiveContract.waitForDeployment();
