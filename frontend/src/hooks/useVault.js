@@ -139,6 +139,8 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
   const [cooldownSecs] = useState(30);
   const [maxCapWeth, setMaxCapWeth] = useState(5.0);
   const [slippageFloorUsd, setSlippageFloorUsd] = useState(2000);
+  const [savedMaxCapWeth, setSavedMaxCapWeth] = useState(5.0);
+  const [savedSlippageFloorUsd, setSavedSlippageFloorUsd] = useState(2000);
 
   const [loopPhase, setLoopPhase] = useState('idle');
   const [activeTxHash, setActiveTxHash] = useState(null);
@@ -218,6 +220,10 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
         setSavedYieldPct(30);
         setStablePct(50);
         setYieldPct(30);
+        setSavedMaxCapWeth(5.0);
+        setSavedSlippageFloorUsd(2000);
+        setMaxCapWeth(5.0);
+        setSlippageFloorUsd(2000);
         setLastTriggeredTs(0);
         setCooldownRemaining(0);
         setActivities([]);
@@ -266,14 +272,16 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
 
         const nextStable = Number(policyTuple.stableBps) / 100;
         const nextYield = Number(policyTuple.yieldBps) / 100;
+        const capNum = Number(ethers.formatEther(policyTuple.maxSingleAllocation));
+        const floorNum = Number(ethers.formatEther(policyTuple.minStableOutPerInput));
         setSavedStablePct(nextStable);
         setSavedYieldPct(nextYield);
+        if (capNum > 0) setSavedMaxCapWeth(capNum);
+        if (floorNum > 0) setSavedSlippageFloorUsd(floorNum);
         if (syncControls) {
           setStablePct(nextStable);
           setYieldPct(nextYield);
-          const capNum = Number(ethers.formatEther(policyTuple.maxSingleAllocation));
           if (capNum > 0) setMaxCapWeth(capNum);
-          const floorNum = Number(ethers.formatEther(policyTuple.minStableOutPerInput));
           if (floorNum > 0) setSlippageFloorUsd(floorNum);
         }
 
@@ -424,19 +432,28 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
       },
       fn: async (signer) => {
         const vault = new ethers.Contract(CONFIG.baseSepolia.vaultAddress, VAULT_ABI, signer);
-        showToast('Saving split policy', 'Confirm setMyBuckets in your wallet');
-        const tx = await vault.setMyBuckets(stablePct * 100, yieldPct * 100);
-        await tx.wait();
+        const bucketsChanged = stablePct !== savedStablePct || yieldPct !== savedYieldPct;
+        const guardrailsChanged = maxCapWeth !== savedMaxCapWeth || slippageFloorUsd !== savedSlippageFloorUsd;
 
-        showToast('Saving risk guardrails', 'Confirm setMyGuardrails in your wallet');
-        const guardTx = await vault.setMyGuardrails(
-          ethers.parseEther(maxCapWeth.toString()),
-          ethers.parseEther(slippageFloorUsd.toString())
-        );
-        await guardTx.wait();
+        if (bucketsChanged || !guardrailsChanged) {
+          showToast('Saving split policy', 'Confirm setMyBuckets in your wallet');
+          const tx = await vault.setMyBuckets(stablePct * 100, yieldPct * 100);
+          await tx.wait();
+        }
+
+        if (guardrailsChanged) {
+          showToast('Saving risk guardrails', 'Confirm setMyGuardrails in your wallet');
+          const guardTx = await vault.setMyGuardrails(
+            ethers.parseEther(maxCapWeth.toString()),
+            ethers.parseEther(slippageFloorUsd.toString())
+          );
+          await guardTx.wait();
+        }
 
         setSavedStablePct(stablePct);
         setSavedYieldPct(yieldPct);
+        setSavedMaxCapWeth(maxCapWeth);
+        setSavedSlippageFloorUsd(slippageFloorUsd);
         showToast(
           'Policy confirmed on-chain',
           `Saved ${stablePct}% USDC · ${yieldPct}% sUSDC · ${keepPct}% WETH for your address`
