@@ -21,13 +21,11 @@ const VERIFIED_PROOFS = {
 
 export default function LandingPage({
   onLaunchApp,
-  onTriggerDemo,
   vaultUsdc,
   vaultYieldUsdc = 0,
   vaultWeth,
   savedStablePct = 50,
   savedYieldPct = 30,
-  loopPhase,
 }) {
   const [copiedKey, setCopiedKey] = useState(null);
   const [showContracts, setShowContracts] = useState(false);
@@ -89,14 +87,12 @@ export default function LandingPage({
                 <ArrowRight className="w-4 h-4 shrink-0" strokeWidth={1.5} />
               </button>
 
-              <button
-                onClick={onTriggerDemo}
-                disabled={loopPhase !== 'idle'}
-                className="h-11 px-5 rounded-lg text-sm font-normal bg-[#121016] hover:bg-[#1c1922] text-[#ededed] border border-white/[0.08] transition-[background-color,transform] duration-150 active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5FCF]"
+              <a
+                href="#how-it-works"
+                className="h-11 px-5 rounded-lg text-sm font-normal bg-[#121016] hover:bg-[#1c1922] text-[#ededed] border border-white/[0.08] transition-[background-color,transform] duration-150 active:scale-[0.98] inline-flex items-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5FCF]"
               >
-                <span className={`w-2 h-2 rounded-full ${loopPhase === 'idle' ? 'bg-[#FF5FCF]' : 'bg-[#FAEB92]'}`} />
-                <span>{loopPhase === 'idle' ? 'Run 1.0 WETH demo' : 'Running demo'}</span>
-              </button>
+                <span>How it works</span>
+              </a>
             </div>
 
             {/* Live Base Sepolia Snapshot & Verified End-to-End Proofs */}

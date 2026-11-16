@@ -6,21 +6,6 @@ import { CONFIG, ERC20_ABI, VAULT_ABI } from '../config/contracts';
 const sepoliaReadProvider = new ethers.JsonRpcProvider(CONFIG.sepolia.rpcUrl);
 const baseSepoliaReadProvider = new ethers.JsonRpcProvider(CONFIG.baseSepolia.rpcUrl);
 
-const INITIAL_ACTIVITIES = [
-  {
-    id: 1,
-    time: 'Verified',
-    inflow: '+1.00 WETH ($2,500)',
-    originTx: '0x0430...fc68',
-    originFullTx: '0x043025677f893c2367986950c26c1cd0017bda08422adc26cc13d8f69359fc68',
-    lasnaSignal: 'Passed (≥ 0.01 WETH)',
-    destSwap: '+1,250 USDC reserve · +750 sUSDC yield · +0.20 WETH kept',
-    destTx: '0x3a2a...d9c6',
-    destFullTx: '0x3a2ad37d975ca1fae92b412f2ebed8c4c00f146a9d1a60fda2aa9a8f7416d9c6',
-    status: 'success',
-  },
-];
-
 function useAnimatedNumber(targetValue, duration = 400) {
   const [displayValue, setDisplayValue] = useState(targetValue);
   const currentRef = useRef(targetValue);
@@ -50,8 +35,6 @@ function useAnimatedNumber(targetValue, duration = 400) {
 
   return displayValue;
 }
-
-const randomHexChunk = () => Math.floor(1000 + Math.random() * 9000).toString(16);
 
 const HISTORY_KEY_PREFIX = 'paycheckvault_history_';
 const MAX_ACTIVITIES = 10;
@@ -98,11 +81,11 @@ function mergeActivities(freshLogs, cachedItems) {
  * transaction execution (faucet, deposit, withdraw, paycheck trigger), and demo simulations.
  */
 export function useVault({ walletAddress, currentChainId, getEip1193, switchNetwork, openWalletModal, showToast }) {
-  const [vaultUsdc, setVaultUsdc] = useState(1250.0);
-  const [vaultYieldUsdc, setVaultYieldUsdc] = useState(750.0);
-  const [vaultWeth, setVaultWeth] = useState(9.2);
-  const [userSepoliaWeth, setUserSepoliaWeth] = useState(10.0);
-  const [userBaseWeth, setUserBaseWeth] = useState(0.0);
+  const [vaultUsdc, setVaultUsdc] = useState(0);
+  const [vaultYieldUsdc, setVaultYieldUsdc] = useState(0);
+  const [vaultWeth, setVaultWeth] = useState(0);
+  const [userSepoliaWeth, setUserSepoliaWeth] = useState(0);
+  const [userBaseWeth, setUserBaseWeth] = useState(0);
   const [userSepoliaEth, setUserSepoliaEth] = useState(null);
   const [userBaseEth, setUserBaseEth] = useState(null);
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
@@ -123,7 +106,7 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
 
   const [loopPhase, setLoopPhase] = useState('idle');
   const [activeTxHash, setActiveTxHash] = useState(null);
-  const [activities, setActivities] = useState(INITIAL_ACTIVITIES);
+  const [activities, setActivities] = useState([]);
 
   const pollIntervalRef = useRef(null);
 
@@ -207,14 +190,7 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
               setActivities(merged);
               saveCachedActivities(targetUser, merged);
             } else if (syncControls) {
-              const cached = loadCachedActivities(targetUser);
-              if (cached.length > 0) {
-                setActivities(cached);
-              } else if (targetUser.toLowerCase() !== CONFIG.deployerRvmId.toLowerCase()) {
-                setActivities([]);
-              } else {
-                setActivities(INITIAL_ACTIVITIES);
-              }
+              setActivities(loadCachedActivities(targetUser));
             }
           } catch {
             // Ignore transient RPC log-range errors
@@ -412,58 +388,14 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
       },
     });
 
-  const runSimulatedLoop = async (wethAmount = 1.0) => {
-    if (loopPhase !== 'idle') return;
-
-    setLoopPhase('sepolia');
-    await new Promise((r) => setTimeout(r, 750));
-
-    setLoopPhase('lasna');
-    await new Promise((r) => setTimeout(r, 850));
-
-    setLoopPhase('base');
-    const effectiveWeth = Math.min(wethAmount, maxCapWeth);
-    const usdValue = effectiveWeth * CONFIG.ethUsdRate;
-    const stableOut = usdValue * (savedStablePct / 100);
-    const yieldOut = usdValue * (savedYieldPct / 100);
-    const keepPct = Math.max(0, 100 - savedStablePct - savedYieldPct);
-    const retainedWeth = effectiveWeth * (keepPct / 100);
-
-    setVaultUsdc((prev) => prev + stableOut);
-    setVaultYieldUsdc((prev) => prev + yieldOut);
-    setVaultWeth((prev) => prev + retainedWeth);
-    setLastUpdated(Date.now());
-    setSecondsAgo(0);
-
-    setActivities((prev) => [
-      {
-        id: Date.now(),
-        time: 'Just now',
-        inflow: `+${effectiveWeth.toFixed(2)} WETH ($${usdValue.toLocaleString()})`,
-        originTx: `0x${randomHexChunk()}...${randomHexChunk()}`,
-        lasnaSignal: `Passed (≥ ${minThresholdWeth} WETH)`,
-        destSwap: `+${stableOut.toLocaleString()} USDC reserve · +${yieldOut.toLocaleString()} sUSDC yield · +${retainedWeth.toFixed(2)} WETH kept`,
-        destTx: `0x${randomHexChunk()}...${randomHexChunk()}`,
-        status: 'success',
-      },
-      ...prev.slice(0, 4),
-    ]);
-
-    showToast(
-      '3-bucket runway executed on Base',
-      `+$${stableOut.toLocaleString()} USDC reserve, +$${yieldOut.toLocaleString()} sUSDC yield, +${retainedWeth.toFixed(2)} WETH kept`
-    );
-
-    await new Promise((r) => setTimeout(r, 1200));
-    setLoopPhase('idle');
-  };
-
   const executeRealPaycheck = async (wethAmount = 1.0) => {
     if (loopPhase !== 'idle') return;
 
     const eip1193 = getEip1193();
     if (!eip1193 || !walletAddress) {
-      return runSimulatedLoop(wethAmount);
+      openWalletModal();
+      showToast('Connect wallet first', 'Choose a wallet to send a Sepolia WETH transaction', 'warn');
+      return;
     }
 
     if (currentChainId !== CONFIG.sepolia.chainId) {
@@ -471,6 +403,8 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
       const switched = await switchNetwork(CONFIG.sepolia);
       if (!switched) return;
     }
+
+    const isDustTest = wethAmount < minThresholdWeth;
 
     try {
       setLoopPhase('sepolia');
@@ -501,20 +435,35 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
         const next = [
           {
             id: activityId,
-            time: 'Just now',
-            inflow: `+${wethAmount.toFixed(2)} WETH ($${usdValue.toLocaleString()})`,
+            time: isDustTest ? 'Suppressed' : 'Just now',
+            inflow: `+${wethAmount.toFixed(isDustTest ? 3 : 2)} WETH ($${usdValue.toLocaleString()})`,
             originTx: `${tx.hash.slice(0, 6)}...${tx.hash.slice(-4)}`,
             originFullTx: tx.hash,
-            lasnaSignal: 'Lasna Omni verified',
-            destSwap: `+${stableOut.toLocaleString()} USDC reserve · +${yieldOut.toLocaleString()} sUSDC yield · +${retainedWeth.toFixed(2)} WETH kept`,
-            destTx: 'Relaying',
-            status: 'success',
+            lasnaSignal: isDustTest ? `Dust (< ${minThresholdWeth} WETH)` : 'Lasna Omni verified',
+            destSwap: isDustTest
+              ? 'Callback suppressed by PaycheckReactive'
+              : `+${stableOut.toLocaleString()} USDC reserve · +${yieldOut.toLocaleString()} sUSDC yield · +${retainedWeth.toFixed(2)} WETH kept`,
+            destTx: isDustTest ? '-' : 'Relaying',
+            status: isDustTest ? 'filtered' : 'success',
           },
           ...prev,
         ].slice(0, MAX_ACTIVITIES);
         saveCachedActivities(walletAddress, next);
         return next;
       });
+
+      if (isDustTest) {
+        setLoopPhase('blocked');
+        showToast(
+          'Dust inflow sent on Sepolia',
+          `Confirmed ${wethAmount} WETH on Sepolia (< ${minThresholdWeth} WETH floor). Lasna suppresses the Base callback.`,
+          'warn'
+        );
+        await new Promise((r) => setTimeout(r, 2000));
+        await fetchLiveBalances(walletAddress);
+        setLoopPhase('idle');
+        return;
+      }
 
       setLoopPhase('lasna');
       showToast('Event caught on Lasna', 'PaycheckReactive verified guardrails and emitted callback to Base');
@@ -602,51 +551,6 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
     }
   };
 
-  const simulateBlockedGuardrail = async ({ inflow, lasnaSignal, destSwap, toastTitle, toastBody }) => {
-    if (loopPhase !== 'idle') return;
-
-    setLoopPhase('sepolia');
-    await new Promise((r) => setTimeout(r, 600));
-
-    setLoopPhase('blocked');
-    setActivities((prev) => [
-      {
-        id: Date.now(),
-        time: 'Just now',
-        inflow,
-        originTx: `0x${randomHexChunk()}...${randomHexChunk()}`,
-        lasnaSignal,
-        destSwap,
-        destTx: '-',
-        status: 'filtered',
-      },
-      ...prev.slice(0, 4),
-    ]);
-
-    showToast(toastTitle, toastBody, 'warn');
-
-    await new Promise((r) => setTimeout(r, 1400));
-    setLoopPhase('idle');
-  };
-
-  const simulateDust = () =>
-    simulateBlockedGuardrail({
-      inflow: '0.002 WETH ($5 dust)',
-      lasnaSignal: `Dust blocked (< ${minThresholdWeth} WETH)`,
-      destSwap: 'Callback suppressed (relayer gas protected)',
-      toastTitle: 'Anti-dust shield triggered on Lasna',
-      toastBody: `0.002 WETH ($5.00) ignored (< ${minThresholdWeth} WETH floor). Callback suppressed.`,
-    });
-
-  const simulateCooldown = () =>
-    simulateBlockedGuardrail({
-      inflow: '+0.50 WETH (rapid repeat)',
-      lasnaSignal: `Cooldown active (< ${cooldownSecs}s window)`,
-      destSwap: 'Callback rate-limited (InflowSuppressed)',
-      toastTitle: 'Cooldown shield triggered on Lasna',
-      toastBody: `Rapid inflow suppressed within ${cooldownSecs}s cooldown window to stop fee drain.`,
-    });
-
   return {
     vaultUsdc,
     vaultYieldUsdc,
@@ -683,8 +587,5 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
     depositToVault,
     withdrawFromVault,
     executeRealPaycheck,
-    simulateDust,
-    simulateCooldown,
-    runSimulatedLoop,
   };
 }

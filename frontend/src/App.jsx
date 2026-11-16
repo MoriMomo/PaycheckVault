@@ -122,13 +122,11 @@ export default function App() {
           {activePage === 'landing' ? (
             <LandingPage
               onLaunchApp={() => setActivePage('app')}
-              onTriggerDemo={() => vault.runSimulatedLoop(1.0)}
               vaultUsdc={vault.vaultUsdc}
               vaultYieldUsdc={vault.vaultYieldUsdc}
               vaultWeth={vault.vaultWeth}
               savedStablePct={vault.savedStablePct}
               savedYieldPct={vault.savedYieldPct}
-              loopPhase={vault.loopPhase}
             />
           ) : (
             <DashboardPage
@@ -166,8 +164,6 @@ export default function App() {
               loopPhase={vault.loopPhase}
               activeTxHash={vault.activeTxHash}
               onExecutePaycheck={vault.executeRealPaycheck}
-              onSimulateDust={vault.simulateDust}
-              onSimulateCooldown={vault.simulateCooldown}
               isLoadingBalances={vault.isLoadingBalances}
               secondsAgo={vault.secondsAgo}
               onRefreshBalances={vault.refreshBalances}

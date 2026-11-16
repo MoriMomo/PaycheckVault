@@ -4,7 +4,6 @@ import {
   ArrowUpRight,
   Ban,
   CheckCircle2,
-  Clock,
   Coins,
   RefreshCw,
   Send,
@@ -54,8 +53,6 @@ export default function DashboardPage({
   loopPhase,
   activeTxHash,
   onExecutePaycheck,
-  onSimulateDust,
-  onSimulateCooldown,
   isLoadingBalances,
   secondsAgo,
   onRefreshBalances,
@@ -122,33 +119,17 @@ export default function DashboardPage({
             className="h-10 px-4 rounded-lg text-sm font-medium bg-[#FAEB92] hover:bg-[#fdf2b0] text-black transition-[background-color,transform] duration-150 active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92]"
           >
             <Send className="w-4 h-4 shrink-0" strokeWidth={1.5} />
-            <span>
-              {loopPhase !== 'idle'
-                ? 'Relaying'
-                : walletAddress
-                ? 'Send 1.0 WETH'
-                : 'Simulate 1.0 WETH'}
-            </span>
+            <span>{loopPhase !== 'idle' ? 'Relaying' : 'Send 1.0 WETH'}</span>
           </button>
 
           <button
-            onClick={onSimulateDust}
+            onClick={() => onExecutePaycheck(0.002)}
             disabled={loopPhase !== 'idle'}
             className="h-10 px-4 rounded-lg text-sm font-normal text-[#ededed] bg-[#1c1922] hover:bg-[#25212d] border border-white/[0.08] transition-[background-color,transform] duration-150 active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5FCF]"
-            title={`Test < ${minThresholdWeth} WETH inflow suppressed by Lasna`}
+            title={`Send a real 0.002 WETH tx on Sepolia (< ${minThresholdWeth} WETH floor) to trigger Lasna dust suppression`}
           >
             <ShieldAlert className="w-4 h-4 shrink-0 text-[#a8a4b3]" strokeWidth={1.5} />
-            <span>Test small inflow</span>
-          </button>
-
-          <button
-            onClick={onSimulateCooldown}
-            disabled={loopPhase !== 'idle'}
-            className="h-10 px-4 rounded-lg text-sm font-normal text-[#ededed] bg-[#1c1922] hover:bg-[#25212d] border border-white/[0.08] transition-[background-color,transform] duration-150 active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5FCF]"
-            title={`Test rapid inflow rate-limited inside ${cooldownSecs}s cooldown`}
-          >
-            <Clock className="w-4 h-4 shrink-0 text-[#a8a4b3]" strokeWidth={1.5} />
-            <span>Test repeat inflow</span>
+            <span>Test 0.002 WETH dust</span>
           </button>
         </div>
       </div>
