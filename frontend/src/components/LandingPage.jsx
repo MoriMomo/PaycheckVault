@@ -12,6 +12,34 @@ import {
 } from 'lucide-react';
 import { CONFIG } from '../config/contracts';
 import MicroSlats from './ui/MicroSlats';
+import FoldText from './ui/FoldText';
+
+const SECTION_FOLD_PROPS = {
+  foldStyle: 'paper',
+  splitBy: 'char',
+  hinge: 'top',
+  trigger: 'scroll',
+  foldAngle: 92,
+  duration: 0.65,
+  stagger: 0.03,
+  staggerFrom: 'start',
+  ease: 'power3.out',
+  hoverRefold: true,
+  refoldRadius: 140,
+  refoldAngle: 45,
+  perspective: 700,
+  creaseShading: 0.55,
+  fontSize: 'inherit',
+  fontWeight: 500,
+};
+
+const CARD_FOLD_PROPS = {
+  ...SECTION_FOLD_PROPS,
+  duration: 0.55,
+  stagger: 0.02,
+  refoldRadius: 120,
+  refoldAngle: 35,
+};
 
 const VERIFIED_PROOFS = {
   sepoliaTx: '0x043025677f893c2367986950c26c1cd0017bda08422adc26cc13d8f69359fc68',
@@ -71,7 +99,11 @@ export default function LandingPage({
           <div className="lg:col-span-7 space-y-6 lg:border-l lg:border-white/[0.08] lg:pl-10">
             <div className="space-y-4">
               <h1 className="font-display text-[36px] sm:text-[48px] lg:text-[56px] font-medium tracking-[-0.03em] text-[#ededed] leading-[1.05]">
-                Signal-driven cross-chain treasury rules
+                <FoldText
+                  {...SECTION_FOLD_PROPS}
+                  trigger="mount"
+                  text="Signal-driven cross-chain treasury rules"
+                />
               </h1>
 
               <p className="text-base sm:text-lg text-[#a8a4b3] leading-relaxed max-w-[36rem]">
@@ -183,7 +215,7 @@ export default function LandingPage({
         <div className="border-t border-white/[0.08] pt-10 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
           <div>
             <h2 className="font-display text-[28px] sm:text-[32px] leading-[1.15] font-medium text-[#ededed] tracking-[-0.02em]">
-              What happens when a paycheck arrives
+              <FoldText {...SECTION_FOLD_PROPS} text="What happens when a paycheck arrives" />
             </h2>
           </div>
           <div className="font-mono text-xs px-3 py-1 rounded bg-[#121016] border border-white/[0.08] text-[#a8a4b3] tabular-nums w-fit">
@@ -205,7 +237,7 @@ export default function LandingPage({
                 <span className="text-[#8e8999] tabular-nums">11155111</span>
               </div>
               <h3 className="font-display text-base font-medium text-[#ededed]">
-                You receive WETH
+                <FoldText {...CARD_FOLD_PROPS} text="You receive WETH" />
               </h3>
               <p className="text-sm text-[#a8a4b3] leading-relaxed">
                 Someone sends WETH to your monitored Sepolia wallet. The ERC-20 token emits a <code className="font-mono text-xs text-[#FAEB92]">Transfer(from, to, value)</code> log that Reactive picks up automatically.
@@ -230,7 +262,7 @@ export default function LandingPage({
                 <span className="text-[#8e8999] tabular-nums">5318007</span>
               </div>
               <h3 className="font-display text-base font-medium text-[#ededed]">
-                Filters verify amount and timing
+                <FoldText {...CARD_FOLD_PROPS} text="Filters verify amount and timing" />
               </h3>
               <p className="text-sm text-[#a8a4b3] leading-relaxed">
                 PaycheckReactive runs <code className="font-mono text-xs text-[#ededed]">react(LogRecord)</code> under <code className="font-mono text-xs text-[#ededed]">onlySystem</code>, checks the 0.01 WETH minimum and 30s cooldown, and calls <code className="font-mono text-xs text-[#FF5FCF]">requestCallbackV_1_0</code>.
@@ -255,7 +287,7 @@ export default function LandingPage({
                 <span className="text-[#8e8999] tabular-nums">84532</span>
               </div>
               <h3 className="font-display text-base font-medium text-[#ededed]">
-                Vault splits the payout
+                <FoldText {...CARD_FOLD_PROPS} text="Vault splits the payout" />
               </h3>
               <p className="text-sm text-[#a8a4b3] leading-relaxed">
                 Base Omni Proxy delivers the callback to PaycheckVault, which verifies cap and slippage bounds before routing payouts across USDC reserve, sUSDC yield, and retained WETH (50% / 30% / 20% by default).
@@ -275,7 +307,7 @@ export default function LandingPage({
       <section className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6">
         <div className="border-t border-white/[0.08] pt-10 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
           <h2 className="font-display text-[28px] sm:text-[32px] leading-[1.15] font-medium text-[#ededed] tracking-[-0.02em]">
-            What the contracts enforce
+            <FoldText {...SECTION_FOLD_PROPS} text="What the contracts enforce" />
           </h2>
         </div>
 
@@ -329,7 +361,7 @@ export default function LandingPage({
                 </div>
                 <div className="md:col-span-8 space-y-2">
                   <h3 className="font-display text-base sm:text-lg font-medium text-[#ededed] tracking-tight">
-                    {spec.title}
+                    <FoldText {...CARD_FOLD_PROPS} text={spec.title} />
                   </h3>
                   <p className="text-sm text-[#a8a4b3] leading-relaxed">
                     {spec.desc}
@@ -353,7 +385,7 @@ export default function LandingPage({
           >
             <div className="space-y-0.5">
               <h2 className="font-display text-base font-medium text-[#ededed]">
-                Deployed contracts
+                <FoldText {...CARD_FOLD_PROPS} text="Deployed contracts" />
               </h2>
               <p className="text-xs text-[#8e8999]">
                 Verified public addresses on Ethereum Sepolia, Reactive Lasna, and Base Sepolia
