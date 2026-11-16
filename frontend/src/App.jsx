@@ -130,6 +130,12 @@ export default function App() {
               walletAddress={wallet.walletAddress}
               onConnectWallet={wallet.openWalletModal}
               currentChainId={wallet.currentChainId}
+              reactiveStats={vault.reactiveStats}
+              cooldownRemaining={vault.cooldownRemaining}
+              isPreviewMode={vault.isPreviewMode}
+              previewAddress={vault.previewAddress}
+              onEnablePreview={vault.enableSamplePreview}
+              onExitPreview={vault.exitSamplePreview}
               animatedUSDC={vault.animatedUSDC}
               animatedYieldUSDC={vault.animatedYieldUSDC}
               animatedWETH={vault.animatedWETH}

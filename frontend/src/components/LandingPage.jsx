@@ -71,11 +71,11 @@ export default function LandingPage({
           <div className="lg:col-span-7 space-y-6 lg:border-l lg:border-white/[0.08] lg:pl-10">
             <div className="space-y-4">
               <h1 className="font-display text-[36px] sm:text-[48px] lg:text-[56px] font-medium tracking-[-0.03em] text-[#ededed] leading-[1.05]">
-                Auto-split crypto paychecks across chains
+                Signal-driven cross-chain treasury rules
               </h1>
 
               <p className="text-base sm:text-lg text-[#a8a4b3] leading-relaxed max-w-[36rem]">
-                Get paid in WETH on Ethereum Sepolia. PaycheckReactive checks transfer limits on Lasna and triggers PaycheckVault on Base Sepolia to split payouts into USDC for expenses, sUSDC for yield, and leftover WETH.
+                When WETH hits your Ethereum Sepolia address, PaycheckReactive enforces dust and cooldown limits on Lasna and triggers PaycheckVault on Base Sepolia to split your pre-funded Base treasury into USDC, sUSDC yield, and operating WETH, with zero keepers or backend cron servers.
               </p>
             </div>
 

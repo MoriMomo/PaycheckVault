@@ -1,8 +1,12 @@
-# PaycheckVault v3 — Multi-User Autonomous Cross-Chain Stablecoin Vault
+# PaycheckVault v3 — Signal-Driven Cross-Chain Treasury Vault
 
 **Set It and Forget It · Powered by Reactive Network Omni (`5318007`)**
 
-PaycheckVault lets any connected wallet receive volatile **WETH** inflows on **Ethereum Sepolia**, filter transfers through **Reactive Network Omni** guardrails (`>= 0.01 WETH` dust floor, 30s per-user cooldown), and split payouts automatically on **Base Sepolia** into a **USDC** reserve, a **sUSDC** yield vault, and retained operating **WETH** — with isolated per-user balances, split rules, deposit, and withdrawal controls.
+PaycheckVault turns incoming **Ethereum Sepolia WETH transfers** into autonomous treasury triggers on **Base Sepolia**: `PaycheckReactive` filters dust (`< 0.01 WETH`) and enforces a 30-second per-user cooldown on **Reactive Lasna Omni**, then dispatches a callback to **PaycheckVault** on Base Sepolia to split each user's pre-funded Base WETH vault slice across **USDC** reserve, **sUSDC** yield, and retained operating **WETH** — with isolated per-user balances, split rules, deposit, and withdrawal controls.
+
+### Why Reactive? (Zero Keepers, Zero Backend)
+- **No Gelato, no Chainlink Automation, no off-chain server:** Origin ERC-20 `Transfer` subscriptions live natively inside `PaycheckReactive` (`SYSTEM.subscribe` + `onlySystem`).
+- **Distinct from single-chain vaults & rate monitors:** `PaycheckVault` on Base Sepolia cannot observe an inbound WETH transfer arriving at a user's Ethereum Sepolia address on its own. Reactive Network bridges that external event into deterministic destination execution.
 
 ---
 

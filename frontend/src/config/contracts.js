@@ -56,3 +56,14 @@ export const VAULT_ABI = [
   'event Deposited(address indexed recipient, uint256 amount)',
   'event Withdrawn(address indexed recipient, address indexed token, uint256 amount)',
 ];
+
+export const REACTIVE_ABI = [
+  'function totalCallbacksEmitted() view returns (uint256)',
+  'function totalDustBlocked() view returns (uint256)',
+  'function totalCooldownBlocked() view returns (uint256)',
+  'function lastTriggeredAt(address) view returns (uint256)',
+  'function minInflowThreshold() view returns (uint256)',
+  'function cooldownPeriod() view returns (uint256)',
+  'event PaycheckTriggered(address indexed recipient, uint256 indexed amount, address indexed destinationVault, uint256 timestamp)',
+  'event InflowSuppressed(address indexed recipient, uint256 indexed amount, string reason, uint256 timestamp)',
+];

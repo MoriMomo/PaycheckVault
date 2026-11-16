@@ -4,6 +4,7 @@ import {
   ArrowUpRight,
   Ban,
   CheckCircle2,
+  Clock,
   Coins,
   RefreshCw,
   Send,
@@ -22,6 +23,12 @@ export default function DashboardPage({
   walletAddress,
   onConnectWallet,
   currentChainId,
+  reactiveStats = { callbacks: 0, dustBlocked: 0, cooldownBlocked: 0, lasnaReactGas: null, baseVaultEthGas: null },
+  cooldownRemaining = 0,
+  isPreviewMode = false,
+  previewAddress = null,
+  onEnablePreview,
+  onExitPreview,
   animatedUSDC,
   animatedYieldUSDC,
   animatedWETH,
@@ -104,11 +111,16 @@ export default function DashboardPage({
       {/* 1. Top Command Header */}
       <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="font-display text-[32px] leading-[1.15] font-medium tracking-[-0.02em] text-[#ededed]">
-            Treasury
-          </h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="font-display text-[32px] leading-[1.15] font-medium tracking-[-0.02em] text-[#ededed]">
+              Treasury
+            </h1>
+            <span className="font-mono text-xs px-2.5 py-0.5 rounded bg-[#121016] border border-white/[0.08] text-[#a8a4b3]">
+              Testnet Simulation · $2,500/ETH Mock DEX
+            </span>
+          </div>
           <p className="text-sm text-[#a8a4b3] max-w-2xl">
-            Send WETH on Sepolia. PaycheckReactive checks dust and cooldown limits on Lasna and triggers PaycheckVault on Base Sepolia to split funds into your three buckets.
+            Cross-chain signal-driven treasury automation: Sepolia WETH inflows trigger PaycheckReactive on Lasna (dust &amp; cooldown firewall) to split your pre-funded Base Sepolia vault slice into USDC, sUSDC yield, and operating WETH.
           </p>
         </div>
 
@@ -127,10 +139,20 @@ export default function DashboardPage({
             onClick={() => onExecutePaycheck(0.002)}
             disabled={loopPhase !== 'idle'}
             className="h-10 px-4 rounded-lg text-sm font-normal text-[#ededed] bg-[#1c1922] hover:bg-[#25212d] border border-white/[0.08] transition-[background-color,transform] duration-150 active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5FCF]"
-            title={`Send a real 0.002 WETH tx on Sepolia (< ${minThresholdWeth} WETH floor) to trigger Lasna dust suppression`}
+            title={`Send a real 0.002 WETH tx on Sepolia (< ${minThresholdWeth} WETH floor) to trigger Lasna InflowSuppressed`}
           >
             <ShieldAlert className="w-4 h-4 shrink-0 text-[#a8a4b3]" strokeWidth={1.5} />
             <span>Test 0.002 WETH dust</span>
+          </button>
+
+          <button
+            onClick={() => onExecutePaycheck(0.05)}
+            disabled={loopPhase !== 'idle'}
+            className="h-10 px-4 rounded-lg text-sm font-normal text-[#ededed] bg-[#1c1922] hover:bg-[#25212d] border border-white/[0.08] transition-[background-color,transform] duration-150 active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5FCF]"
+            title={`Send 0.05 WETH within the ${cooldownSecs}s cooldown window to test Lasna rate-limiting`}
+          >
+            <Clock className="w-4 h-4 shrink-0 text-[#a8a4b3]" strokeWidth={1.5} />
+            <span>{cooldownRemaining > 0 ? `Test cooldown (${cooldownRemaining}s)` : 'Test 0.05 WETH'}</span>
           </button>
         </div>
       </div>
@@ -239,6 +261,45 @@ export default function DashboardPage({
                 `Split ${savedStablePct}% USDC · ${savedYieldPct}% sUSDC · ${savedKeepPct}% WETH`
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Reactive Firewall Counters & Contract Gas Reserves */}
+        <div className="pt-3 border-t border-white/[0.08] flex flex-wrap items-center justify-between gap-4 text-xs font-mono">
+          <div className="flex flex-wrap items-center gap-4 text-[#a8a4b3] tabular-nums">
+            <span>
+              Callbacks: <strong className="text-[#ededed] font-medium">{reactiveStats.callbacks}</strong>
+            </span>
+            <span>
+              Dust blocked: <strong className="text-[#FF5FCF] font-medium">{reactiveStats.dustBlocked}</strong>
+            </span>
+            <span>
+              Cooldowns blocked: <strong className="text-[#FF5FCF] font-medium">{reactiveStats.cooldownBlocked}</strong>
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4 tabular-nums">
+            <span className="text-[#a8a4b3]">
+              Lasna RSC:{' '}
+              <span className={reactiveStats.lasnaReactGas !== null && reactiveStats.lasnaReactGas < 0.05 ? 'text-[#FF5FCF]' : 'text-[#ededed]'}>
+                {reactiveStats.lasnaReactGas !== null ? `${reactiveStats.lasnaReactGas.toFixed(3)} REACT` : '...'}
+              </span>
+            </span>
+            <span className="text-[#a8a4b3]">
+              Base vault gas:{' '}
+              <span className={reactiveStats.baseVaultEthGas !== null && reactiveStats.baseVaultEthGas < 0.005 ? 'text-[#FF5FCF]' : 'text-[#ededed]'}>
+                {reactiveStats.baseVaultEthGas !== null ? `${reactiveStats.baseVaultEthGas.toFixed(4)} ETH` : '...'}
+              </span>
+            </span>
+            {(walletAddress || isPreviewMode) && (
+              <span
+                className={`px-2 py-0.5 rounded bg-[#1c1922] border border-white/[0.08] ${
+                  cooldownRemaining > 0 ? 'text-[#FF5FCF]' : 'text-[#FAEB92]'
+                }`}
+              >
+                {cooldownRemaining > 0 ? `Cooldown ${cooldownRemaining}s` : 'Cooldown ready'}
+              </span>
+            )}
           </div>
         </div>
       </section>
@@ -434,20 +495,43 @@ export default function DashboardPage({
               <div className="flex items-start gap-3 min-w-0">
                 <Wallet className="w-4 h-4 shrink-0 text-[#8e8999] mt-0.5" strokeWidth={1.5} />
                 <div className="space-y-1 min-w-0">
-                  <div className="text-xs text-[#a8a4b3]">
-                    {walletAddress ? 'Your connected wallet' : 'No wallet connected'}
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-[#a8a4b3]">
+                    <span>
+                      {walletAddress
+                        ? 'Your connected wallet'
+                        : isPreviewMode
+                        ? 'Read-only sample preview'
+                        : 'No wallet connected'}
+                    </span>
+                    {isPreviewMode && (
+                      <span className="font-mono px-2 py-0.5 rounded bg-[#1c1922] border border-[#FF5FCF]/40 text-[#FF5FCF]">
+                        Read-only
+                      </span>
+                    )}
                   </div>
                   {walletAddress ? (
                     <div className="font-mono text-xs text-[#ededed] truncate">
                       {walletAddress}
                     </div>
+                  ) : isPreviewMode ? (
+                    <div className="flex flex-wrap items-center gap-3 text-xs font-mono">
+                      <span className="text-[#ededed] truncate">{previewAddress}</span>
+                      <button onClick={onExitPreview} className="text-[#FF5FCF] hover:underline cursor-pointer">
+                        Exit preview
+                      </button>
+                      <button onClick={onConnectWallet} className="text-[#FAEB92] hover:underline cursor-pointer">
+                        Connect wallet
+                      </button>
+                    </div>
                   ) : (
-                    <button
-                      onClick={onConnectWallet}
-                      className="text-xs font-mono text-[#FAEB92] hover:underline cursor-pointer"
-                    >
-                      Connect wallet to view your vault
-                    </button>
+                    <div className="flex flex-wrap items-center gap-3 text-xs font-mono">
+                      <button onClick={onConnectWallet} className="text-[#FAEB92] hover:underline cursor-pointer">
+                        Connect wallet to view your vault
+                      </button>
+                      <button onClick={onEnablePreview} className="text-[#a8a4b3] hover:text-[#ededed] hover:underline cursor-pointer">
+                        Preview sample vault (read-only)
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -637,6 +721,17 @@ export default function DashboardPage({
                         </a>
                       ) : (
                         <span className="text-[#8e8999]">{item.originTx}</span>
+                      )}
+                      {item.lasnaFullTx && (
+                        <a
+                          href={`${CONFIG.lasna.explorer}/tx/${item.lasnaFullTx}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#1c1922] text-[#FF5FCF] hover:text-white"
+                        >
+                          <span>Lasna</span>
+                          <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+                        </a>
                       )}
                       {item.destFullTx && (
                         <a
