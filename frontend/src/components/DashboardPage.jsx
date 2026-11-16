@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowDownToLine,
   ArrowUpRight,
@@ -24,7 +24,8 @@ export default function DashboardPage({
   onConnectWallet,
   currentChainId,
   reactiveStats = { callbacks: 0, dustBlocked: 0, cooldownBlocked: 0, lasnaReactGas: null, baseVaultEthGas: null },
-  cooldownRemaining = 0,
+  lastUpdated,
+  lastTriggeredTs = 0,
   isPreviewMode = false,
   previewAddress = null,
   onEnablePreview,
@@ -62,10 +63,24 @@ export default function DashboardPage({
   activeTxHash,
   onExecutePaycheck,
   isLoadingBalances,
-  secondsAgo,
   onRefreshBalances,
   activities,
 }) {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      setNowMs(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const secondsAgo = Math.max(0, Math.floor((nowMs - (lastUpdated || nowMs)) / 1000));
+  const cooldownRemaining =
+    lastTriggeredTs > 0
+      ? Math.max(0, cooldownSecs - (Math.floor(nowMs / 1000) - lastTriggeredTs))
+      : 0;
+
   const keepPct = Math.max(0, 100 - stablePct - yieldPct);
   const savedKeepPct = Math.max(0, 100 - savedStablePct - savedYieldPct);
 
@@ -80,6 +95,62 @@ export default function DashboardPage({
   const actualStableShare = Math.round((animatedUSDC / totalPortfolioUsd) * 100);
   const actualYieldShare = Math.round((animatedYieldUSDC / totalPortfolioUsd) * 100);
   const actualWethShare = Math.max(0, 100 - actualStableShare - actualYieldShare);
+
+  const bucketItems = [
+    {
+      key: 'usdc',
+      cardTitle: 'Core reserve',
+      rowLabel: 'USDC reserve',
+      badge: 'USDC',
+      badgeClass: 'bg-[#1c1922] text-[#FAEB92]',
+      dotClass: 'bg-[#FAEB92]',
+      withdrawClass: 'text-[#FAEB92]',
+      loadingLabel: 'Loading USDC balance',
+      formattedCard: `$${animatedUSDC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      formattedRow: `$${animatedUSDC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      rawBalance: vaultUsdc,
+      actualShare: actualStableShare,
+      targetLabel: `${savedStablePct}% target`,
+      targetPct: savedStablePct,
+    },
+    {
+      key: 'sUsdc',
+      cardTitle: 'Yield vault',
+      rowLabel: 'sUSDC yield',
+      badge: 'sUSDC',
+      badgeClass: 'bg-[#1c1922] text-[#FF5FCF]',
+      dotClass: 'bg-[#FF5FCF]',
+      withdrawClass: 'text-[#FF5FCF]',
+      loadingLabel: 'Loading sUSDC balance',
+      formattedCard: `$${animatedYieldUSDC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      formattedRow: `$${animatedYieldUSDC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      rawBalance: vaultYieldUsdc,
+      actualShare: actualYieldShare,
+      targetLabel: `${savedYieldPct}% target`,
+      targetPct: savedYieldPct,
+    },
+    {
+      key: 'weth',
+      cardTitle: 'Operating asset',
+      rowLabel: 'Operating WETH',
+      badge: 'WETH',
+      badgeClass: 'bg-[#9929EA] text-white',
+      dotClass: 'bg-[#9929EA]',
+      withdrawClass: 'text-[#ededed]',
+      loadingLabel: 'Loading WETH balance',
+      formattedCard: (
+        <>
+          {animatedWETH.toFixed(4)}
+          <span className="ml-1.5 text-xs text-[#8e8999] font-sans font-normal">WETH</span>
+        </>
+      ),
+      formattedRow: `$${Math.round(wethUsdValue).toLocaleString('en-US')} (${animatedWETH.toFixed(2)})`,
+      rawBalance: vaultWeth,
+      actualShare: actualWethShare,
+      targetLabel: `${savedKeepPct}% kept`,
+      targetPct: savedKeepPct,
+    },
+  ];
 
   const handleStableChange = (nextStable) => {
     setStablePct(nextStable);
@@ -320,90 +391,35 @@ export default function DashboardPage({
         <div className="xl:col-span-7 space-y-6">
           {/* 3 Compact Stat Cards with Per-User Withdraw */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" aria-busy={isLoadingBalances}>
-            <div className="bg-[#121016] border border-white/[0.08] p-5 rounded-xl space-y-3">
-              <div className="flex items-center justify-between text-xs text-[#a8a4b3]">
-                <span>Core reserve</span>
-                <span className="font-mono text-xs px-2 py-0.5 rounded bg-[#1c1922] text-[#FAEB92]">
-                  USDC
-                </span>
-              </div>
-              {isLoadingBalances ? (
-                <div className="h-7 w-28 bg-[#1c1922] rounded" aria-label="Loading USDC balance" />
-              ) : (
-                <div className="text-[28px] leading-none font-mono font-medium tabular-nums text-[#ededed]">
-                  ${animatedUSDC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {bucketItems.map((b) => (
+              <div key={b.key} className="bg-[#121016] border border-white/[0.08] p-5 rounded-xl space-y-3">
+                <div className="flex items-center justify-between text-xs text-[#a8a4b3]">
+                  <span>{b.cardTitle}</span>
+                  <span className={`font-mono text-xs px-2 py-0.5 rounded ${b.badgeClass}`}>
+                    {b.badge}
+                  </span>
                 </div>
-              )}
-              <div className="flex items-center justify-between text-xs text-[#8e8999] font-mono tabular-nums">
-                <span>{savedStablePct}% target</span>
-                {walletAddress && vaultUsdc > 0 && (
-                  <button
-                    onClick={() => onWithdrawBucket('usdc')}
-                    disabled={isWalletActionBusy !== null}
-                    className="text-[#FAEB92] hover:underline disabled:opacity-50 cursor-pointer"
-                  >
-                    {isWalletActionBusy === 'withdraw-usdc' ? 'Withdrawing' : 'Withdraw'}
-                  </button>
+                {isLoadingBalances ? (
+                  <div className="h-7 w-28 bg-[#1c1922] rounded" aria-label={b.loadingLabel} />
+                ) : (
+                  <div className="text-[28px] leading-none font-mono font-medium tabular-nums text-[#ededed]">
+                    {b.formattedCard}
+                  </div>
                 )}
-              </div>
-            </div>
-
-            <div className="bg-[#121016] border border-white/[0.08] p-5 rounded-xl space-y-3">
-              <div className="flex items-center justify-between text-xs text-[#a8a4b3]">
-                <span>Yield vault</span>
-                <span className="font-mono text-xs px-2 py-0.5 rounded bg-[#1c1922] text-[#FF5FCF]">
-                  sUSDC
-                </span>
-              </div>
-              {isLoadingBalances ? (
-                <div className="h-7 w-28 bg-[#1c1922] rounded" aria-label="Loading sUSDC balance" />
-              ) : (
-                <div className="text-[28px] leading-none font-mono font-medium tabular-nums text-[#ededed]">
-                  ${animatedYieldUSDC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <div className="flex items-center justify-between text-xs text-[#8e8999] font-mono tabular-nums">
+                  <span>{b.targetLabel}</span>
+                  {walletAddress && b.rawBalance > 0 && (
+                    <button
+                      onClick={() => onWithdrawBucket(b.key)}
+                      disabled={isWalletActionBusy !== null}
+                      className={`${b.withdrawClass} hover:underline disabled:opacity-50 cursor-pointer`}
+                    >
+                      {isWalletActionBusy === `withdraw-${b.key}` ? 'Withdrawing' : 'Withdraw'}
+                    </button>
+                  )}
                 </div>
-              )}
-              <div className="flex items-center justify-between text-xs text-[#8e8999] font-mono tabular-nums">
-                <span>{savedYieldPct}% target</span>
-                {walletAddress && vaultYieldUsdc > 0 && (
-                  <button
-                    onClick={() => onWithdrawBucket('sUsdc')}
-                    disabled={isWalletActionBusy !== null}
-                    className="text-[#FF5FCF] hover:underline disabled:opacity-50 cursor-pointer"
-                  >
-                    {isWalletActionBusy === 'withdraw-sUsdc' ? 'Withdrawing' : 'Withdraw'}
-                  </button>
-                )}
               </div>
-            </div>
-
-            <div className="bg-[#121016] border border-white/[0.08] p-5 rounded-xl space-y-3">
-              <div className="flex items-center justify-between text-xs text-[#a8a4b3]">
-                <span>Operating asset</span>
-                <span className="font-mono text-xs px-2 py-0.5 rounded bg-[#9929EA] text-white">
-                  WETH
-                </span>
-              </div>
-              {isLoadingBalances ? (
-                <div className="h-7 w-28 bg-[#1c1922] rounded" aria-label="Loading WETH balance" />
-              ) : (
-                <div className="text-[28px] leading-none font-mono font-medium tabular-nums text-[#ededed]">
-                  {animatedWETH.toFixed(4)}
-                  <span className="ml-1.5 text-xs text-[#8e8999] font-sans font-normal">WETH</span>
-                </div>
-              )}
-              <div className="flex items-center justify-between text-xs text-[#8e8999] font-mono tabular-nums">
-                <span>{savedKeepPct}% kept</span>
-                {walletAddress && vaultWeth > 0 && (
-                  <button
-                    onClick={() => onWithdrawBucket('weth')}
-                    disabled={isWalletActionBusy !== null}
-                    className="text-[#ededed] hover:underline disabled:opacity-50 cursor-pointer"
-                  >
-                    {isWalletActionBusy === 'withdraw-weth' ? 'Withdrawing' : 'Withdraw'}
-                  </button>
-                )}
-              </div>
-            </div>
+            ))}
           </div>
 
           {/* Primary Data Moment: Runway Composition vs Policy Target */}
@@ -451,51 +467,26 @@ export default function DashboardPage({
                 <span className="col-span-2 text-right">Actual</span>
                 <span className="col-span-2 text-right">Target</span>
               </div>
-              <div className="py-3 grid grid-cols-12 items-center">
-                <span className="col-span-4 flex items-center gap-2 text-[#ededed]">
-                  <span className="w-2 h-2 rounded-full bg-[#FAEB92] shrink-0" />
-                  <span>USDC reserve</span>
-                </span>
-                <span className="col-span-4 text-right font-mono tabular-nums text-[#ededed]">
-                  ${animatedUSDC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-                <span className="col-span-2 text-right font-mono tabular-nums text-[#a8a4b3]">
-                  {actualStableShare}%
-                </span>
-                <span className="col-span-2 text-right font-mono tabular-nums text-[#8e8999]">
-                  {savedStablePct}%
-                </span>
-              </div>
-              <div className="py-3 grid grid-cols-12 items-center">
-                <span className="col-span-4 flex items-center gap-2 text-[#ededed]">
-                  <span className="w-2 h-2 rounded-full bg-[#FF5FCF] shrink-0" />
-                  <span>sUSDC yield</span>
-                </span>
-                <span className="col-span-4 text-right font-mono tabular-nums text-[#ededed]">
-                  ${animatedYieldUSDC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-                <span className="col-span-2 text-right font-mono tabular-nums text-[#a8a4b3]">
-                  {actualYieldShare}%
-                </span>
-                <span className="col-span-2 text-right font-mono tabular-nums text-[#8e8999]">
-                  {savedYieldPct}%
-                </span>
-              </div>
-              <div className="pt-3 grid grid-cols-12 items-center">
-                <span className="col-span-4 flex items-center gap-2 text-[#ededed]">
-                  <span className="w-2 h-2 rounded-full bg-[#9929EA] shrink-0" />
-                  <span>Operating WETH</span>
-                </span>
-                <span className="col-span-4 text-right font-mono tabular-nums text-[#ededed]">
-                  ${Math.round(wethUsdValue).toLocaleString('en-US')} ({animatedWETH.toFixed(2)})
-                </span>
-                <span className="col-span-2 text-right font-mono tabular-nums text-[#a8a4b3]">
-                  {actualWethShare}%
-                </span>
-                <span className="col-span-2 text-right font-mono tabular-nums text-[#8e8999]">
-                  {savedKeepPct}%
-                </span>
-              </div>
+              {bucketItems.map((b, idx) => (
+                <div
+                  key={b.key}
+                  className={`${idx === bucketItems.length - 1 ? 'pt-3' : 'py-3'} grid grid-cols-12 items-center`}
+                >
+                  <span className="col-span-4 flex items-center gap-2 text-[#ededed]">
+                    <span className={`w-2 h-2 rounded-full ${b.dotClass} shrink-0`} />
+                    <span>{b.rowLabel}</span>
+                  </span>
+                  <span className="col-span-4 text-right font-mono tabular-nums text-[#ededed]">
+                    {b.formattedRow}
+                  </span>
+                  <span className="col-span-2 text-right font-mono tabular-nums text-[#a8a4b3]">
+                    {b.actualShare}%
+                  </span>
+                  <span className="col-span-2 text-right font-mono tabular-nums text-[#8e8999]">
+                    {b.targetPct}%
+                  </span>
+                </div>
+              ))}
             </div>
           </section>
 
@@ -702,7 +693,9 @@ export default function DashboardPage({
                   className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="flex items-start gap-3 min-w-0">
-                    {item.status === 'filtered' ? (
+                    {item.status === 'pending' ? (
+                      <Clock className="w-4 h-4 shrink-0 text-[#FAEB92] mt-0.5" strokeWidth={1.5} />
+                    ) : item.status === 'filtered' ? (
                       <Ban className="w-4 h-4 shrink-0 text-[#FF5FCF] mt-0.5" strokeWidth={1.5} />
                     ) : (
                       <CheckCircle2 className="w-4 h-4 shrink-0 text-[#FAEB92] mt-0.5" strokeWidth={1.5} />

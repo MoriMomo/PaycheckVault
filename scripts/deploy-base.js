@@ -2,12 +2,8 @@ import hardhat from "hardhat";
 const { ethers } = hardhat;
 
 async function main() {
-  const signers = await ethers.getSigners();
-  if (!signers || signers.length === 0) {
-    console.error("\nERROR: No valid private key found in .env");
-    process.exit(1);
-  }
-  const deployer = signers[0];
+  const [deployer] = await ethers.getSigners();
+  if (!deployer) throw new Error("No valid private key found in .env");
   console.log("========================================================");
   console.log("Deploying Multi-Bucket PaycheckVault on Base Sepolia (Omni, Chain ID: 84532)");
   console.log("Deployer Address:", deployer.address);

@@ -24,7 +24,7 @@
 
 import * as React from "react"
 
-export interface MeadowPalette {
+interface MeadowPalette {
   /** Sky at the top, and at the horizon. */
   sky: [string, string]
   /** What distance fades into. Usually a touch darker than the horizon. */
@@ -49,31 +49,31 @@ export interface MeadowPalette {
   night?: boolean
 }
 
-export type MeadowTheme = "meadow" | "golden" | "moonlit"
+type MeadowTheme = "meadow" | "golden" | "moonlit"
 
-export type MeadowPreset = "auto" | MeadowTheme
+type MeadowPreset = "auto" | MeadowTheme
 
-export interface MeadowLink {
+interface MeadowLink {
   label: string
   href?: string
   onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void
 }
 
-export interface MeadowColumn {
+interface MeadowColumn {
   title: string
   links: MeadowLink[]
 }
 
-export type MeadowSocialIcon = "linkedin" | "instagram" | "facebook" | "x" | "youtube"
+type MeadowSocialIcon = "linkedin" | "instagram" | "facebook" | "x" | "youtube"
 
-export interface MeadowSocial {
+interface MeadowSocial {
   icon: MeadowSocialIcon
   href?: string
   /** Accessible name. Defaults to the network's name. */
   label?: string
 }
 
-export interface MeadowRiseFooterProps {
+interface MeadowRiseFooterProps {
   /** Brand name beside the mark, and in the default headline and copyright. */
   name?: string
   /** Where the brand links to. */
@@ -137,21 +137,7 @@ export interface MeadowRiseFooterProps {
 }
 
 /** Any subset of a palette, merged over the preset. */
-export interface MeadowPaletteOverrides {
-  sky?: [string, string]
-  haze?: string
-  glow?: string
-  hills?: [string, string][]
-  ground?: string
-  ink?: string
-  sub?: string
-  pill?: string
-  pillInk?: string
-  text?: string
-  muted?: string
-  line?: string
-  night?: boolean
-}
+type MeadowPaletteOverrides = Partial<MeadowPalette>
 
 interface MeadowPaletteMap {
   meadow: MeadowPalette
@@ -265,7 +251,7 @@ const SERIF_STACK = '"Instrument Serif", "Cormorant Garamond", "Playfair Display
 // can run it directly.
 
 /** mulberry32 — small, fast, deterministic. Returns floats in [0, 1). */
-export function mrfRng(seed: number) {
+function mrfRng(seed: number) {
   let a = (seed | 0) ^ 0x9e3779b9
   return () => {
     a = (a + 0x6d2b79f5) | 0
@@ -277,7 +263,7 @@ export function mrfRng(seed: number) {
 }
 
 /** "#rgb" / "#rrggbb" to [r, g, b]; anything else is null so callers can fall back. */
-export function mrfHex(c: string) {
+function mrfHex(c: string) {
   const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec((c || "").trim())
   if (!m) return null
   let h = m[1]
@@ -286,23 +272,23 @@ export function mrfHex(c: string) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 
-export function mrfClamp(x: number) {
+function mrfClamp(x: number) {
   return x < 0 ? 0 : x > 1 ? 1 : x
 }
 
-export function mrfSmooth(e0: number, e1: number, x: number) {
+function mrfSmooth(e0: number, e1: number, x: number) {
   const t = mrfClamp((x - e0) / (e1 - e0))
   return t * t * (3 - 2 * t)
 }
 
 /** Quartic ease-out: quick to leave, long soft landing. */
-export function mrfEase(t: number) {
+function mrfEase(t: number) {
   const c = mrfClamp(t)
   return 1 - (1 - c) * (1 - c) * (1 - c) * (1 - c)
 }
 
 /** 256 × 256 value noise that tiles in both directions, lattice every 8 cells. Values in [0, 1). */
-export function mrfNoiseTable(seed: number) {
+function mrfNoiseTable(seed: number) {
   const rnd = mrfRng(seed * 7919 + 17)
   const G = 32
   const lat = new Float32Array(G * G)
@@ -331,7 +317,7 @@ export function mrfNoiseTable(seed: number) {
 }
 
 /** Bilinear read of a noise table at a non-negative coordinate, wrapping. */
-export function mrfSample(t: Float32Array, x: number, y: number) {
+function mrfSample(t: Float32Array, x: number, y: number) {
   const x0 = x | 0
   const y0 = y | 0
   const fx = x - x0
@@ -345,13 +331,13 @@ export function mrfSample(t: Float32Array, x: number, y: number) {
   return a + (b - a) * fy
 }
 
-export interface MrfDome {
+interface MrfDome {
   c: number
   w: number
   h: number
 }
 
-export interface MrfLayerSpec {
+interface MrfLayerSpec {
   /** 0 for the farthest ridge, 1 for the nearest. */
   q: number
   /** Crest baseline, as a fraction of the hero height. */
@@ -367,7 +353,7 @@ export interface MrfLayerSpec {
 }
 
 /** The shape of ridge i of n: a soft union of grassy domes over a slow undulation. */
-export function mrfLayerSpec(i: number, n: number, seed: number) {
+function mrfLayerSpec(i: number, n: number, seed: number) {
   const q = n > 1 ? i / (n - 1) : 1
   const rnd = mrfRng(seed * 977 + i * 131 + 7)
   const count = q > 0.9 ? 2 : 3 + Math.floor(rnd() * 1.6)
@@ -399,7 +385,7 @@ export function mrfLayerSpec(i: number, n: number, seed: number) {
 }
 
 /** Crest height (CSS px from the top) of a ridge at x, for a scene W wide whose hero band is H tall. */
-export function mrfCrestAt(spec: MrfLayerSpec, x: number, W: number, H: number) {
+function mrfCrestAt(spec: MrfLayerSpec, x: number, W: number, H: number) {
   // World units are 1000 CSS px wide and centred, so a narrow screen sees a
   // crop of the same range instead of a squashed one.
   const u = (x - W / 2) / 1000
@@ -420,7 +406,7 @@ export function mrfCrestAt(spec: MrfLayerSpec, x: number, W: number, H: number) 
 }
 
 /** 0–1: how close x sits to a crease where two domes of a ridge meet. */
-export function mrfSeamAt(spec: MrfLayerSpec, x: number, W: number) {
+function mrfSeamAt(spec: MrfLayerSpec, x: number, W: number) {
   const u = (x - W / 2) / 1000
   let a = 0
   let b = 0
@@ -448,7 +434,7 @@ const MRF_L = (() => {
  * runs from 0 at the crest to 1 deep in the face. Near the crest the surface
  * follows the silhouette; lower down it turns to face the viewer.
  */
-export function mrfShade(m: number, t: number) {
+function mrfShade(m: number, t: number) {
   const f = Math.pow(mrfClamp(t), 0.6)
   const nx = m * 2.4 * (1 - f)
   const ny = 1 - f + 0.18
@@ -458,7 +444,7 @@ export function mrfShade(m: number, t: number) {
   return mrfClamp(0.12 + 0.88 * d)
 }
 
-export interface MrfPaintOptions {
+interface MrfPaintOptions {
   /** Device px per CSS px. */
   s: number
   /** Horizontal bleed on each side, CSS px. */
@@ -483,7 +469,7 @@ const MRF_STEPS = 64
  * the crest, shaded grass below. Column ranges let a caller spread the work
  * over frames.
  */
-export function mrfPaintLayer(px: Uint8ClampedArray, w: number, h: number, o: MrfPaintOptions, c0 = 0, c1 = w) {
+function mrfPaintLayer(px: Uint8ClampedArray, w: number, h: number, o: MrfPaintOptions, c0 = 0, c1 = w) {
   const { s, mx, top, W, H, spec, lit, shadow, haze, noise } = o
   const out = new Uint32Array(px.buffer, px.byteOffset, w * h)
   const q = spec.q
@@ -574,7 +560,7 @@ export function mrfPaintLayer(px: Uint8ClampedArray, w: number, h: number, o: Mr
 }
 
 /** A horizontally tiling band of mist alpha, w × h, values 0–1. */
-export function mrfMistBand(noise: Float32Array, w: number, h: number) {
+function mrfMistBand(noise: Float32Array, w: number, h: number) {
   const out = new Float32Array(w * h)
   for (let y = 0; y < h; y++) {
     const v = (y + 0.5) / h
@@ -590,22 +576,22 @@ export function mrfMistBand(noise: Float32Array, w: number, h: number) {
 }
 
 /** Where the page is relative to the footer: 0 as it enters the viewport, 1 once it has fully arrived. */
-export function mrfArrival(top: number, height: number, vh: number) {
+function mrfArrival(top: number, height: number, vh: number) {
   const end = Math.max(0, vh - height)
   return mrfClamp((vh - top) / Math.max(1, vh - end))
 }
 
-export function mrfIsEmail(v: string) {
+function mrfIsEmail(v: string) {
   return /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)*\.[a-z]{2,}$/i.test(v.trim())
 }
 
-export interface MrfHeadingWord {
+interface MrfHeadingWord {
   text: string
   accent: boolean
 }
 
 /** "Take the *first step*\nwith X today." → lines of words, accent marked. */
-export function mrfParseHeading(src: string) {
+function mrfParseHeading(src: string) {
   return src.split("\n").map((line) => {
     const words = [] as MrfHeadingWord[]
     line.split("*").forEach((seg, k) => {
@@ -615,7 +601,7 @@ export function mrfParseHeading(src: string) {
   })
 }
 
-export interface MrfStem {
+interface MrfStem {
   stem: string
   parts: string[]
   /** Base of the stem, for the sway origin. */
@@ -627,7 +613,7 @@ export interface MrfStem {
 const f1 = (v: number) => (Math.round(v * 10) / 10).toString()
 
 /** Wildflower line drawings in a 1200 × 420 box: stems, leaves, and a head on each. */
-export function mrfBotany(seed: number, count: number) {
+function mrfBotany(seed: number, count: number) {
   const rnd = mrfRng(seed * 31 + 5)
   const out = [] as MrfStem[]
   const B = 420

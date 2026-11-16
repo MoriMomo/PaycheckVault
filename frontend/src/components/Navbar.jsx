@@ -15,7 +15,7 @@ import {
   Workflow,
   X,
 } from 'lucide-react';
-import { CONFIG } from '../config/contracts';
+import { CONFIG, DEPLOYED_CONTRACTS } from '../config/contracts';
 
 export default function Navbar({
   activePage,
@@ -326,62 +326,28 @@ export default function Navbar({
               </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono">
-              <div className="bg-black border border-white/[0.08] p-4 rounded-lg space-y-2">
-                <div className="flex justify-between items-center text-xs text-[#a8a4b3]">
-                  <span className="font-sans font-medium text-[#ededed]">Sepolia origin WETH</span>
-                  <span className="px-2 py-0.5 rounded bg-[#1c1922] text-xs text-[#8e8999]">11155111</span>
+              {DEPLOYED_CONTRACTS.map((contract) => (
+                <div key={contract.key} className="bg-black border border-white/[0.08] p-4 rounded-lg space-y-2">
+                  <div className="flex justify-between items-center text-xs text-[#a8a4b3]">
+                    <span className="font-sans font-medium text-[#ededed]">{contract.inspectorLabel}</span>
+                    <span className={`px-2 py-0.5 rounded bg-[#1c1922] text-xs ${contract.badgeClass}`}>
+                      {contract.chainId}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-[#a8a4b3] truncate">{contract.address}</span>
+                    <a
+                      href={contract.explorerUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[#FAEB92] hover:underline text-xs shrink-0"
+                    >
+                      <span>{contract.explorerName}</span>
+                      <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
+                    </a>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-[#a8a4b3] truncate">{CONFIG.sepolia.usdcAddress}</span>
-                  <a
-                    href={`${CONFIG.sepolia.explorer}/address/${CONFIG.sepolia.usdcAddress}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[#FAEB92] hover:underline text-xs shrink-0"
-                  >
-                    <span>Etherscan</span>
-                    <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
-                  </a>
-                </div>
-              </div>
-
-              <div className="bg-black border border-white/[0.08] p-4 rounded-lg space-y-2">
-                <div className="flex justify-between items-center text-xs text-[#a8a4b3]">
-                  <span className="font-sans font-medium text-[#ededed]">Lasna PaycheckReactive</span>
-                  <span className="px-2 py-0.5 rounded bg-[#1c1922] text-xs text-[#FF5FCF]">5318007</span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-[#a8a4b3] truncate">{CONFIG.lasna.reactiveAddress}</span>
-                  <a
-                    href={`${CONFIG.lasna.explorer}/address/${CONFIG.lasna.reactiveAddress}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[#FAEB92] hover:underline text-xs shrink-0"
-                  >
-                    <span>ReactScan</span>
-                    <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
-                  </a>
-                </div>
-              </div>
-
-              <div className="bg-black border border-white/[0.08] p-4 rounded-lg space-y-2">
-                <div className="flex justify-between items-center text-xs text-[#a8a4b3]">
-                  <span className="font-sans font-medium text-[#ededed]">Base Sepolia vault</span>
-                  <span className="px-2 py-0.5 rounded bg-[#1c1922] text-xs text-[#FAEB92]">84532</span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-[#a8a4b3] truncate">{CONFIG.baseSepolia.vaultAddress}</span>
-                  <a
-                    href={`${CONFIG.baseSepolia.explorer}/address/${CONFIG.baseSepolia.vaultAddress}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[#FAEB92] hover:underline text-xs shrink-0"
-                  >
-                    <span>BaseScan</span>
-                    <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
-                  </a>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>

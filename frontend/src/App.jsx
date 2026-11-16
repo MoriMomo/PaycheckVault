@@ -131,7 +131,8 @@ export default function App() {
               onConnectWallet={wallet.openWalletModal}
               currentChainId={wallet.currentChainId}
               reactiveStats={vault.reactiveStats}
-              cooldownRemaining={vault.cooldownRemaining}
+              lastUpdated={vault.lastUpdated}
+              lastTriggeredTs={vault.lastTriggeredTs}
               isPreviewMode={vault.isPreviewMode}
               previewAddress={vault.previewAddress}
               onEnablePreview={vault.enableSamplePreview}
@@ -169,7 +170,6 @@ export default function App() {
               activeTxHash={vault.activeTxHash}
               onExecutePaycheck={vault.executeRealPaycheck}
               isLoadingBalances={vault.isLoadingBalances}
-              secondsAgo={vault.secondsAgo}
               onRefreshBalances={vault.refreshBalances}
               activities={vault.activities}
             />

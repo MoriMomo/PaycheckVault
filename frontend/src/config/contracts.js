@@ -5,6 +5,7 @@ export const CONFIG = {
     chainName: 'Ethereum Sepolia',
     rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com',
     explorer: 'https://sepolia.etherscan.io',
+    wethAddress: '0xC56bffDC6d87222128e60D617221AeC584e9F643',
     usdcAddress: '0xC56bffDC6d87222128e60D617221AeC584e9F643',
   },
   lasna: {
@@ -66,4 +67,40 @@ export const REACTIVE_ABI = [
   'function cooldownPeriod() view returns (uint256)',
   'event PaycheckTriggered(address indexed recipient, uint256 indexed amount, address indexed destinationVault, uint256 timestamp)',
   'event InflowSuppressed(address indexed recipient, uint256 indexed amount, string reason, uint256 timestamp)',
+];
+
+export const DEPLOYED_CONTRACTS = [
+  {
+    key: 'sepolia',
+    name: 'Sepolia WETH',
+    inspectorLabel: 'Sepolia origin WETH',
+    chainId: '11155111',
+    address: CONFIG.sepolia.wethAddress,
+    explorerName: 'Etherscan',
+    explorerUrl: `${CONFIG.sepolia.explorer}/address/${CONFIG.sepolia.wethAddress}`,
+    titleClass: 'text-[#ededed]',
+    badgeClass: 'text-[#8e8999]',
+  },
+  {
+    key: 'lasna',
+    name: 'Lasna PaycheckReactive',
+    inspectorLabel: 'Lasna PaycheckReactive',
+    chainId: '5318007',
+    address: CONFIG.lasna.reactiveAddress,
+    explorerName: 'ReactScan',
+    explorerUrl: `${CONFIG.lasna.explorer}/address/${CONFIG.lasna.reactiveAddress}`,
+    titleClass: 'text-[#FF5FCF]',
+    badgeClass: 'text-[#FF5FCF]',
+  },
+  {
+    key: 'base',
+    name: 'Base PaycheckVault',
+    inspectorLabel: 'Base Sepolia vault',
+    chainId: '84532',
+    address: CONFIG.baseSepolia.vaultAddress,
+    explorerName: 'BaseScan',
+    explorerUrl: `${CONFIG.baseSepolia.explorer}/address/${CONFIG.baseSepolia.vaultAddress}`,
+    titleClass: 'text-[#FAEB92]',
+    badgeClass: 'text-[#FAEB92]',
+  },
 ];

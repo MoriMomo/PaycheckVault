@@ -1,5 +1,5 @@
-import "@nomicfoundation/hardhat-toolbox";
-import "dotenv/config";
+require("@nomicfoundation/hardhat-toolbox");
+require("dotenv/config");
 
 // Sanitize and validate private key from .env
 const rawKey = (process.env.PRIVATE_KEY || "").trim().replace(/^["']|["']$/g, "");
@@ -49,4 +49,4 @@ const config = {
   },
 };
 
-export default config;
+module.exports = config;

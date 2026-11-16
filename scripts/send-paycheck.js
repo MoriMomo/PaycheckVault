@@ -2,12 +2,8 @@ import hardhat from "hardhat";
 const { ethers } = hardhat;
 
 async function main() {
-  const signers = await ethers.getSigners();
-  if (!signers || signers.length === 0) {
-    console.error("\nERROR: No valid private key found in .env");
-    process.exit(1);
-  }
-  const sender = signers[0];
+  const [sender] = await ethers.getSigners();
+  if (!sender) throw new Error("No valid private key found in .env");
   console.log("========================================================");
   console.log("Triggering Live Volatile WETH Inflow on Sepolia");
   console.log("Sender / Deployer:", sender.address);

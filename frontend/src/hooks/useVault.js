@@ -14,6 +14,7 @@ function useAnimatedNumber(targetValue, duration = 400) {
   const startTimeRef = useRef(null);
 
   useEffect(() => {
+    if (Math.abs(targetValue - currentRef.current) < 1e-6) return;
     startValueRef.current = currentRef.current;
     startTimeRef.current = null;
     let rafId;
@@ -65,16 +66,31 @@ function saveCachedActivities(addr, items) {
 
 function mergeActivities(freshLogs, cachedItems) {
   const byKey = new Map();
-  for (const item of freshLogs) {
-    byKey.set(item.destFullTx || item.lasnaFullTx || item.originFullTx || item.id, item);
-  }
   for (const item of cachedItems) {
-    const key = item.destFullTx || item.lasnaFullTx || item.originFullTx || item.id;
     // Drop stale "Relaying" placeholders once any confirmed on-chain log is present
     if (item.destTx === 'Relaying' && freshLogs.length > 0) continue;
-    if (!byKey.has(key)) byKey.set(key, item);
+    const key = item.destFullTx || item.lasnaFullTx || item.originFullTx || item.id;
+    byKey.set(key, item);
   }
-  return Array.from(byKey.values()).slice(0, MAX_ACTIVITIES);
+  const merged = [];
+  const seen = new Set();
+  for (const fresh of freshLogs) {
+    const key = fresh.destFullTx || fresh.lasnaFullTx || fresh.originFullTx || fresh.id;
+    const existing = byKey.get(key);
+    merged.push(existing ? { ...existing, ...fresh } : fresh);
+    seen.add(key);
+  }
+  for (const [key, item] of byKey.entries()) {
+    if (!seen.has(key)) merged.push(item);
+  }
+  return merged.slice(0, MAX_ACTIVITIES);
+}
+
+function formatTxError(err, fallback = 'Transaction failed') {
+  if (err?.code === 'ACTION_REJECTED' || err?.code === 4001) {
+    return 'Transaction rejected in wallet';
+  }
+  return err?.shortMessage || err?.reason || err?.message || fallback;
 }
 
 function mapBaseAllocationLog(log, idx) {
@@ -127,7 +143,6 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
   const [isWalletActionBusy, setIsWalletActionBusy] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(() => Date.now());
-  const [secondsAgo, setSecondsAgo] = useState(0);
 
   const [stablePct, setStablePct] = useState(50);
   const [yieldPct, setYieldPct] = useState(30);
@@ -155,9 +170,14 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
     baseVaultEthGas: null,
   });
   const [lastTriggeredTs, setLastTriggeredTs] = useState(0);
-  const [cooldownRemaining, setCooldownRemaining] = useState(0);
 
-  const pollIntervalRef = useRef(null);
+  const pollTimerRef = useRef(null);
+  const fetchSeqRef = useRef(0);
+  const activeWalletRef = useRef(walletAddress);
+
+  useEffect(() => {
+    activeWalletRef.current = walletAddress;
+  }, [walletAddress]);
 
   const animatedUSDC = useAnimatedNumber(vaultUsdc);
   const animatedYieldUSDC = useAnimatedNumber(vaultYieldUsdc);
@@ -207,6 +227,7 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
 
   const fetchLiveBalances = useCallback(
     async (userAddr, syncControls = false) => {
+      const reqId = ++fetchSeqRef.current;
       const targetUser = userAddr || walletAddress || activePreviewAddress;
       if (!targetUser) {
         setUserSepoliaWeth(0);
@@ -225,7 +246,6 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
         setMaxCapWeth(5.0);
         setSlippageFloorUsd(2000);
         setLastTriggeredTs(0);
-        setCooldownRemaining(0);
         setActivities([]);
         setActiveTxHash(null);
         setIsLoadingBalances(false);
@@ -234,7 +254,7 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
 
       setIsLoadingBalances(true);
       try {
-        const sepToken = new ethers.Contract(CONFIG.sepolia.usdcAddress, ERC20_ABI, sepoliaReadProvider);
+        const sepToken = new ethers.Contract(CONFIG.sepolia.wethAddress || CONFIG.sepolia.usdcAddress, ERC20_ABI, sepoliaReadProvider);
         const baseWeth = new ethers.Contract(CONFIG.baseSepolia.wethAddress, ERC20_ABI, baseSepoliaReadProvider);
         const vaultContract = new ethers.Contract(CONFIG.baseSepolia.vaultAddress, VAULT_ABI, baseSepoliaReadProvider);
         const reactiveContract = new ethers.Contract(CONFIG.lasna.reactiveAddress, REACTIVE_ABI, lasnaReadProvider);
@@ -260,6 +280,8 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
           reactiveContract.lastTriggeredAt(targetUser).catch(() => 0n),
           lasnaReadProvider.getBlockNumber().catch(() => null),
         ]);
+
+        if (reqId !== fetchSeqRef.current) return;
 
         setUserSepoliaWeth(Number(ethers.formatEther(sepBal)));
         setUserBaseWeth(Number(ethers.formatEther(walletBaseWethBal)));
@@ -319,6 +341,8 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
           }
         }
 
+        if (reqId !== fetchSeqRef.current) return;
+
         if (freshLogs.length > 0) {
           const merged = mergeActivities(freshLogs, loadCachedActivities(targetUser));
           setActivities(merged);
@@ -328,17 +352,18 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
         }
 
         setLastUpdated(Date.now());
-        setSecondsAgo(0);
       } catch (err) {
         console.warn('Error fetching live balances:', err);
       } finally {
-        setIsLoadingBalances(false);
+        if (reqId === fetchSeqRef.current) {
+          setIsLoadingBalances(false);
+        }
       }
     },
     [walletAddress, activePreviewAddress]
   );
 
-  // Sync public TVL & user-scoped state; poll every 15s
+  // Sync public TVL & user-scoped state; poll every 15s when tab is visible
   useEffect(() => {
     const activeTarget = walletAddress || activePreviewAddress;
     const initTimer = setTimeout(() => {
@@ -346,6 +371,7 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
       fetchLiveBalances(activeTarget, true);
     }, 0);
     const pollTimer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       fetchProtocolTvl();
       if (activeTarget) fetchLiveBalances(activeTarget, false);
     }, 15000);
@@ -358,23 +384,9 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
   // Clear paycheck relay poll timer on unmount
   useEffect(() => {
     return () => {
-      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
     };
   }, []);
-
-  // Seconds-ago & per-user cooldown countdown ticker
-  useEffect(() => {
-    const tickTimer = setInterval(() => {
-      setSecondsAgo(Math.floor((Date.now() - lastUpdated) / 1000));
-      if (lastTriggeredTs > 0) {
-        const nowSec = Math.floor(Date.now() / 1000);
-        setCooldownRemaining(Math.max(0, cooldownSecs - (nowSec - lastTriggeredTs)));
-      } else {
-        setCooldownRemaining(0);
-      }
-    }, 1000);
-    return () => clearInterval(tickTimer);
-  }, [lastUpdated, lastTriggeredTs, cooldownSecs]);
 
   // Shared guard & signer wrapper for all state-changing wallet transactions
   const runWalletTx = async ({
@@ -409,14 +421,21 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
       const signer = await provider.getSigner();
       await fn(signer, targetNet);
     } catch (err) {
-      showToast(errorTitle, err?.reason || err?.message, 'warn');
+      showToast(errorTitle, formatTxError(err), 'warn');
     } finally {
       setBusy(busyKey ? null : false);
     }
   };
 
   const savePolicyOnChain = () => {
-    const keepPct = Math.max(0, 100 - stablePct - yieldPct);
+    const clampedStable = Math.round(Number(stablePct));
+    const clampedYield = Math.round(Number(yieldPct));
+    if (clampedStable < 0 || clampedYield < 0 || clampedStable + clampedYield > 100) {
+      showToast('Invalid allocation split', 'USDC + sUSDC percentages cannot exceed 100%', 'warn');
+      return;
+    }
+
+    const keepPct = Math.max(0, 100 - clampedStable - clampedYield);
     return runWalletTx({
       targetNet: CONFIG.baseSepolia,
       setBusy: setIsUpdatingPolicy,
@@ -425,37 +444,37 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
         openWalletModal();
         showToast(
           'Connect wallet to save on-chain',
-          `Connect your wallet to save ${stablePct}% USDC · ${yieldPct}% sUSDC · ${keepPct}% WETH on Base Sepolia`,
+          `Connect your wallet to save ${clampedStable}% USDC · ${clampedYield}% sUSDC · ${keepPct}% WETH on Base Sepolia`,
           'warn'
         );
       },
       fn: async (signer) => {
         const vault = new ethers.Contract(CONFIG.baseSepolia.vaultAddress, VAULT_ABI, signer);
-        const bucketsChanged = stablePct !== savedStablePct || yieldPct !== savedYieldPct;
+        const bucketsChanged = clampedStable !== savedStablePct || clampedYield !== savedYieldPct;
         const guardrailsChanged = maxCapWeth !== savedMaxCapWeth || slippageFloorUsd !== savedSlippageFloorUsd;
 
         if (bucketsChanged || !guardrailsChanged) {
           showToast('Saving split policy', 'Confirm setMyBuckets in your wallet');
-          const tx = await vault.setMyBuckets(stablePct * 100, yieldPct * 100);
+          const tx = await vault.setMyBuckets(Math.round(clampedStable * 100), Math.round(clampedYield * 100));
           await tx.wait();
+          setSavedStablePct(clampedStable);
+          setSavedYieldPct(clampedYield);
         }
 
         if (guardrailsChanged) {
           showToast('Saving risk guardrails', 'Confirm setMyGuardrails in your wallet');
           const guardTx = await vault.setMyGuardrails(
-            ethers.parseEther(maxCapWeth.toString()),
-            ethers.parseEther(slippageFloorUsd.toString())
+            ethers.parseEther(Number(maxCapWeth).toFixed(6)),
+            ethers.parseEther(Number(slippageFloorUsd).toFixed(2))
           );
           await guardTx.wait();
+          setSavedMaxCapWeth(maxCapWeth);
+          setSavedSlippageFloorUsd(slippageFloorUsd);
         }
 
-        setSavedStablePct(stablePct);
-        setSavedYieldPct(yieldPct);
-        setSavedMaxCapWeth(maxCapWeth);
-        setSavedSlippageFloorUsd(slippageFloorUsd);
         showToast(
           'Policy confirmed on-chain',
-          `Saved ${stablePct}% USDC · ${yieldPct}% sUSDC · ${keepPct}% WETH for your address`
+          `Saved ${clampedStable}% USDC · ${clampedYield}% sUSDC · ${keepPct}% WETH for your address`
         );
       },
     });
@@ -469,7 +488,10 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
       missingWalletMsg: 'Choose MetaMask, Phantom, or another wallet to mint test WETH',
       errorTitle: 'Mint cancelled',
       fn: async (signer) => {
-        const tokenAddr = targetChain === 'baseSepolia' ? CONFIG.baseSepolia.wethAddress : CONFIG.sepolia.usdcAddress;
+        const tokenAddr =
+          targetChain === 'baseSepolia'
+            ? CONFIG.baseSepolia.wethAddress
+            : CONFIG.sepolia.wethAddress || CONFIG.sepolia.usdcAddress;
         const token = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
         const tx = await token.mint(walletAddress, ethers.parseUnits(amountWeth.toString(), 18));
         showToast('Minting test WETH', `Confirmed tx ${tx.hash.slice(0, 10)}...`);
@@ -549,6 +571,7 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
       return;
     }
 
+    const originWallet = walletAddress;
     const isDustTest = wethAmount < minThresholdWeth;
     if (!isDustTest && vaultWeth <= 0) {
       showToast(
@@ -575,12 +598,16 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
 
       const provider = new ethers.BrowserProvider(eip1193);
       const signer = await provider.getSigner();
-      const sepToken = new ethers.Contract(CONFIG.sepolia.usdcAddress, ERC20_ABI, signer);
+      const sepToken = new ethers.Contract(
+        CONFIG.sepolia.wethAddress || CONFIG.sepolia.usdcAddress,
+        ERC20_ABI,
+        signer
+      );
 
       const transferAmount = ethers.parseUnits(wethAmount.toString(), 18);
       showToast('Confirm inflow in wallet', `Sending ${wethAmount} WETH on Sepolia to trigger Reactive loop`);
 
-      const tx = await sepToken.transfer(walletAddress, transferAmount);
+      const tx = await sepToken.transfer(originWallet, transferAmount);
       setActiveTxHash(tx.hash);
       showToast('Sepolia tx broadcasted', `Tx ${tx.hash.slice(0, 10)}... waiting for confirmation`);
 
@@ -605,13 +632,13 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
             lasnaSignal: isDustTest ? `Checking (< ${minThresholdWeth} WETH)` : 'Checking Lasna Omni',
             destSwap: isDustTest
               ? 'Waiting for Lasna anti-dust verification'
-              : `+${stableOut.toLocaleString()} USDC reserve · +${yieldOut.toLocaleString()} sUSDC yield · +${retainedWeth.toFixed(2)} WETH kept`,
+              : `Est. +${stableOut.toLocaleString()} USDC reserve · +${yieldOut.toLocaleString()} sUSDC yield · +${retainedWeth.toFixed(2)} WETH kept`,
             destTx: 'Relaying',
-            status: isDustTest ? 'filtered' : 'success',
+            status: isDustTest ? 'filtered' : 'pending',
           },
           ...prev,
         ].slice(0, MAX_ACTIVITIES);
-        saveCachedActivities(walletAddress, next);
+        saveCachedActivities(originWallet, next);
         return next;
       });
 
@@ -626,16 +653,20 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
       let attempts = 0;
       let capturedLasnaTx = null;
       const maxAttempts = isDustTest ? 8 : 24;
-      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
 
-      pollIntervalRef.current = setInterval(async () => {
+      const pollStep = async () => {
+        if (activeWalletRef.current !== originWallet) {
+          pollTimerRef.current = null;
+          return;
+        }
         attempts++;
         try {
           const vaultContract = new ethers.Contract(CONFIG.baseSepolia.vaultAddress, VAULT_ABI, baseSepoliaReadProvider);
           const reactiveContract = new ethers.Contract(CONFIG.lasna.reactiveAddress, REACTIVE_ABI, lasnaReadProvider);
 
           const [userBal, latestBaseBlock, latestLasnaBlock] = await Promise.all([
-            vaultContract.balances(walletAddress),
+            vaultContract.balances(originWallet),
             baseSepoliaReadProvider.getBlockNumber().catch(() => null),
             lasnaReadProvider.getBlockNumber().catch(() => null),
           ]);
@@ -646,10 +677,10 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
             const fromLasna = startLasnaBlock !== null ? startLasnaBlock : Math.max(0, latestLasnaBlock - 30);
             const [supLogs, trigLogs] = await Promise.all([
               reactiveContract
-                .queryFilter(reactiveContract.filters.InflowSuppressed(walletAddress), fromLasna, latestLasnaBlock)
+                .queryFilter(reactiveContract.filters.InflowSuppressed(originWallet), fromLasna, latestLasnaBlock)
                 .catch(() => []),
               reactiveContract
-                .queryFilter(reactiveContract.filters.PaycheckTriggered(walletAddress), fromLasna, latestLasnaBlock)
+                .queryFilter(reactiveContract.filters.PaycheckTriggered(originWallet), fromLasna, latestLasnaBlock)
                 .catch(() => []),
             ]);
             if (supLogs.length > 0) suppressedLog = supLogs[supLogs.length - 1];
@@ -657,8 +688,7 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
           }
 
           if (suppressedLog) {
-            clearInterval(pollIntervalRef.current);
-            pollIntervalRef.current = null;
+            pollTimerRef.current = null;
             const lasnaHash = suppressedLog.transactionHash;
             const reason = suppressedLog.args.reason || 'InflowSuppressed';
 
@@ -676,13 +706,13 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
                     }
                   : item
               );
-              saveCachedActivities(walletAddress, updated);
+              saveCachedActivities(originWallet, updated);
               return updated;
             });
 
             setLoopPhase('blocked');
             showToast('Suppressed on Lasna', `PaycheckReactive blocked callback (${reason})`, 'warn');
-            await Promise.all([fetchProtocolTvl(), fetchLiveBalances(walletAddress)]);
+            await Promise.all([fetchProtocolTvl(), fetchLiveBalances(originWallet)]);
             setTimeout(() => setLoopPhase('idle'), 1800);
             return;
           }
@@ -696,7 +726,7 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
                   ? { ...item, lasnaSignal: 'PaycheckTriggered', lasnaFullTx: capturedLasnaTx }
                   : item
               );
-              saveCachedActivities(walletAddress, updated);
+              saveCachedActivities(originWallet, updated);
               return updated;
             });
           } else if (attempts === 2 && !isDustTest) {
@@ -707,7 +737,7 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
           if (!isDustTest && latestBaseBlock !== null) {
             const fromBlock = startBaseBlock !== null ? startBaseBlock : Math.max(0, latestBaseBlock - 30);
             const logs = await vaultContract
-              .queryFilter(vaultContract.filters.MultiBucketAllocated(walletAddress), fromBlock, latestBaseBlock)
+              .queryFilter(vaultContract.filters.MultiBucketAllocated(originWallet), fromBlock, latestBaseBlock)
               .catch(() => []);
             if (logs.length > 0) matchedLog = logs[logs.length - 1];
           }
@@ -722,38 +752,45 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
               numWeth !== initialSnapshot.weth);
 
           if (matchedLog || balanceChanged) {
-            clearInterval(pollIntervalRef.current);
-            pollIntervalRef.current = null;
-
-            if (matchedLog) {
-              const destHash = matchedLog.transactionHash;
-              const logUsdc = Number(ethers.formatEther(matchedLog.args.stableOut));
-              const logYield = Number(ethers.formatEther(matchedLog.args.yieldOut));
-              const logWeth = Number(ethers.formatEther(matchedLog.args.retainedIn));
-              setActivities((prev) => {
-                const updated = prev.map((item) =>
-                  item.id === activityId
-                    ? {
-                        ...item,
-                        time: 'Confirmed',
-                        lasnaFullTx: capturedLasnaTx || item.lasnaFullTx,
-                        destTx: `${destHash.slice(0, 6)}...${destHash.slice(-4)}`,
-                        destFullTx: destHash,
-                        destSwap: `+${logUsdc.toLocaleString('en-US', { maximumFractionDigits: 0 })} USDC reserve · +${logYield.toLocaleString('en-US', { maximumFractionDigits: 0 })} sUSDC yield · +${logWeth.toFixed(2)} WETH kept`,
-                      }
-                    : item
-                );
-                saveCachedActivities(walletAddress, updated);
-                return updated;
+            pollTimerRef.current = null;
+            setActivities((prev) => {
+              const updated = prev.map((item) => {
+                if (item.id !== activityId) return item;
+                if (matchedLog) {
+                  const destHash = matchedLog.transactionHash;
+                  const logUsdc = Number(ethers.formatEther(matchedLog.args.stableOut));
+                  const logYield = Number(ethers.formatEther(matchedLog.args.yieldOut));
+                  const logWeth = Number(ethers.formatEther(matchedLog.args.retainedIn));
+                  return {
+                    ...item,
+                    time: 'Confirmed',
+                    status: 'success',
+                    lasnaFullTx: capturedLasnaTx || item.lasnaFullTx,
+                    destTx: `${destHash.slice(0, 6)}...${destHash.slice(-4)}`,
+                    destFullTx: destHash,
+                    destSwap: `+${logUsdc.toLocaleString('en-US', { maximumFractionDigits: 0 })} USDC reserve · +${logYield.toLocaleString('en-US', { maximumFractionDigits: 0 })} sUSDC yield · +${logWeth.toFixed(2)} WETH kept`,
+                  };
+                }
+                return {
+                  ...item,
+                  time: 'Confirmed',
+                  status: 'success',
+                  lasnaFullTx: capturedLasnaTx || item.lasnaFullTx,
+                  destTx: 'Confirmed',
+                };
               });
-            }
+              saveCachedActivities(originWallet, updated);
+              return updated;
+            });
 
-            await Promise.all([fetchProtocolTvl(), fetchLiveBalances(walletAddress)]);
+            await Promise.all([fetchProtocolTvl(), fetchLiveBalances(originWallet)]);
             setLoopPhase('idle');
             showToast('Multi-bucket settlement complete', '3-bucket split verified on Base Sepolia');
-          } else if (attempts >= maxAttempts) {
-            clearInterval(pollIntervalRef.current);
-            pollIntervalRef.current = null;
+            return;
+          }
+
+          if (attempts >= maxAttempts) {
+            pollTimerRef.current = null;
             if (isDustTest) {
               setLoopPhase('blocked');
               await fetchProtocolTvl();
@@ -771,21 +808,29 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
                 'warn'
               );
             }
+            return;
           }
-        } catch {
-          // Keep polling until confirmed or timeout
+        } catch (pollErr) {
+          console.warn('Relay poll error:', pollErr?.shortMessage || pollErr?.message || pollErr);
         }
-      }, 2500);
+
+        if (activeWalletRef.current === originWallet && attempts < maxAttempts) {
+          pollTimerRef.current = setTimeout(pollStep, 2500);
+        }
+      };
+
+      pollTimerRef.current = setTimeout(pollStep, 2500);
     } catch (err) {
       setLoopPhase('idle');
-      showToast('Transaction cancelled', err?.reason || err?.message, 'warn');
+      showToast('Transaction cancelled', formatTxError(err), 'warn');
     }
   };
 
   return {
     protocolTvl,
     reactiveStats,
-    cooldownRemaining,
+    lastUpdated,
+    lastTriggeredTs,
     isPreviewMode,
     previewAddress: activePreviewAddress,
     enableSamplePreview: () => setPreviewAddress(CONFIG.deployerRvmId),
@@ -815,7 +860,6 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
     isUpdatingPolicy,
     isLoadingBalances,
     isWalletActionBusy,
-    secondsAgo,
     loopPhase,
     activeTxHash,
     activities,

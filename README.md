@@ -4,9 +4,33 @@
 
 PaycheckVault turns incoming **Ethereum Sepolia WETH transfers** into autonomous treasury triggers on **Base Sepolia**: `PaycheckReactive` filters dust (`< 0.01 WETH`) and enforces a 30-second per-user cooldown on **Reactive Lasna Omni**, then dispatches a callback to **PaycheckVault** on Base Sepolia to split each user's pre-funded Base WETH vault slice across **USDC** reserve, **sUSDC** yield, and retained operating **WETH** — with isolated per-user balances, split rules, deposit, and withdrawal controls.
 
+### It allocates a DeFi portfolio on arrival — it does not just bookkeep
+When the Lasna callback lands, `PaycheckVault` executes **real on-chain financial actions atomically**, not internal sub-ledger partitioning:
+- **Liquid USDC reserve** — a configurable `stableBps` slice is swapped to USDC via the on-chain DEX router and held for spending/taxes.
+- **Yield sUSDC** — a `yieldBps` slice is routed into yield-bearing stablecoin shares.
+- **Auto-invest WETH** — the remainder (`10000 - stableBps - yieldBps`) is retained as the accumulating WETH position.
+
+Each slice is a token movement through a DEX swap with a per-user slippage floor and max-allocation cap — a ledger that only moves numbers between sub-balances cannot claim this.
+
+## Measured Cross-Chain Loop Telemetry (5/5 live loops)
+
+End-to-end latency is measured from `block.timestamp` (Sepolia inflow block → Base settlement block), **not** block counts — Base Sepolia mines ~200ms blocks, so block-delta timing is meaningless (per the buildathon's Base Sepolia timing rule).
+
+**Median end-to-end latency: 3s** · min 2s · max 4s · avg Sepolia inflow gas `0.000025 ETH` · avg Base callback gas `0.000005 ETH`. Reproduce with `npx hardhat run scripts/measure-loop.js --network sepolia`.
+
+| # | Origin Inflow (Sepolia) | Reactive (Lasna) | Callback (Base Sepolia) | Latency |
+| :-- | :-- | :-- | :-- | :-- |
+| 1 | [`0xa73cc6…f61e03`](https://sepolia.etherscan.io/tx/0xa73cc6b0d7b49de5c70363dc6c4a9ab9f62037b2d4f456e190479ef768f61e03) | [`0x07396e…7eec7a`](https://lasna.reactscan.net/tx/0x07396e8f3a4448618d5164a6ddb32d2f176f463ac520dcd60390ebec547eec7a) | [`0x7fd39c…eaa886`](https://sepolia.basescan.org/tx/0x7fd39cb2c3281e718a2864ba5881abefe428e2db19944c0f6a658f3fe1eaa886) | 2s |
+| 2 | [`0x5ead0e…460a56`](https://sepolia.etherscan.io/tx/0x5ead0ea128c5c5a7263dc882ba432394a94b1f22f7af7af4ed38d117f6460a56) | [`0x345c4f…763b37`](https://lasna.reactscan.net/tx/0x345c4fde1b44f3684d680cd3f6d63e77564953025ecadad1930fe6ec59763b37) | [`0xe7f838…d54e4f`](https://sepolia.basescan.org/tx/0xe7f838a0d6f80281a38fd4ba5018071233fc8ae3624672eaaa2ea2dd91d54e4f) | 2s |
+| 3 | [`0x7d0dbf…332bc5`](https://sepolia.etherscan.io/tx/0x7d0dbfc2ad774e2abe0609c3437fa8e50a7a62047c6fdf2be9f4b23d6a332bc5) | [`0xa5efe6…c5ee01`](https://lasna.reactscan.net/tx/0xa5efe63085bb10cffcfa3c9088b05129190720e57ebd651ea1c243ee20c5ee01) | [`0x91a5c0…d4f1d2`](https://sepolia.basescan.org/tx/0x91a5c0ed5423e16004ccb5277fd574be71cac3854c23b9404660508939d4f1d2) | 3s |
+| 4 | [`0x35380e…8d65a3`](https://sepolia.etherscan.io/tx/0x35380eb78b2a5b004c1954bcc4a275a8b615871b6ed8ea07e85b81773b8d65a3) | [`0x1a3afa…9b4187`](https://lasna.reactscan.net/tx/0x1a3afad642801653e5b485c04f1c2d01c932270c699b6085596d9832989b4187) | [`0x9e9bb3…e91be2`](https://sepolia.basescan.org/tx/0x9e9bb3c07662de156dca83f45da5da85b17ade8464d31ab85623757bfbe91be2) | 4s |
+| 5 | [`0xb2a249…3e7afd`](https://sepolia.etherscan.io/tx/0xb2a2490ed081e2e18e6dd737695d7314bc54844a69e0fc448fc7c5334c3e7afd) | [`0x8d5de4…9c8521`](https://lasna.reactscan.net/tx/0x8d5de42ebf64958a5856fca0f951aa897e1a23d07e1e4dfcb362e198db9c8521) | [`0x4b5824…df2e53`](https://sepolia.basescan.org/tx/0x4b582459570dc18eb87290258546b905be47fbd7749253f9d0f7b80768df2e53) | 3s |
+
 ### Why Reactive? (Zero Keepers, Zero Backend)
-- **No Gelato, no Chainlink Automation, no off-chain server:** Origin ERC-20 `Transfer` subscriptions live natively inside `PaycheckReactive` (`SYSTEM.subscribe` + `onlySystem`).
-- **Distinct from single-chain vaults & rate monitors:** `PaycheckVault` on Base Sepolia cannot observe an inbound WETH transfer arriving at a user's Ethereum Sepolia address on its own. Reactive Network bridges that external event into deterministic destination execution.
+- **ERC-20 `Transfer` cannot self-trigger a vault.** A `Transfer(from, to, amount)` call only mutates balances inside the **token** contract — it never invokes code on the recipient. Without `PaycheckReactive` on Lasna subscribing to Sepolia `Transfer` logs (topic0 = `keccak256("Transfer(address,address,uint256)")`, topic2 = recipient), `PaycheckVault` has no way to know an employer or client sent WETH. The reactive contract is load-bearing, not bolted on.
+- **Cross-chain observation, not same-chain polling.** The inflow is observed on **Ethereum Sepolia** and execution fires on **Base Sepolia**. A same-chain vault could use a hook or keeper; a vault on Base physically cannot see an event on Sepolia without an external watcher — which is exactly what Reactive Omni provides.
+- **No Gelato, no Chainlink Automation, no off-chain server:** the subscription lives natively inside `PaycheckReactive` (`SYSTEM.subscribe` + `onlySystem`).
+- **Distinct from the other paycheck entries:** builds that "split a deposit" move numbers between internal sub-ledgers. PaycheckVault performs DEX swaps into USDC/sUSDC/WETH with per-user slippage and cap guardrails — on-chain financial actions, not bookkeeping.
 
 ### Production Roadmap (Next Steps)
 - **Self-Refueling Gas Loop:** Auto-route a small bps slice of settled inflows/yield into Lasna `REACT` and Base callback `ETH` so contracts never run dry.
@@ -64,7 +88,9 @@ PaycheckVault turns incoming **Ethereum Sepolia WETH transfers** into autonomous
 
 ---
 
-## Verified End-to-End Cross-Chain Proofs (`1.0 WETH` Paycheck — v3 Multi-User)
+## Annotated Single-Loop Proof (`1.0 WETH` Paycheck — bucket-level detail)
+
+The telemetry table above measures latency across 5 loops; this table breaks down one loop step-by-step, including the exact `MultiBucketAllocated` split, so the on-chain financial actions are auditable.
 
 | Step | Network | Action / Event | Transaction Hash |
 | :--- | :--- | :--- | :--- |

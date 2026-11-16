@@ -10,7 +10,7 @@ import {
   Scale,
   ShieldAlert,
 } from 'lucide-react';
-import { CONFIG } from '../config/contracts';
+import { CONFIG, DEPLOYED_CONTRACTS } from '../config/contracts';
 import MicroSlats from './ui/MicroSlats';
 import FoldText from './ui/FoldText';
 
@@ -403,35 +403,7 @@ export default function LandingPage({
 
         {showContracts && (
           <div id="verified-contracts-panel" className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              {
-                key: 'sepolia',
-                name: 'Sepolia WETH',
-                chainId: '11155111',
-                address: CONFIG.sepolia.usdcAddress,
-                explorerName: 'Etherscan',
-                explorerUrl: `${CONFIG.sepolia.explorer}/address/${CONFIG.sepolia.usdcAddress}`,
-                titleClass: 'text-[#ededed]',
-              },
-              {
-                key: 'lasna',
-                name: 'Lasna PaycheckReactive',
-                chainId: '5318007',
-                address: CONFIG.lasna.reactiveAddress,
-                explorerName: 'ReactScan',
-                explorerUrl: `${CONFIG.lasna.explorer}/address/${CONFIG.lasna.reactiveAddress}`,
-                titleClass: 'text-[#FF5FCF]',
-              },
-              {
-                key: 'base',
-                name: 'Base PaycheckVault',
-                chainId: '84532',
-                address: CONFIG.baseSepolia.vaultAddress,
-                explorerName: 'BaseScan',
-                explorerUrl: `${CONFIG.baseSepolia.explorer}/address/${CONFIG.baseSepolia.vaultAddress}`,
-                titleClass: 'text-[#FAEB92]',
-              },
-            ].map((contract) => (
+            {DEPLOYED_CONTRACTS.map((contract) => (
               <div key={contract.key} className="bg-[#121016] border border-white/[0.08] p-5 rounded-xl space-y-3">
                 <div className="flex justify-between items-center gap-2 text-xs">
                   <span className={`font-medium ${contract.titleClass}`}>{contract.name}</span>
