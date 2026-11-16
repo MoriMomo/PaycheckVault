@@ -3,6 +3,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   Check,
+  ChevronDown,
   Copy,
   Layers,
   Lock,
@@ -29,6 +30,7 @@ export default function LandingPage({
   loopPhase,
 }) {
   const [copiedKey, setCopiedKey] = useState(null);
+  const [showContracts, setShowContracts] = useState(false);
   const savedKeepPct = Math.max(0, 100 - savedStablePct - savedYieldPct);
 
   const handleCopy = (key, text) => {
@@ -213,7 +215,7 @@ export default function LandingPage({
             </div>
             <div className="p-3 rounded-lg bg-black border border-white/[0.08] font-mono text-xs text-[#a8a4b3] truncate">
               <span className="text-[#8e8999]">Watch </span>
-              <span className="text-[#ededed]">to == 0x1863...255a</span>
+              <span className="text-[#ededed]">to == your wallet</span>
             </div>
           </div>
 
@@ -342,80 +344,104 @@ export default function LandingPage({
         </div>
       </section>
 
-      {/* 4. VERIFIED CONTRACT REGISTRY */}
-      <section id="contracts" className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6">
-        <div className="border-t border-white/[0.08] pt-10 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-display text-[28px] sm:text-[32px] leading-[1.15] font-medium text-[#ededed] tracking-[-0.02em]">
-            Deployed contracts
-          </h2>
-
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            {
-              key: 'sepolia',
-              name: 'Sepolia WETH',
-              chainId: '11155111',
-              address: CONFIG.sepolia.usdcAddress,
-              explorerName: 'Etherscan',
-              explorerUrl: `${CONFIG.sepolia.explorer}/address/${CONFIG.sepolia.usdcAddress}`,
-              titleClass: 'text-[#ededed]',
-            },
-            {
-              key: 'lasna',
-              name: 'Lasna PaycheckReactive',
-              chainId: '5318007',
-              address: CONFIG.lasna.reactiveAddress,
-              explorerName: 'ReactScan',
-              explorerUrl: `${CONFIG.lasna.explorer}/address/${CONFIG.lasna.reactiveAddress}`,
-              titleClass: 'text-[#FF5FCF]',
-            },
-            {
-              key: 'base',
-              name: 'Base PaycheckVault',
-              chainId: '84532',
-              address: CONFIG.baseSepolia.vaultAddress,
-              explorerName: 'BaseScan',
-              explorerUrl: `${CONFIG.baseSepolia.explorer}/address/${CONFIG.baseSepolia.vaultAddress}`,
-              titleClass: 'text-[#FAEB92]',
-            },
-          ].map((contract) => (
-            <div key={contract.key} className="bg-[#121016] border border-white/[0.08] p-5 rounded-xl space-y-3">
-              <div className="flex justify-between items-center gap-2 text-xs">
-                <span className={`font-medium ${contract.titleClass}`}>{contract.name}</span>
-                <span className="font-mono px-2 py-0.5 rounded bg-[#1c1922] text-[#8e8999] tabular-nums">
-                  {contract.chainId}
-                </span>
-              </div>
-              <div className="font-mono text-xs text-[#ededed] break-all bg-black p-3 rounded-lg border border-white/[0.08]">
-                {contract.address}
-              </div>
-              <div className="flex justify-between items-center pt-1 text-xs font-mono">
-                <button
-                  onClick={() => handleCopy(contract.key, contract.address)}
-                  className="inline-flex items-center gap-1.5 text-[#a8a4b3] hover:text-[#ededed] transition-colors duration-150 cursor-pointer"
-                >
-                  {copiedKey === contract.key ? (
-                    <Check className="w-4 h-4 text-[#FAEB92]" strokeWidth={1.5} />
-                  ) : (
-                    <Copy className="w-4 h-4" strokeWidth={1.5} />
-                  )}
-                  <span>{copiedKey === contract.key ? 'Copied' : 'Copy'}</span>
-                </button>
-                <a
-                  href={contract.explorerUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-[#FAEB92] hover:underline"
-                >
-                  <span>{contract.explorerName}</span>
-                  <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
-                </a>
-              </div>
+      {/* 4. VERIFIED CONTRACT REGISTRY (COLLAPSIBLE) */}
+      <section id="contracts" className="max-w-6xl mx-auto px-4 sm:px-6 space-y-4">
+        <div className="border-t border-white/[0.08] pt-10">
+          <button
+            type="button"
+            onClick={() => setShowContracts((prev) => !prev)}
+            aria-expanded={showContracts}
+            aria-controls="verified-contracts-panel"
+            className="w-full flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-[#121016] border border-white/[0.08] hover:border-white/[0.16] transition-colors duration-150 cursor-pointer text-left"
+          >
+            <div className="space-y-0.5">
+              <h2 className="font-display text-base font-medium text-[#ededed]">
+                Deployed contracts
+              </h2>
+              <p className="text-xs text-[#8e8999]">
+                Verified public addresses on Ethereum Sepolia, Reactive Lasna, and Base Sepolia
+              </p>
             </div>
-          ))}
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1c1922] border border-white/[0.08] text-xs font-mono text-[#ededed]">
+              <span>{showContracts ? 'Hide contracts' : 'View verified contracts (3)'}</span>
+              <ChevronDown
+                className={`w-4 h-4 text-[#a8a4b3] transition-transform duration-150 ${showContracts ? 'rotate-180' : ''}`}
+                strokeWidth={1.5}
+              />
+            </span>
+          </button>
         </div>
+
+        {showContracts && (
+          <div id="verified-contracts-panel" className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              {
+                key: 'sepolia',
+                name: 'Sepolia WETH',
+                chainId: '11155111',
+                address: CONFIG.sepolia.usdcAddress,
+                explorerName: 'Etherscan',
+                explorerUrl: `${CONFIG.sepolia.explorer}/address/${CONFIG.sepolia.usdcAddress}`,
+                titleClass: 'text-[#ededed]',
+              },
+              {
+                key: 'lasna',
+                name: 'Lasna PaycheckReactive',
+                chainId: '5318007',
+                address: CONFIG.lasna.reactiveAddress,
+                explorerName: 'ReactScan',
+                explorerUrl: `${CONFIG.lasna.explorer}/address/${CONFIG.lasna.reactiveAddress}`,
+                titleClass: 'text-[#FF5FCF]',
+              },
+              {
+                key: 'base',
+                name: 'Base PaycheckVault',
+                chainId: '84532',
+                address: CONFIG.baseSepolia.vaultAddress,
+                explorerName: 'BaseScan',
+                explorerUrl: `${CONFIG.baseSepolia.explorer}/address/${CONFIG.baseSepolia.vaultAddress}`,
+                titleClass: 'text-[#FAEB92]',
+              },
+            ].map((contract) => (
+              <div key={contract.key} className="bg-[#121016] border border-white/[0.08] p-5 rounded-xl space-y-3">
+                <div className="flex justify-between items-center gap-2 text-xs">
+                  <span className={`font-medium ${contract.titleClass}`}>{contract.name}</span>
+                  <span className="font-mono px-2 py-0.5 rounded bg-[#1c1922] text-[#8e8999] tabular-nums">
+                    {contract.chainId}
+                  </span>
+                </div>
+                <div
+                  title={contract.address}
+                  className="font-mono text-xs text-[#ededed] bg-black px-3 py-2.5 rounded-lg border border-white/[0.08] tabular-nums"
+                >
+                  {`${contract.address.slice(0, 10)}...${contract.address.slice(-8)}`}
+                </div>
+                <div className="flex justify-between items-center pt-1 text-xs font-mono">
+                  <button
+                    onClick={() => handleCopy(contract.key, contract.address)}
+                    className="inline-flex items-center gap-1.5 text-[#a8a4b3] hover:text-[#ededed] transition-colors duration-150 cursor-pointer"
+                  >
+                    {copiedKey === contract.key ? (
+                      <Check className="w-4 h-4 text-[#FAEB92]" strokeWidth={1.5} />
+                    ) : (
+                      <Copy className="w-4 h-4" strokeWidth={1.5} />
+                    )}
+                    <span>{copiedKey === contract.key ? 'Copied' : 'Copy'}</span>
+                  </button>
+                  <a
+                    href={contract.explorerUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[#FAEB92] hover:underline"
+                  >
+                    <span>{contract.explorerName}</span>
+                    <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
