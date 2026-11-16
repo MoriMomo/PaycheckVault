@@ -4,6 +4,7 @@ import { CONFIG, ERC20_ABI, VAULT_ABI } from './config/contracts';
 import Navbar from './components/Navbar';
 import LandingPage from './components/LandingPage';
 import DashboardPage from './components/DashboardPage';
+import WalletModal from './components/WalletModal';
 import MeadowRiseFooter from '@/components/ui/meadow-rise-footer';
 
 // Smooth numeric odometer hook
@@ -40,10 +41,14 @@ export default function App() {
   // Two-Page Navigation State: 'landing' | 'app'
   const [activePage, setActivePage] = useState('landing');
 
-  // Wallet & Network State
+  // Wallet & Network State (EIP-6963 Multi-Wallet Support)
   const [walletAddress, setWalletAddress] = useState(null);
   const [currentChainId, setCurrentChainId] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [discoveredWallets, setDiscoveredWallets] = useState([]);
+  const [activeProvider, setActiveProvider] = useState(null);
+  const [activeWalletInfo, setActiveWalletInfo] = useState(null);
+  const [showWalletModal, setShowWalletModal] = useState(false);
 
   // Live On-Chain Balances & Liveness Tracking
   const [vaultUsdc, setVaultUsdc] = useState(1250.0);
@@ -202,9 +207,119 @@ export default function App() {
     return () => clearInterval(tickTimer);
   }, [lastUpdated]);
 
-  // Listen to window.ethereum changes
+  // Discover all installed EVM wallets via EIP-6963 + Phantom/MetaMask fallbacks
+  const scanInjectedWallets = useCallback(() => {
+    const found = new Map();
+
+    const addEntry = (info, provider) => {
+      if (!provider || typeof provider.request !== 'function') return;
+      const key = info.rdns || info.name;
+      if (!found.has(key)) {
+        found.set(key, { info, provider });
+      }
+    };
+
+    const onAnnounce = (event) => {
+      const detail = event?.detail;
+      if (detail?.info && detail?.provider) {
+        addEntry(detail.info, detail.provider);
+      }
+    };
+
+    window.addEventListener('eip6963:announceProvider', onAnnounce);
+    window.dispatchEvent(new Event('eip6963:requestProvider'));
+
+    // Fallback discovery for wallets that do not emit EIP-6963 synchronously
+    if (window.phantom?.ethereum) {
+      addEntry(
+        { uuid: 'fallback-phantom', name: 'Phantom', rdns: 'app.phantom', icon: null },
+        window.phantom.ethereum
+      );
+    }
+
+    const legacyProviders = Array.isArray(window.ethereum?.providers)
+      ? window.ethereum.providers
+      : window.ethereum
+      ? [window.ethereum]
+      : [];
+
+    for (const p of legacyProviders) {
+      if (p.isPhantom) {
+        addEntry({ uuid: 'fallback-phantom', name: 'Phantom', rdns: 'app.phantom', icon: null }, p);
+      } else if (p.isMetaMask) {
+        addEntry({ uuid: 'fallback-metamask', name: 'MetaMask', rdns: 'io.metamask', icon: null }, p);
+      } else if (p.isRabby) {
+        addEntry({ uuid: 'fallback-rabby', name: 'Rabby Wallet', rdns: 'io.rabby', icon: null }, p);
+      } else if (p.isCoinbaseWallet) {
+        addEntry({ uuid: 'fallback-coinbase', name: 'Coinbase Wallet', rdns: 'com.coinbase.wallet', icon: null }, p);
+      } else {
+        addEntry({ uuid: 'fallback-browser', name: 'Browser Wallet', rdns: 'injected.browser', icon: null }, p);
+      }
+    }
+
+    const list = Array.from(found.values());
+    setDiscoveredWallets(list);
+
+    setTimeout(() => {
+      window.removeEventListener('eip6963:announceProvider', onAnnounce);
+    }, 300);
+
+    return list;
+  }, []);
+
   useEffect(() => {
-    if (!window.ethereum) return;
+    const wallets = [];
+    const byKey = new Map();
+
+    const mergeWallets = (info, provider) => {
+      if (!provider || typeof provider.request !== 'function') return;
+      const key = info.rdns || info.name;
+      if (!byKey.has(key)) {
+        byKey.set(key, { info, provider });
+      }
+      setDiscoveredWallets(Array.from(byKey.values()));
+    };
+
+    const handleAnnounce = (event) => {
+      if (event?.detail?.info && event?.detail?.provider) {
+        mergeWallets(event.detail.info, event.detail.provider);
+      }
+    };
+
+    window.addEventListener('eip6963:announceProvider', handleAnnounce);
+    window.dispatchEvent(new Event('eip6963:requestProvider'));
+
+    const fallbackList = scanInjectedWallets();
+    fallbackList.forEach((w) => wallets.push(w));
+
+    // Restore prior wallet selection quietly if user previously connected
+    const savedRdns = window.localStorage?.getItem('paycheckvault_wallet_rdns');
+    if (savedRdns) {
+      setTimeout(() => {
+        const match = Array.from(byKey.values()).find((w) => w.info.rdns === savedRdns)
+          || fallbackList.find((w) => w.info.rdns === savedRdns);
+        if (match) {
+          match.provider.request({ method: 'eth_accounts' }).then((accounts) => {
+            if (accounts && accounts.length > 0) {
+              setActiveProvider(match.provider);
+              setActiveWalletInfo(match.info);
+              setWalletAddress(accounts[0]);
+              fetchLiveBalances(accounts[0], true);
+            }
+          }).catch(() => {});
+        }
+      }, 150);
+    }
+
+    return () => {
+      window.removeEventListener('eip6963:announceProvider', handleAnnounce);
+    };
+  }, [scanInjectedWallets, fetchLiveBalances]);
+
+  // Listen to active wallet provider account/chain events
+  useEffect(() => {
+    const provider = activeProvider || window.ethereum;
+    if (!provider || typeof provider.on !== 'function') return;
 
     const handleAccountsChanged = (accounts) => {
       if (accounts.length > 0) {
@@ -213,6 +328,9 @@ export default function App() {
         showToastMsg('Account switched', `Connected as ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`);
       } else {
         setWalletAddress(null);
+        setActiveProvider(null);
+        setActiveWalletInfo(null);
+        window.localStorage?.removeItem('paycheckvault_wallet_rdns');
         fetchLiveBalances(CONFIG.deployerRvmId, true);
         showToastMsg('Wallet disconnected', 'Viewing default vault telemetry', 'warn');
       }
@@ -222,72 +340,99 @@ export default function App() {
       setCurrentChainId(parseInt(chainIdHex, 16));
     };
 
-    window.ethereum.on('accountsChanged', handleAccountsChanged);
-    window.ethereum.on('chainChanged', handleChainChanged);
+    provider.on('accountsChanged', handleAccountsChanged);
+    provider.on('chainChanged', handleChainChanged);
 
-    window.ethereum.request({ method: 'eth_accounts' }).then((accounts) => {
-      if (accounts && accounts.length > 0) {
-        setWalletAddress(accounts[0]);
-        fetchLiveBalances(accounts[0], true);
-      }
-    });
-    window.ethereum.request({ method: 'eth_chainId' }).then((hex) => {
-      if (hex) setCurrentChainId(parseInt(hex, 16));
-    });
+    if (activeProvider) {
+      provider.request({ method: 'eth_chainId' }).then((hex) => {
+        if (hex) setCurrentChainId(parseInt(hex, 16));
+      }).catch(() => {});
+    }
 
     return () => {
-      window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-      window.ethereum.removeListener('chainChanged', handleChainChanged);
+      provider.removeListener?.('accountsChanged', handleAccountsChanged);
+      provider.removeListener?.('chainChanged', handleChainChanged);
     };
-  }, [fetchLiveBalances]);
+  }, [activeProvider, fetchLiveBalances]);
 
-  // Connect Wallet Action
-  const connectWallet = async () => {
-    if (walletAddress) {
-      setWalletAddress(null);
-      fetchLiveBalances(CONFIG.deployerRvmId, true);
-      showToastMsg('Disconnected', 'Viewing default vault telemetry');
-      return;
-    }
+  const getEip1193 = () => activeProvider || window.ethereum;
 
-    if (!window.ethereum) {
-      setWalletAddress(CONFIG.deployerRvmId);
-      showToastMsg('Observer mode', 'Install MetaMask or another browser wallet to transact');
-      fetchLiveBalances(CONFIG.deployerRvmId, true);
-      return;
-    }
+  // Open Wallet Chooser Modal (MetaMask, Phantom, Rabby, etc.)
+  const connectWallet = () => {
+    scanInjectedWallets();
+    setShowWalletModal(true);
+  };
 
+  // Connect with Specific Wallet Extension & Trigger Extension Popup
+  const selectAndConnectWallet = async (walletEntry) => {
     setIsConnecting(true);
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const accounts = await provider.send('eth_requestAccounts', []);
-      const network = await provider.getNetwork();
+      const targetProvider = walletEntry.provider;
+
+      // Prompt account selector popup inside MetaMask if previously granted
+      if (targetProvider.isMetaMask && !targetProvider.isPhantom) {
+        try {
+          await targetProvider.request({
+            method: 'wallet_requestPermissions',
+            params: [{ eth_accounts: {} }],
+          });
+        } catch (permErr) {
+          if (permErr?.code === 4001) throw permErr;
+        }
+      }
+
+      const browserProvider = new ethers.BrowserProvider(targetProvider);
+      const accounts = await browserProvider.send('eth_requestAccounts', []);
+      const network = await browserProvider.getNetwork();
       const user = accounts[0];
 
+      setActiveProvider(targetProvider);
+      setActiveWalletInfo(walletEntry.info);
+      window.localStorage?.setItem('paycheckvault_wallet_rdns', walletEntry.info.rdns || walletEntry.info.name);
       setWalletAddress(user);
       setCurrentChainId(Number(network.chainId));
+      setShowWalletModal(false);
       await fetchLiveBalances(user, true);
 
-      showToastMsg('Wallet connected', `Loaded vault slice for ${user.slice(0, 6)}...${user.slice(-4)}`);
+      showToastMsg(
+        `${walletEntry.info.name} connected`,
+        `Loaded vault slice for ${user.slice(0, 6)}...${user.slice(-4)}`
+      );
     } catch (err) {
-      showToastMsg('Connection cancelled', err.message || 'User rejected connection', 'warn');
+      showToastMsg('Connection cancelled', err?.message || 'Wallet rejected connection', 'warn');
     } finally {
       setIsConnecting(false);
     }
   };
 
-  // Switch Network Helper
+  const disconnectWallet = () => {
+    setWalletAddress(null);
+    setActiveProvider(null);
+    setActiveWalletInfo(null);
+    setCurrentChainId(null);
+    setShowWalletModal(false);
+    window.localStorage?.removeItem('paycheckvault_wallet_rdns');
+    fetchLiveBalances(CONFIG.deployerRvmId, true);
+    showToastMsg('Disconnected', 'Viewing default vault telemetry');
+  };
+
+  // Switch Network Helper on Selected Wallet
   const switchNetwork = async (targetNetwork) => {
-    if (!window.ethereum) return;
+    const eip1193 = getEip1193();
+    if (!eip1193) {
+      setShowWalletModal(true);
+      return;
+    }
     try {
-      await window.ethereum.request({
+      await eip1193.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: targetNetwork.chainIdHex }],
       });
+      setCurrentChainId(targetNetwork.chainId);
     } catch (switchError) {
       if (switchError.code === 4902) {
         try {
-          await window.ethereum.request({
+          await eip1193.request({
             method: 'wallet_addEthereumChain',
             params: [
               {
@@ -299,6 +444,7 @@ export default function App() {
               },
             ],
           });
+          setCurrentChainId(targetNetwork.chainId);
         } catch (addError) {
           console.error(addError);
         }
@@ -309,12 +455,14 @@ export default function App() {
   // Save per-user Multi-Bucket Policy & Guardrails On-Chain (Base Sepolia)
   const savePolicyOnChain = async () => {
     const keepPct = Math.max(0, 100 - stablePct - yieldPct);
-    if (!window.ethereum || !walletAddress) {
+    const eip1193 = getEip1193();
+    if (!eip1193 || !walletAddress) {
+      setShowWalletModal(true);
       setSavedStablePct(stablePct);
       setSavedYieldPct(yieldPct);
       showToastMsg(
-        'Policy preview updated',
-        `${stablePct}% USDC reserve · ${yieldPct}% sUSDC yield · ${keepPct}% WETH kept`
+        'Connect wallet to save on-chain',
+        `Preview updated to ${stablePct}% USDC · ${yieldPct}% sUSDC · ${keepPct}% WETH`
       );
       return;
     }
@@ -327,7 +475,7 @@ export default function App() {
 
     setIsUpdatingPolicy(true);
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
+      const provider = new ethers.BrowserProvider(eip1193);
       const signer = await provider.getSigner();
       const vault = new ethers.Contract(CONFIG.baseSepolia.vaultAddress, VAULT_ABI, signer);
 
@@ -357,8 +505,10 @@ export default function App() {
 
   // Public Testnet WETH Faucet (Sepolia or Base Sepolia)
   const mintTestWeth = async (targetChain = 'sepolia', amountWeth = 5) => {
-    if (!window.ethereum || !walletAddress) {
-      showToastMsg('Connect wallet first', 'Connect MetaMask to mint test WETH tokens', 'warn');
+    const eip1193 = getEip1193();
+    if (!eip1193 || !walletAddress) {
+      setShowWalletModal(true);
+      showToastMsg('Connect wallet first', 'Choose MetaMask, Phantom, or another wallet to mint test WETH', 'warn');
       return;
     }
     const net = targetChain === 'baseSepolia' ? CONFIG.baseSepolia : CONFIG.sepolia;
@@ -371,7 +521,7 @@ export default function App() {
     const busyKey = `mint-${targetChain}`;
     setIsWalletActionBusy(busyKey);
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
+      const provider = new ethers.BrowserProvider(eip1193);
       const signer = await provider.getSigner();
       const tokenAddr = targetChain === 'baseSepolia' ? CONFIG.baseSepolia.wethAddress : CONFIG.sepolia.usdcAddress;
       const token = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
@@ -389,8 +539,10 @@ export default function App() {
 
   // Deposit Base Sepolia WETH into User Vault Slice
   const depositToVault = async (amountWeth = 2.0) => {
-    if (!window.ethereum || !walletAddress) {
-      showToastMsg('Connect wallet first', 'Connect MetaMask to deposit Base WETH into your vault slice', 'warn');
+    const eip1193 = getEip1193();
+    if (!eip1193 || !walletAddress) {
+      setShowWalletModal(true);
+      showToastMsg('Connect wallet first', 'Choose a wallet to deposit Base WETH into your vault slice', 'warn');
       return;
     }
     if (currentChainId !== CONFIG.baseSepolia.chainId) {
@@ -401,7 +553,7 @@ export default function App() {
 
     setIsWalletActionBusy('deposit');
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
+      const provider = new ethers.BrowserProvider(eip1193);
       const signer = await provider.getSigner();
       const weth = new ethers.Contract(CONFIG.baseSepolia.wethAddress, ERC20_ABI, signer);
       const vault = new ethers.Contract(CONFIG.baseSepolia.vaultAddress, VAULT_ABI, signer);
@@ -428,8 +580,10 @@ export default function App() {
 
   // Withdraw User's Own Bucket Tokens from Base Sepolia Vault
   const withdrawFromVault = async (bucket) => {
-    if (!window.ethereum || !walletAddress) {
-      showToastMsg('Connect wallet first', 'Connect MetaMask to withdraw from your vault slice', 'warn');
+    const eip1193 = getEip1193();
+    if (!eip1193 || !walletAddress) {
+      setShowWalletModal(true);
+      showToastMsg('Connect wallet first', 'Choose a wallet to withdraw from your vault slice', 'warn');
       return;
     }
     if (currentChainId !== CONFIG.baseSepolia.chainId) {
@@ -440,7 +594,7 @@ export default function App() {
 
     setIsWalletActionBusy(`withdraw-${bucket}`);
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
+      const provider = new ethers.BrowserProvider(eip1193);
       const signer = await provider.getSigner();
       const vault = new ethers.Contract(CONFIG.baseSepolia.vaultAddress, VAULT_ABI, signer);
       const userBal = await vault.balances(walletAddress);
@@ -467,7 +621,7 @@ export default function App() {
         return;
       }
 
-      showToastMsg(`Withdrawing ${label}`, `Confirm withdrawal in MetaMask`);
+      showToastMsg(`Withdrawing ${label}`, 'Confirm withdrawal in your wallet');
       const tx = await vault.withdraw(tokenAddress, rawAmt);
       await tx.wait();
       await fetchLiveBalances(walletAddress);
@@ -527,11 +681,12 @@ export default function App() {
     setLoopPhase('idle');
   };
 
-  // Execute Live Real On-Chain Paycheck via MetaMask
+  // Execute Live Real On-Chain Paycheck via Selected Wallet
   const executeRealPaycheck = async (wethAmount = 1.0) => {
     if (loopPhase !== 'idle') return;
 
-    if (!window.ethereum || !walletAddress) {
+    const eip1193 = getEip1193();
+    if (!eip1193 || !walletAddress) {
       return runSimulatedLoop(wethAmount);
     }
 
@@ -543,7 +698,7 @@ export default function App() {
 
     try {
       setLoopPhase('sepolia');
-      const provider = new ethers.BrowserProvider(window.ethereum);
+      const provider = new ethers.BrowserProvider(eip1193);
       const signer = await provider.getSigner();
       const sepToken = new ethers.Contract(CONFIG.sepolia.usdcAddress, ERC20_ABI, signer);
 
@@ -715,10 +870,24 @@ export default function App() {
         activePage={activePage}
         onNavigate={setActivePage}
         walletAddress={walletAddress}
+        activeWalletName={activeWalletInfo?.name}
         currentChainId={currentChainId}
         isConnecting={isConnecting}
         onConnectWallet={connectWallet}
         onSwitchNetwork={switchNetwork}
+      />
+
+      {/* Multi-Wallet Selector Modal (MetaMask, Phantom, Rabby, Coinbase, etc.) */}
+      <WalletModal
+        isOpen={showWalletModal}
+        onClose={() => setShowWalletModal(false)}
+        wallets={discoveredWallets}
+        walletAddress={walletAddress}
+        activeWalletInfo={activeWalletInfo}
+        isConnecting={isConnecting}
+        onSelectWallet={selectAndConnectWallet}
+        onDisconnect={disconnectWallet}
+        onRefreshWallets={scanInjectedWallets}
       />
 
       {/* Main Content + Footer Wrapper (offset for fixed left sidebar on desktop) */}

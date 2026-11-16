@@ -21,6 +21,7 @@ export default function Navbar({
   activePage,
   onNavigate,
   walletAddress,
+  activeWalletName,
   currentChainId,
   isConnecting,
   onConnectWallet,
@@ -212,7 +213,10 @@ export default function Navbar({
           ) : walletAddress ? (
             <>
               <span className="w-2 h-2 rounded-full bg-[#FAEB92]" />
-              <span className="font-mono tabular-nums">{`${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`}</span>
+              <span className="font-mono tabular-nums">
+                {activeWalletName ? `${activeWalletName} · ` : ''}
+                {`${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`}
+              </span>
             </>
           ) : (
             <>
