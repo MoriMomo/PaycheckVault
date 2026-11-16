@@ -4,3 +4,4 @@ node_modules
 !.env.example
 cache
 artifacts
+notes.txt

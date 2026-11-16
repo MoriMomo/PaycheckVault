@@ -4,10 +4,12 @@ const { ethers } = hardhat;
 async function main() {
   const user = process.env.SEPOLIA_MONITORED_RECIPIENT || "0x18634B5266369a482836328b8954E67918e5255a";
 
-  const sepoliaUsdcAddr = process.env.SEPOLIA_TOKEN_ADDRESS || "0x4f93F4E22F90F1F66C4E56dB10D8a2990035A09e";
-  const vaultAddr = process.env.BASE_VAULT_ADDRESS || "0x68FE8Ff67a3bF8bC3AdC78b4282bf79E6cbD0142";
-  const baseUsdcAddr = "0xe18f4DF3B4Faa2D7F49b3F1581c04427a0Be9223";
-  const baseWethAddr = "0x4f93F4E22F90F1F66C4E56dB10D8a2990035A09e";
+  // Defaults mirror the live v3 deployment documented in README.md.
+  // Override any of these via .env when inspecting a fresh deployment.
+  const sepoliaTokenAddr = process.env.SEPOLIA_TOKEN_ADDRESS || "0xC56bffDC6d87222128e60D617221AeC584e9F643";
+  const vaultAddr = process.env.BASE_VAULT_ADDRESS || "0x59EaBF6a64d01C4fD544aDcdEe6AB1C3ADe629e0";
+  const baseUsdcAddr = process.env.BASE_USDC_ADDRESS || "0x30A2A3AcD2E5118F50E34A0Ee2e464C5EF8614B0";
+  const baseWethAddr = process.env.BASE_WETH_ADDRESS || "0xbBAD7e94D7E3950da3F365Cc9E715f834A59C35f";
 
   const erc20Abi = [
     "function balanceOf(address) view returns (uint256)",
@@ -24,11 +26,11 @@ async function main() {
   try {
     const sepoliaProvider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
     const sepoliaEth = await sepoliaProvider.getBalance(user);
-    const sepoliaUsdc = new ethers.Contract(sepoliaUsdcAddr, erc20Abi, sepoliaProvider);
-    const userSepoliaUsdc = await sepoliaUsdc.balanceOf(user);
+    const sepoliaToken = new ethers.Contract(sepoliaTokenAddr, erc20Abi, sepoliaProvider);
+    const userSepoliaWeth = await sepoliaToken.balanceOf(user);
     console.log("1. ORIGIN CHAIN: Ethereum Sepolia (11155111)");
     console.log(`   - Wallet SepoliaETH:  ${ethers.formatEther(sepoliaEth)} ETH`);
-    console.log(`   - Wallet Mock USDC:   ${Number(ethers.formatEther(userSepoliaUsdc)).toLocaleString()} USDC`);
+    console.log(`   - Wallet Origin WETH: ${Number(ethers.formatEther(userSepoliaWeth)).toLocaleString()} WETH`);
   } catch (err) {
     console.log("   - Sepolia error:", err.message);
   }

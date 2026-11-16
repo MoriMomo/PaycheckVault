@@ -9,9 +9,9 @@
     "dev": "npm --prefix frontend run dev",
     "build:frontend": "npm --prefix frontend run build"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["reactive-network", "defi", "cross-chain", "vault", "base-sepolia"],
+  "author": "MoriMomo",
+  "license": "MIT",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@openzeppelin/contracts": "^5.4.0",

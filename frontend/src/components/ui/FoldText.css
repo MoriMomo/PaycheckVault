@@ -6,11 +6,13 @@
   line-height: 1.12;
   letter-spacing: -0.025em;
   white-space: pre-wrap;
+  -webkit-user-select: text;
   user-select: text;
 }
 
 .fold-text-sr-only {
   position: absolute;
+  -webkit-user-select: none;
   user-select: none;
   width: 1px;
   height: 1px;

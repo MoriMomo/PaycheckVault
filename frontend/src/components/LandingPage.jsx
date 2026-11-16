@@ -311,7 +311,7 @@ export default function LandingPage({
           </h2>
         </div>
 
-        <div className="border-y border-white/[0.08] divide-y divide-white/[0.08]">
+        <div className="divide-y divide-white/[0.08] border-y border-white/[0.08]">
           {[
             {
               index: '01',
