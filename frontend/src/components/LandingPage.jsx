@@ -26,6 +26,7 @@ export default function LandingPage({
   vaultWeth,
   savedStablePct = 50,
   savedYieldPct = 30,
+  loopPhase = 'idle',
 }) {
   const [copiedKey, setCopiedKey] = useState(null);
   const [showContracts, setShowContracts] = useState(false);

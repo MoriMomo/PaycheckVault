@@ -127,6 +127,7 @@ export default function App() {
               vaultWeth={vault.vaultWeth}
               savedStablePct={vault.savedStablePct}
               savedYieldPct={vault.savedYieldPct}
+              loopPhase={vault.loopPhase}
             />
           ) : (
             <DashboardPage
