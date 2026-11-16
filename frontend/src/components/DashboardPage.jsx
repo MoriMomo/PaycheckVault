@@ -20,6 +20,7 @@ const STRATEGY_PRESETS = [
 
 export default function DashboardPage({
   walletAddress,
+  onConnectWallet,
   currentChainId,
   animatedUSDC,
   animatedYieldUSDC,
@@ -434,11 +435,20 @@ export default function DashboardPage({
                 <Wallet className="w-4 h-4 shrink-0 text-[#8e8999] mt-0.5" strokeWidth={1.5} />
                 <div className="space-y-1 min-w-0">
                   <div className="text-xs text-[#a8a4b3]">
-                    {walletAddress ? 'Your connected wallet' : 'Default demo wallet (connect yours in sidebar)'}
+                    {walletAddress ? 'Your connected wallet' : 'No wallet connected'}
                   </div>
-                  <div className="font-mono text-xs text-[#ededed] truncate">
-                    {walletAddress || CONFIG.deployerRvmId}
-                  </div>
+                  {walletAddress ? (
+                    <div className="font-mono text-xs text-[#ededed] truncate">
+                      {walletAddress}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={onConnectWallet}
+                      className="text-xs font-mono text-[#FAEB92] hover:underline cursor-pointer"
+                    >
+                      Connect wallet to view your vault
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-5 shrink-0">
@@ -581,7 +591,9 @@ export default function DashboardPage({
             <div className="divide-y divide-white/[0.08] text-xs">
               {activities.length === 0 ? (
                 <div className="py-6 text-center text-xs text-[#8e8999]">
-                  No on-chain settlements for this wallet yet
+                  {walletAddress
+                    ? 'No on-chain settlements for this wallet yet'
+                    : 'Connect a wallet to view your on-chain settlements'}
                 </div>
               ) : (
                 activities.map((item) => (

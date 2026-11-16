@@ -122,16 +122,13 @@ export default function App() {
           {activePage === 'landing' ? (
             <LandingPage
               onLaunchApp={() => setActivePage('app')}
-              vaultUsdc={vault.vaultUsdc}
-              vaultYieldUsdc={vault.vaultYieldUsdc}
-              vaultWeth={vault.vaultWeth}
-              savedStablePct={vault.savedStablePct}
-              savedYieldPct={vault.savedYieldPct}
+              protocolTvl={vault.protocolTvl}
               loopPhase={vault.loopPhase}
             />
           ) : (
             <DashboardPage
               walletAddress={wallet.walletAddress}
+              onConnectWallet={wallet.openWalletModal}
               currentChainId={wallet.currentChainId}
               animatedUSDC={vault.animatedUSDC}
               animatedYieldUSDC={vault.animatedYieldUSDC}

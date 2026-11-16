@@ -107,6 +107,7 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
   const [loopPhase, setLoopPhase] = useState('idle');
   const [activeTxHash, setActiveTxHash] = useState(null);
   const [activities, setActivities] = useState([]);
+  const [protocolTvl, setProtocolTvl] = useState({ usdc: 0, sUsdc: 0, weth: 0 });
 
   const pollIntervalRef = useRef(null);
 
@@ -114,11 +115,53 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
   const animatedYieldUSDC = useAnimatedNumber(vaultYieldUsdc);
   const animatedWETH = useAnimatedNumber(vaultWeth);
 
+  // Public site telemetry: total Base Sepolia PaycheckVault TVL (independent of connected wallet)
+  const fetchProtocolTvl = useCallback(async () => {
+    try {
+      const vaultAddr = CONFIG.baseSepolia.vaultAddress;
+      const usdc = new ethers.Contract(CONFIG.baseSepolia.usdcAddress, ERC20_ABI, baseSepoliaReadProvider);
+      const sUsdc = new ethers.Contract(CONFIG.baseSepolia.sUsdcAddress, ERC20_ABI, baseSepoliaReadProvider);
+      const weth = new ethers.Contract(CONFIG.baseSepolia.wethAddress, ERC20_ABI, baseSepoliaReadProvider);
+
+      const [usdcBal, sUsdcBal, wethBal] = await Promise.all([
+        usdc.balanceOf(vaultAddr),
+        sUsdc.balanceOf(vaultAddr),
+        weth.balanceOf(vaultAddr),
+      ]);
+
+      setProtocolTvl({
+        usdc: Number(ethers.formatEther(usdcBal)),
+        sUsdc: Number(ethers.formatEther(sUsdcBal)),
+        weth: Number(ethers.formatEther(wethBal)),
+      });
+    } catch (err) {
+      console.warn('Error fetching protocol TVL:', err);
+    }
+  }, []);
+
   const fetchLiveBalances = useCallback(
     async (userAddr, syncControls = false) => {
+      const targetUser = userAddr || walletAddress;
+      if (!targetUser) {
+        setUserSepoliaWeth(0);
+        setUserBaseWeth(0);
+        setUserSepoliaEth(null);
+        setUserBaseEth(null);
+        setVaultWeth(0);
+        setVaultUsdc(0);
+        setVaultYieldUsdc(0);
+        setSavedStablePct(50);
+        setSavedYieldPct(30);
+        setStablePct(50);
+        setYieldPct(30);
+        setActivities([]);
+        setActiveTxHash(null);
+        setIsLoadingBalances(false);
+        return;
+      }
+
       setIsLoadingBalances(true);
       try {
-        const targetUser = userAddr || walletAddress || CONFIG.deployerRvmId;
         const sepToken = new ethers.Contract(CONFIG.sepolia.usdcAddress, ERC20_ABI, sepoliaReadProvider);
         const baseWeth = new ethers.Contract(CONFIG.baseSepolia.wethAddress, ERC20_ABI, baseSepoliaReadProvider);
         const vaultContract = new ethers.Contract(CONFIG.baseSepolia.vaultAddress, VAULT_ABI, baseSepoliaReadProvider);
@@ -208,15 +251,21 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
     [walletAddress]
   );
 
-  // Sync user controls when wallet changes; poll every 15s in background
+  // Sync public TVL & user-scoped state; poll every 15s
   useEffect(() => {
-    const initTimer = setTimeout(() => fetchLiveBalances(walletAddress, true), 0);
-    const pollTimer = setInterval(() => fetchLiveBalances(walletAddress, false), 15000);
+    const initTimer = setTimeout(() => {
+      fetchProtocolTvl();
+      fetchLiveBalances(walletAddress, true);
+    }, 0);
+    const pollTimer = setInterval(() => {
+      fetchProtocolTvl();
+      if (walletAddress) fetchLiveBalances(walletAddress, false);
+    }, 15000);
     return () => {
       clearTimeout(initTimer);
       clearInterval(pollTimer);
     };
-  }, [walletAddress, fetchLiveBalances]);
+  }, [walletAddress, fetchProtocolTvl, fetchLiveBalances]);
 
   // Clear paycheck relay poll timer on unmount
   useEffect(() => {
@@ -552,6 +601,7 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
   };
 
   return {
+    protocolTvl,
     vaultUsdc,
     vaultYieldUsdc,
     vaultWeth,

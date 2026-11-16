@@ -21,16 +21,17 @@ const VERIFIED_PROOFS = {
 
 export default function LandingPage({
   onLaunchApp,
-  vaultUsdc,
-  vaultYieldUsdc = 0,
-  vaultWeth,
-  savedStablePct = 50,
-  savedYieldPct = 30,
+  protocolTvl = { usdc: 0, sUsdc: 0, weth: 0 },
   loopPhase = 'idle',
 }) {
   const [copiedKey, setCopiedKey] = useState(null);
   const [showContracts, setShowContracts] = useState(false);
-  const savedKeepPct = Math.max(0, 100 - savedStablePct - savedYieldPct);
+
+  const wethUsd = protocolTvl.weth * CONFIG.ethUsdRate;
+  const totalTvlUsd = Math.max(1, protocolTvl.usdc + protocolTvl.sUsdc + wethUsd);
+  const usdcShare = Math.round((protocolTvl.usdc / totalTvlUsd) * 100);
+  const yieldShare = Math.round((protocolTvl.sUsdc / totalTvlUsd) * 100);
+  const wethShare = Math.max(0, 100 - usdcShare - yieldShare);
 
   const handleCopy = (key, text) => {
     navigator.clipboard?.writeText(text);
@@ -96,47 +97,47 @@ export default function LandingPage({
               </a>
             </div>
 
-            {/* Live Base Sepolia Snapshot & Verified End-to-End Proofs */}
+            {/* Live Protocol TVL & Verified End-to-End Proofs */}
             <div className="bg-[#121016] border border-white/[0.08] rounded-xl p-5 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#FAEB92]" />
                   <span className="text-xs font-medium text-[#ededed]">
-                    Base Sepolia vault
+                    Protocol TVL · Base Sepolia
                   </span>
                 </div>
                 <span className="font-mono text-xs px-2 py-0.5 rounded bg-[#1c1922] text-[#a8a4b3] tabular-nums">
-                  {savedStablePct}/{savedYieldPct}/{savedKeepPct} split
+                  ${Math.round(protocolTvl.usdc + protocolTvl.sUsdc + wethUsd).toLocaleString('en-US')} locked
                 </span>
               </div>
 
-              {/* Live 3-Bucket Figures */}
+              {/* Live Contract Balances */}
               <div className="grid grid-cols-3 gap-4 pt-1">
                 <div>
-                  <div className="text-xs text-[#a8a4b3]">USDC (expenses)</div>
+                  <div className="text-xs text-[#a8a4b3]">USDC reserve</div>
                   <div className="text-lg sm:text-xl font-mono font-medium text-[#FAEB92] tabular-nums mt-1">
-                    ${vaultUsdc.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    ${protocolTvl.usdc.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-[#a8a4b3]">sUSDC (yield)</div>
+                  <div className="text-xs text-[#a8a4b3]">sUSDC yield</div>
                   <div className="text-lg sm:text-xl font-mono font-medium text-[#FF5FCF] tabular-nums mt-1">
-                    ${vaultYieldUsdc.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    ${protocolTvl.sUsdc.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-[#a8a4b3]">WETH (kept)</div>
+                  <div className="text-xs text-[#a8a4b3]">WETH reserve</div>
                   <div className="text-lg sm:text-xl font-mono font-medium text-[#ededed] tabular-nums mt-1">
-                    {vaultWeth.toFixed(2)} WETH
+                    {protocolTvl.weth.toFixed(2)} WETH
                   </div>
                 </div>
               </div>
 
               {/* 3-Band Solid Composition Bar */}
               <div className="h-2.5 w-full rounded bg-black p-0.5 border border-white/[0.08] flex gap-0.5 overflow-hidden">
-                <div style={{ width: `${savedStablePct}%` }} className="h-full rounded-[2px] bg-[#FAEB92]" />
-                <div style={{ width: `${savedYieldPct}%` }} className="h-full rounded-[2px] bg-[#FF5FCF]" />
-                <div style={{ width: `${savedKeepPct}%` }} className="h-full rounded-[2px] bg-[#9929EA]" />
+                <div style={{ width: `${usdcShare}%` }} className="h-full rounded-[2px] bg-[#FAEB92]" />
+                <div style={{ width: `${yieldShare}%` }} className="h-full rounded-[2px] bg-[#FF5FCF]" />
+                <div style={{ width: `${wethShare}%` }} className="h-full rounded-[2px] bg-[#9929EA]" />
               </div>
 
               {/* Real Verified Cross-Chain Tx Links */}

@@ -128,7 +128,7 @@ export function useWallet({ showToast }) {
         setActiveProvider(null);
         setActiveWalletInfo(null);
         window.localStorage?.removeItem(WALLET_STORAGE_KEY);
-        showToast('Wallet disconnected', 'Viewing default vault telemetry', 'warn');
+        showToast('Wallet disconnected', 'Connect a wallet to view your vault', 'warn');
       }
     };
 
@@ -213,7 +213,7 @@ export function useWallet({ showToast }) {
     setCurrentChainId(null);
     setShowWalletModal(false);
     window.localStorage?.removeItem(WALLET_STORAGE_KEY);
-    showToast('Disconnected', 'Viewing default vault telemetry');
+    showToast('Wallet disconnected', 'Connect a wallet to view your vault');
   }, [showToast]);
 
   const switchNetwork = useCallback(
