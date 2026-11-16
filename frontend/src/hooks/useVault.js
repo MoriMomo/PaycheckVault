@@ -423,11 +423,10 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
       errorTitle: 'Policy update failed',
       onNoWallet: () => {
         openWalletModal();
-        setSavedStablePct(stablePct);
-        setSavedYieldPct(yieldPct);
         showToast(
           'Connect wallet to save on-chain',
-          `Preview updated to ${stablePct}% USDC · ${yieldPct}% sUSDC · ${keepPct}% WETH`
+          `Connect your wallet to save ${stablePct}% USDC · ${yieldPct}% sUSDC · ${keepPct}% WETH on Base Sepolia`,
+          'warn'
         );
       },
       fn: async (signer) => {
@@ -550,13 +549,21 @@ export function useVault({ walletAddress, currentChainId, getEip1193, switchNetw
       return;
     }
 
+    const isDustTest = wethAmount < minThresholdWeth;
+    if (!isDustTest && vaultWeth <= 0) {
+      showToast(
+        'Deposit Base WETH first',
+        'Your Base Sepolia vault slice is 0 WETH. Mint & deposit Base WETH below so PaycheckVault has funds to split (or test 0.002 WETH dust).',
+        'warn'
+      );
+      return;
+    }
+
     if (currentChainId !== CONFIG.sepolia.chainId) {
       showToast('Switching to Sepolia', 'Your paycheck origin transfer must be signed on Ethereum Sepolia');
       const switched = await switchNetwork(CONFIG.sepolia);
       if (!switched) return;
     }
-
-    const isDustTest = wethAmount < minThresholdWeth;
 
     try {
       setLoopPhase('sepolia');

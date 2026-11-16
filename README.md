@@ -8,6 +8,11 @@ PaycheckVault turns incoming **Ethereum Sepolia WETH transfers** into autonomous
 - **No Gelato, no Chainlink Automation, no off-chain server:** Origin ERC-20 `Transfer` subscriptions live natively inside `PaycheckReactive` (`SYSTEM.subscribe` + `onlySystem`).
 - **Distinct from single-chain vaults & rate monitors:** `PaycheckVault` on Base Sepolia cannot observe an inbound WETH transfer arriving at a user's Ethereum Sepolia address on its own. Reactive Network bridges that external event into deterministic destination execution.
 
+### Production Roadmap (Next Steps)
+- **Self-Refueling Gas Loop:** Auto-route a small bps slice of settled inflows/yield into Lasna `REACT` and Base callback `ETH` so contracts never run dry.
+- **Cross-Chain Bridge / Intent Settlement:** Pair origin inflows with CCTP or Across intent execution so L1 value bridges alongside the Reactive signal.
+- **Cooldown Accumulation Queue:** Queue rapid inflows arriving inside the 30-second cooldown window instead of suppressing them via `InflowSuppressed`.
+
 ---
 
 ## Architecture (`Sepolia -> Lasna Omni -> Base Sepolia`)

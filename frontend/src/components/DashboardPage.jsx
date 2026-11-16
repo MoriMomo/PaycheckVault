@@ -154,6 +154,16 @@ export default function DashboardPage({
             <Clock className="w-4 h-4 shrink-0 text-[#a8a4b3]" strokeWidth={1.5} />
             <span>{cooldownRemaining > 0 ? `Test cooldown (${cooldownRemaining}s)` : 'Test 0.05 WETH'}</span>
           </button>
+
+          <a
+            href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia"
+            target="_blank"
+            rel="noreferrer"
+            className="h-10 px-3 rounded-lg text-xs font-mono text-[#a8a4b3] hover:text-[#FAEB92] bg-[#121016] border border-white/[0.08] inline-flex items-center gap-1 transition-colors duration-150"
+          >
+            <span>Sepolia faucet</span>
+            <ArrowUpRight className="w-3.5 h-3.5 shrink-0" strokeWidth={1.5} />
+          </a>
         </div>
       </div>
 
@@ -608,6 +618,12 @@ export default function DashboardPage({
                   </div>
                 </div>
               )}
+
+            {walletAddress && vaultWeth <= 0 && (
+              <div className="p-3 rounded-lg bg-black border border-[#FAEB92]/40 text-xs text-[#a8a4b3]">
+                New wallet step 1: Mint 5 Base WETH and click <span className="font-mono text-[#FAEB92]">&quot;Deposit 2 WETH to vault&quot;</span> on Base Sepolia first so PaycheckVault has a WETH balance to split when your Sepolia inflow arrives.
+              </div>
+            )}
 
             {/* Public Testnet Faucet & Deposit Actions */}
             <div className="pt-3 border-t border-white/[0.08] flex flex-wrap items-center justify-between gap-2">

@@ -24,7 +24,7 @@ const SECTION_FOLD_PROPS = {
   stagger: 0.03,
   staggerFrom: 'start',
   ease: 'power3.out',
-  hoverRefold: true,
+  hoverRefold: false,
   refoldRadius: 140,
   refoldAngle: 45,
   perspective: 700,
