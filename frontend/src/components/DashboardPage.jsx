@@ -30,6 +30,8 @@ export default function DashboardPage({
   vaultWeth,
   userSepoliaWeth,
   userBaseWeth = 0,
+  userSepoliaEth = null,
+  userBaseEth = null,
   isWalletActionBusy,
   onMintTestWeth,
   onDepositToVault,
@@ -458,7 +460,7 @@ export default function DashboardPage({
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-6 shrink-0">
+              <div className="flex flex-wrap items-center gap-5 shrink-0">
                 <div>
                   <div className="text-xs text-[#8e8999]">Sepolia WETH</div>
                   <div className="font-mono text-sm font-medium text-[#FAEB92] tabular-nums mt-0.5">
@@ -471,8 +473,66 @@ export default function DashboardPage({
                     {userBaseWeth.toLocaleString('en-US', { maximumFractionDigits: 2 })} WETH
                   </div>
                 </div>
+                {walletAddress && userSepoliaEth !== null && userBaseEth !== null && (
+                  <div className="flex items-center gap-4 pl-4 border-l border-white/[0.08]">
+                    <div>
+                      <div className="text-xs text-[#8e8999]">Sepolia gas</div>
+                      <div
+                        className={`font-mono text-xs tabular-nums mt-0.5 ${
+                          userSepoliaEth < 0.001 ? 'text-[#FF5FCF]' : 'text-[#a8a4b3]'
+                        }`}
+                      >
+                        {userSepoliaEth.toFixed(4)} ETH
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-[#8e8999]">Base gas</div>
+                      <div
+                        className={`font-mono text-xs tabular-nums mt-0.5 ${
+                          userBaseEth < 0.001 ? 'text-[#FF5FCF]' : 'text-[#a8a4b3]'
+                        }`}
+                      >
+                        {userBaseEth.toFixed(4)} ETH
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
+
+            {walletAddress &&
+              ((userSepoliaEth !== null && userSepoliaEth < 0.001) ||
+                (userBaseEth !== null && userBaseEth < 0.001)) && (
+                <div className="p-3 rounded-lg bg-black border border-[#FF5FCF]/40 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="text-[#a8a4b3]">
+                    Low testnet gas (&lt; 0.001 ETH). Fund ETH before signing:
+                  </span>
+                  <div className="flex items-center gap-3 font-mono">
+                    {userSepoliaEth !== null && userSepoliaEth < 0.001 && (
+                      <a
+                        href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[#FAEB92] hover:underline"
+                      >
+                        <span>Sepolia faucet</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      </a>
+                    )}
+                    {userBaseEth !== null && userBaseEth < 0.001 && (
+                      <a
+                        href="https://www.alchemy.com/faucets/base-sepolia"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[#FF5FCF] hover:underline"
+                      >
+                        <span>Base Sepolia faucet</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
 
             {/* Public Testnet Faucet & Deposit Actions */}
             <div className="pt-3 border-t border-white/[0.08] flex flex-wrap items-center justify-between gap-2">

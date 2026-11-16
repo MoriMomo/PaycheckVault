@@ -142,6 +142,8 @@ export default function App() {
               vaultWeth={vault.vaultWeth}
               userSepoliaWeth={vault.userSepoliaWeth}
               userBaseWeth={vault.userBaseWeth}
+              userSepoliaEth={vault.userSepoliaEth}
+              userBaseEth={vault.userBaseEth}
               isWalletActionBusy={vault.isWalletActionBusy}
               onMintTestWeth={vault.mintTestWeth}
               onDepositToVault={vault.depositToVault}
