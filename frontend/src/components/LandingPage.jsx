@@ -258,7 +258,7 @@ export default function LandingPage({
                 Vault splits the payout
               </h3>
               <p className="text-sm text-[#a8a4b3] leading-relaxed">
-                Base Omni Proxy delivers the callback to PaycheckVault, which verifies cap and slippage bounds before routing {savedStablePct}% to USDC, {savedYieldPct}% to sUSDC, and keeping {savedKeepPct}% in WETH.
+                Base Omni Proxy delivers the callback to PaycheckVault, which verifies cap and slippage bounds before routing payouts across USDC reserve, sUSDC yield, and retained WETH (50% / 30% / 20% by default).
               </p>
             </div>
             <div className="p-3 rounded-lg bg-black border border-white/[0.08] font-mono text-xs text-[#a8a4b3] truncate">
