@@ -13,17 +13,21 @@ import { AbstractReactive } from "./reactive-lib-omni/base/AbstractReactive.sol"
  *         and requests an authenticated cross-chain callback to PaycheckVault on Base Sepolia (84532).
  */
 contract PaycheckReactive is AbstractReactive {
+    uint256 public constant PAYCHECK_ID_VERSION = 1;
     uint256 public constant SEPOLIA_CHAIN_ID = 11155111;
     uint256 public constant BASE_SEPOLIA_CHAIN_ID = 84532;
 
     address public owner;
     address public originToken;             // Sepolia inflow asset (e.g. WETH)
+    address public baseOriginToken;         // Optional Base Sepolia WETH for direct L2 auto-split
+    address public ignoredRouter;           // DEX router ignored on Base to prevent swap loops
     address public monitoredRecipient;      // Optional single recipient filter; address(0) = wildcard multi-user
     address public destinationVault;        // PaycheckVault on Base Sepolia
     uint256 public minInflowThreshold;      // Anti-dust guardrail threshold
     uint256 public cooldownPeriod;          // Minimum seconds between callbacks per recipient (0 = disabled)
 
     mapping(address => uint256) public lastTriggeredAt;
+    mapping(address => uint256) public pendingInflow;
     uint256 public totalCallbacksEmitted;
     uint256 public totalDustBlocked;
     uint256 public totalCooldownBlocked;
@@ -33,6 +37,10 @@ contract PaycheckReactive is AbstractReactive {
     // keccak256("Transfer(address,address,uint256)")
     uint256 public constant ERC20_TRANSFER_TOPIC_0 =
         uint256(keccak256("Transfer(address,address,uint256)"));
+
+    event PaycheckAccepted(bytes32 indexed paycheckId, address indexed recipient);
+    event PaycheckSuppressed(bytes32 indexed paycheckId, address indexed recipient, string reason);
+    event BaseAutoSplitEnabled(address indexed baseToken, address indexed ignoredRouter);
 
     event PaycheckTriggered(
         address indexed recipient,
@@ -94,6 +102,27 @@ contract PaycheckReactive is AbstractReactive {
     }
 
     /**
+     * @notice Subscribe to Base Sepolia WETH transfers for direct L2 wallet auto-splitting.
+     */
+    function enableBaseAutoSplit(address _baseToken, address _ignoredRouter) external onlyOwner {
+        require(_baseToken != address(0), "Zero token");
+        baseOriginToken = _baseToken;
+        ignoredRouter = _ignoredRouter;
+        uint256 topic2Filter = monitoredRecipient == address(0)
+            ? REACTIVE_IGNORE
+            : uint256(uint160(monitoredRecipient));
+        SYSTEM.subscribe(
+            BASE_SEPOLIA_CHAIN_ID,
+            _baseToken,
+            ERC20_TRANSFER_TOPIC_0,
+            REACTIVE_IGNORE,
+            topic2Filter,
+            REACTIVE_IGNORE
+        );
+        emit BaseAutoSplitEnabled(_baseToken, _ignoredRouter);
+    }
+
+    /**
      * @notice Update anti-dust floor and cooldown rate-limiter parameters.
      */
     function setGuardrails(uint256 _minInflowThreshold, uint256 _cooldownPeriod) external onlyOwner {
@@ -114,15 +143,15 @@ contract PaycheckReactive is AbstractReactive {
      * @notice Invoked by Reactive Omni SYSTEM (0x8888...8888) when a matching Sepolia Transfer occurs.
      */
     function react(LogRecord calldata log_) external onlySystem {
-        if (
-            log_.chainId != SEPOLIA_CHAIN_ID ||
-            log_.contractAddress != originToken ||
-            log_.topic0 != ERC20_TRANSFER_TOPIC_0 ||
-            destinationVault == address(0)
-        ) {
+        bool isSepolia = (log_.chainId == SEPOLIA_CHAIN_ID && log_.contractAddress == originToken);
+        bool isBase = (baseOriginToken != address(0) &&
+            log_.chainId == BASE_SEPOLIA_CHAIN_ID &&
+            log_.contractAddress == baseOriginToken);
+        if ((!isSepolia && !isBase) || log_.topic0 != ERC20_TRANSFER_TOPIC_0 || destinationVault == address(0)) {
             return;
         }
 
+        address sender = address(uint160(log_.topic1));
         address recipient = address(uint160(log_.topic2));
         if (recipient == address(0)) {
             return;
@@ -130,17 +159,31 @@ contract PaycheckReactive is AbstractReactive {
         if (monitoredRecipient != address(0) && recipient != monitoredRecipient) {
             return;
         }
+        if (isBase) {
+            // Ignore mints, vault deposits/withdrawals, and DEX swaps to prevent recursive loops
+            if (
+                sender == address(0) ||
+                sender == destinationVault ||
+                recipient == destinationVault ||
+                (ignoredRouter != address(0) && (sender == ignoredRouter || recipient == ignoredRouter))
+            ) {
+                return;
+            }
+        }
 
         uint256 amount = abi.decode(log_.data, (uint256));
+
+        bytes32 paycheckId = keccak256(abi.encode(log_.chainId, log_.txHash, log_.logIndex));
 
         // Guardrail 1: Anti-dust spam filter
         if (amount < minInflowThreshold) {
             totalDustBlocked += 1;
+            emit PaycheckSuppressed(paycheckId, recipient, "DUST_THRESHOLD");
             emit InflowSuppressed(recipient, amount, "DUST_THRESHOLD", block.timestamp);
             return;
         }
 
-        // Guardrail 2: Per-recipient cooldown rate limiter
+        // Guardrail 2: Per-recipient cooldown rate limiter (queues inflow for next valid callback)
         uint256 prevTriggered = lastTriggeredAt[recipient];
         if (
             cooldownPeriod > 0 &&
@@ -148,18 +191,26 @@ contract PaycheckReactive is AbstractReactive {
             block.timestamp < prevTriggered + cooldownPeriod
         ) {
             totalCooldownBlocked += 1;
+            pendingInflow[recipient] += amount;
+            emit PaycheckSuppressed(paycheckId, recipient, "COOLDOWN");
             emit InflowSuppressed(recipient, amount, "COOLDOWN", block.timestamp);
             return;
+        }
+
+        uint256 totalAmount = amount + pendingInflow[recipient];
+        if (pendingInflow[recipient] > 0) {
+            pendingInflow[recipient] = 0;
         }
 
         lastTriggeredAt[recipient] = block.timestamp;
         totalCallbacksEmitted += 1;
 
         bytes memory payload = abi.encodeWithSignature(
-            "executePaycheckAllocation(address,address,uint256)",
+            "allocatePaycheck(address,address,uint256,bytes32)",
             address(0),
             recipient,
-            amount
+            totalAmount,
+            paycheckId
         );
 
         SYSTEM.requestCallbackV_1_0(
@@ -171,6 +222,7 @@ contract PaycheckReactive is AbstractReactive {
             })
         );
 
-        emit PaycheckTriggered(recipient, amount, destinationVault, block.timestamp);
+        emit PaycheckAccepted(paycheckId, recipient);
+        emit PaycheckTriggered(recipient, totalAmount, destinationVault, block.timestamp);
     }
 }

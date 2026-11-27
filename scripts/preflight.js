@@ -92,14 +92,16 @@ async function checkWiring() {
   console.log(`\n${DIM}2/4 — Cross-chain wiring${RESET}`);
 
   const reactiveAbi = [
+    "function PAYCHECK_ID_VERSION() view returns (uint256)",
     "function destinationVault() view returns (address)",
     "function minInflowThreshold() view returns (uint256)",
     "function cooldownPeriod() view returns (uint256)",
   ];
-  const vaultAbi = ["function CALLBACK_SENDER() view returns (address)"];
+  const vaultAbi = ["function getCallbackSender() view returns (address)", "function handledPaychecks(bytes32) view returns (bool)"];
 
   try {
     const reactive = new ethers.Contract(ADDRESSES.lasna.reactive, reactiveAbi, providers.lasna);
+    if (await reactive.PAYCHECK_ID_VERSION() !== 1n) throw new Error("Unsupported paycheck identifier version");
     const boundVault = await reactive.destinationVault();
     if (boundVault.toLowerCase() === ADDRESSES.baseSepolia.vault.toLowerCase()) {
       pass(`PaycheckReactive.destinationVault -> ${boundVault} (matches Base vault)`);
@@ -108,29 +110,30 @@ async function checkWiring() {
       blockingFailures++;
     }
   } catch (err) {
-    warn(`Could not read destinationVault (ABI/RPC): ${err.message}`);
-    warnings++;
+    fail(`Could not read destinationVault (ABI/RPC): ${err.message}`);
+    blockingFailures++;
   }
 
   // Confirm the vault authorizes exactly the Lasna reactive contract as sender.
-  // CALLBACK_SENDER naming can vary by SDK version, so treat a read miss as a warn.
   try {
     const vault = new ethers.Contract(ADDRESSES.baseSepolia.vault, vaultAbi, providers.baseSepolia);
-    const sender = await vault.CALLBACK_SENDER();
+    await vault.handledPaychecks(ethers.ZeroHash);
+    const sender = await vault.getCallbackSender();
     if (sender.toLowerCase() === ADDRESSES.lasna.reactive.toLowerCase()) {
       pass(`PaycheckVault authorized sender -> ${sender} (matches reactive)`);
     } else {
-      warn(`Vault authorized sender is ${sender}, expected ${ADDRESSES.lasna.reactive} — verify manually`);
-      warnings++;
+      fail(`Vault authorized sender is ${sender}, expected ${ADDRESSES.lasna.reactive} — verify manually`);
+      blockingFailures++;
     }
-  } catch {
-    console.log(`  ${DIM}info  Vault sender getter not exposed; skipping (verified in tests)${RESET}`);
+  } catch (err) {
+    fail(`Unverified vault sender: ${err.message}`);
+    blockingFailures++;
   }
 }
 
 async function checkReadmeProofs() {
   console.log(`\n${DIM}3/4 — README verified-proof tx hashes${RESET}`);
-  for (const { step, network, hash } of README_TX_HASHES) {
+  for (const { step, network, hash, emitter, event } of README_TX_HASHES) {
     const provider = providers[network];
     const explorer = ADDRESSES[network].explorer;
     try {
@@ -138,9 +141,12 @@ async function checkReadmeProofs() {
       if (receipt && receipt.blockNumber) {
         const status = receipt.status === 1 ? "success" : "reverted";
         const line = `${step} [${network}] block ${receipt.blockNumber} (${status})`;
-        if (receipt.status === 1) pass(line);
+        const expected = new ethers.Interface([event]);
+        const hasEvent = receipt.logs.some(log => log.address.toLowerCase() === emitter.toLowerCase()
+          && expected.parseLog(log) !== null);
+        if (receipt.status === 1 && hasEvent) pass(line);
         else {
-          fail(`${line} — tx reverted; do not cite it as a proof`);
+          fail(`${line} — receipt failed or expected event missing`);
           blockingFailures++;
         }
       } else {
@@ -148,8 +154,8 @@ async function checkReadmeProofs() {
         blockingFailures++;
       }
     } catch (err) {
-      warn(`${step} [${network}] lookup error (${err.message}); check ${explorer}/tx/${hash}`);
-      warnings++;
+      fail(`${step} [${network}] proof unverified (${err.message}); check ${explorer}/tx/${hash}`);
+      blockingFailures++;
     }
   }
 }

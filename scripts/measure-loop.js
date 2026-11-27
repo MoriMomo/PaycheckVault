@@ -1,3 +1,5 @@
+import { originPaycheckId } from '../frontend/src/config/paycheck.js';
+import { REACTIVE_ABI, VAULT_ABI } from '../frontend/src/config/contracts.js';
 /**
  * PaycheckVault — Cross-Chain Loop Telemetry Harness
  *
@@ -38,14 +40,6 @@ const ERC20_ABI = [
   "function transfer(address to, uint256 amount) returns (bool)",
   "function balanceOf(address) view returns (uint256)",
 ];
-const REACTIVE_ABI = [
-  "event PaycheckTriggered(address indexed recipient, uint256 indexed amount, address indexed destinationVault, uint256 timestamp)",
-  "event InflowSuppressed(address indexed recipient, uint256 indexed amount, string reason, uint256 timestamp)",
-];
-const VAULT_ABI = [
-  "event MultiBucketAllocated(address indexed recipient, address indexed caller, uint256 totalProcessed, uint256 stableOut, uint256 yieldOut, uint256 retainedIn, uint256 timestamp)",
-];
-
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const short = (h) => `${h.slice(0, 8)}…${h.slice(-6)}`;
 
@@ -100,6 +94,9 @@ async function main() {
   console.log(`Vault:    ${ADDRESSES.baseSepolia.vault}`);
   console.log("========================================================");
 
+  if (await reactive.PAYCHECK_ID_VERSION() !== 1n) throw new Error("Unsupported paycheck identifier version");
+  await vault.handledPaychecks(ethers.ZeroHash);
+
   const bal = await originToken.balanceOf(me);
   const need = ethers.parseUnits(PAYCHECK_AMOUNT, 18) * BigInt(LOOP_COUNT);
   if (bal < need) {
@@ -121,6 +118,7 @@ async function main() {
     const tx = await originToken.transfer(me, amount);
     console.log(`  origin tx:   ${short(tx.hash)}  (waiting…)`);
     const originReceipt = await tx.wait();
+    const paycheckId = originPaycheckId(originReceipt, ADDRESSES.sepolia.chainId, ADDRESSES.sepolia.token, me, amount);
     const originTs = await blockTs(sepoliaProvider, originReceipt.blockNumber);
     const originGasEth = Number(
       ethers.formatEther(originReceipt.gasUsed * originReceipt.gasPrice)
@@ -132,14 +130,14 @@ async function main() {
     const triggered = await waitForEvent(
       reactive,
       lasnaProvider,
-      reactive.filters.PaycheckTriggered(me),
+      reactive.filters.PaycheckAccepted(paycheckId, me),
       lasnaFrom,
       deadline
     );
     if (!triggered) {
       // Check whether it was suppressed (dust/cooldown) vs just slow
       const supp = await reactive
-        .queryFilter(reactive.filters.InflowSuppressed(me), lasnaFrom, await lasnaProvider.getBlockNumber())
+        .queryFilter(reactive.filters.PaycheckSuppressed(paycheckId, me), lasnaFrom, await lasnaProvider.getBlockNumber())
         .catch(() => []);
       const reason = supp.length ? supp[supp.length - 1].args.reason : "timeout";
       console.log(`  ${"\x1b[33m"}lasna:       no PaycheckTriggered (${reason})\x1b[0m`);
@@ -154,7 +152,7 @@ async function main() {
     const settled = await waitForEvent(
       vault,
       baseProvider,
-      vault.filters.MultiBucketAllocated(me),
+      vault.filters.PaycheckSettled(paycheckId, me),
       baseFrom,
       deadline
     );

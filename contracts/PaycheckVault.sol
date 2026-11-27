@@ -54,6 +54,9 @@ contract PaycheckVault is AbstractCallback {
     mapping(address => Policy) private userPolicies;
     mapping(address => UserLedger) public balances;
 
+    event PaycheckSettled(bytes32 indexed paycheckId, address indexed recipient);
+    mapping(bytes32 => bool) public handledPaychecks;
+
     event MultiBucketAllocated(
         address indexed recipient,
         address indexed caller,
@@ -101,6 +104,9 @@ contract PaycheckVault is AbstractCallback {
         uint256 _yieldBps
     ) payable AbstractCallback(IPayable(payable(_callbackProxy)), _callbackSender) {
         require(_stableBps + _yieldBps <= 10000, "Invalid bps");
+        require(_dexRouter.code.length > 0 && _inputToken.code.length > 0 &&
+            _stableToken.code.length > 0 && _yieldToken.code.length > 0, "Invalid router or token");
+        require(_inputToken != _stableToken && _inputToken != _yieldToken && _stableToken != _yieldToken, "Duplicate token");
         owner = msg.sender;
         dexRouter = _dexRouter;
         inputToken = _inputToken;
@@ -163,10 +169,21 @@ contract PaycheckVault is AbstractCallback {
         onlyServiceProvider
         onlyCallbackSender(callbackSender)
     {
-        if (recipient == address(0) || inflowAmount == 0) return;
+        _allocate(callbackSender, recipient, inflowAmount);
+    }
+
+    function allocatePaycheck(address callbackSender, address recipient, uint256 inflowAmount, bytes32 paycheckId)
+        external onlyServiceProvider onlyCallbackSender(callbackSender)
+    {
+        if (handledPaychecks[paycheckId]) return;
+        handledPaychecks[paycheckId] = true;
+        if (_allocate(callbackSender, recipient, inflowAmount)) emit PaycheckSettled(paycheckId, recipient);
+    }
+
+    function _allocate(address callbackSender, address recipient, uint256 inflowAmount) private returns (bool) {
+        if (recipient == address(0) || inflowAmount == 0) return false;
 
         UserLedger storage acct = balances[recipient];
-        if (acct.weth == 0) return;
 
         (
             uint256 stableBps,
@@ -175,14 +192,27 @@ contract PaycheckVault is AbstractCallback {
             uint256 slippageFloor,
         ) = getPolicy(recipient);
 
-        uint256 effectiveInflow = inflowAmount;
-        if (cap > 0 && effectiveInflow > cap) {
-            effectiveInflow = cap;
+        uint256 targetInflow = inflowAmount;
+        if (cap > 0 && targetInflow > cap) {
+            targetInflow = cap;
         }
+        if (acct.weth < targetInflow) {
+            uint256 shortfall = targetInflow - acct.weth;
+            uint256 allowed = IERC20(inputToken).allowance(recipient, address(this));
+            uint256 walletBal = IERC20(inputToken).balanceOf(recipient);
+            uint256 pullAmt = shortfall;
+            if (allowed < pullAmt) pullAmt = allowed;
+            if (walletBal < pullAmt) pullAmt = walletBal;
+            if (pullAmt > 0) {
+                IERC20(inputToken).safeTransferFrom(recipient, address(this), pullAmt);
+                acct.weth += pullAmt;
+            }
+        }
+        uint256 effectiveInflow = targetInflow;
         if (effectiveInflow > acct.weth) {
             effectiveInflow = acct.weth;
         }
-        if (effectiveInflow == 0) return;
+        if (effectiveInflow == 0) return false;
 
         uint256 stableIn = (effectiveInflow * stableBps) / 10000;
         uint256 yieldIn = (effectiveInflow * yieldBps) / 10000;
@@ -232,6 +262,7 @@ contract PaycheckVault is AbstractCallback {
             retainedIn,
             block.timestamp
         );
+        return true;
     }
 
     /**
@@ -255,6 +286,13 @@ contract PaycheckVault is AbstractCallback {
     /**
      * @notice Any connected user can configure their own stablecoin/yield split (total <= 10000 bps).
      */
+    function setMyPolicy(uint256 stableBps, uint256 yieldBps, uint256 cap, uint256 floor) external {
+        require(stableBps + yieldBps <= 10000, "Invalid bps");
+        userPolicies[msg.sender] = Policy(stableBps, yieldBps, cap, floor, true);
+        emit PolicyUpdated(msg.sender, stableBps, yieldBps, 10000 - stableBps - yieldBps);
+        emit UserGuardrailsUpdated(msg.sender, cap, floor);
+    }
+
     function setMyBuckets(uint256 _stableBps, uint256 _yieldBps) external {
         require(_stableBps + _yieldBps <= 10000, "Invalid bps");
         Policy storage p = userPolicies[msg.sender];

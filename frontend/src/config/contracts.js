@@ -1,3 +1,5 @@
+import deployment from './deployment.json' with { type: 'json' };
+
 export const CONFIG = {
   sepolia: {
     chainId: 11155111,
@@ -5,8 +7,8 @@ export const CONFIG = {
     chainName: 'Ethereum Sepolia',
     rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com',
     explorer: 'https://sepolia.etherscan.io',
-    wethAddress: '0xC56bffDC6d87222128e60D617221AeC584e9F643',
-    usdcAddress: '0xC56bffDC6d87222128e60D617221AeC584e9F643',
+    wethAddress: deployment.sepolia.token,
+    usdcAddress: deployment.sepolia.token,
   },
   lasna: {
     chainId: 5318007,
@@ -14,7 +16,7 @@ export const CONFIG = {
     chainName: 'Reactive Lasna Testnet',
     rpcUrl: 'https://lasna-rpc.rnk.dev',
     explorer: 'https://lasna.reactscan.net',
-    reactiveAddress: '0x68FE8Ff67a3bF8bC3AdC78b4282bf79E6cbD0142',
+    reactiveAddress: deployment.lasna.reactive,
   },
   baseSepolia: {
     chainId: 84532,
@@ -22,11 +24,11 @@ export const CONFIG = {
     chainName: 'Base Sepolia',
     rpcUrl: 'https://sepolia.base.org',
     explorer: 'https://sepolia.basescan.org',
-    vaultAddress: '0x59EaBF6a64d01C4fD544aDcdEe6AB1C3ADe629e0',
-    usdcAddress: '0x30A2A3AcD2E5118F50E34A0Ee2e464C5EF8614B0',
-    sUsdcAddress: '0x58aB359b4aA491C45dd013B580aE0be50Bf4fE14',
-    wethAddress: '0xbBAD7e94D7E3950da3F365Cc9E715f834A59C35f',
-    dexAddress: '0xE4BF9404aA3A6aE552EaD8F91CCC8b68269c4841',
+    vaultAddress: deployment.baseSepolia.vault,
+    usdcAddress: deployment.baseSepolia.usdc,
+    sUsdcAddress: deployment.baseSepolia.susdc,
+    wethAddress: deployment.baseSepolia.weth,
+    dexAddress: deployment.baseSepolia.dex,
   },
   inflowAsset: 'WETH',
   ethUsdRate: 2500,
@@ -43,6 +45,9 @@ export const ERC20_ABI = [
 ];
 
 export const VAULT_ABI = [
+  "function handledPaychecks(bytes32) view returns (bool)",
+  'event PaycheckSettled(bytes32 indexed paycheckId, address indexed recipient)',
+  'function setMyPolicy(uint256,uint256,uint256,uint256)',
   'function owner() view returns (address)',
   'function allocationBps() view returns (uint256)',
   'function balances(address user) view returns (uint256 weth, uint256 usdc, uint256 sUsdc)',
@@ -59,6 +64,11 @@ export const VAULT_ABI = [
 ];
 
 export const REACTIVE_ABI = [
+  "function PAYCHECK_ID_VERSION() view returns (uint256)",
+  'event PaycheckAccepted(bytes32 indexed paycheckId, address indexed recipient)',
+  'event PaycheckSuppressed(bytes32 indexed paycheckId, address indexed recipient, string reason)',
+  'function pendingInflow(address) view returns (uint256)',
+  'function baseOriginToken() view returns (address)',
   'function totalCallbacksEmitted() view returns (uint256)',
   'function totalDustBlocked() view returns (uint256)',
   'function totalCooldownBlocked() view returns (uint256)',

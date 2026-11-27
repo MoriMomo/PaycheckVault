@@ -41,6 +41,9 @@ export default function DashboardPage({
   userSepoliaEth = null,
   userBaseEth = null,
   isWalletActionBusy,
+  isAutoSplitEnabled = false,
+  pendingLasnaWeth = 0,
+  onEnableAutoSplit,
   onMintTestWeth,
   onDepositToVault,
   onWithdrawBucket,
@@ -198,12 +201,22 @@ export default function DashboardPage({
         {/* Action Cluster */}
         <div className="flex flex-wrap items-center gap-3 shrink-0">
           <button
-            onClick={() => onExecutePaycheck(1.0)}
+            onClick={() => onExecutePaycheck(1.0, 'sepolia')}
             disabled={loopPhase !== 'idle'}
             className="h-10 px-4 rounded-lg text-sm font-medium bg-[#FAEB92] hover:bg-[#fdf2b0] text-black transition-[background-color,transform] duration-150 active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92]"
           >
             <Send className="w-4 h-4 shrink-0" strokeWidth={1.5} />
             <span>{loopPhase !== 'idle' ? 'Relaying' : 'Send 1.0 WETH'}</span>
+          </button>
+
+          <button
+            onClick={() => onExecutePaycheck(1.0, 'baseSepolia')}
+            disabled={loopPhase !== 'idle'}
+            className="h-10 px-4 rounded-lg text-sm font-normal text-[#ededed] bg-[#1c1922] hover:bg-[#25212d] border border-white/[0.08] transition-[background-color,transform] duration-150 active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92]"
+            title="Send 1.0 WETH directly on Base Sepolia to trigger Lasna auto-pull & split"
+          >
+            <Send className="w-4 h-4 shrink-0 text-[#FAEB92]" strokeWidth={1.5} />
+            <span>Pay 1.0 Base WETH</span>
           </button>
 
           <button
@@ -357,6 +370,11 @@ export default function DashboardPage({
             <span>
               Cooldowns blocked: <strong className="text-[#FF5FCF] font-medium">{reactiveStats.cooldownBlocked}</strong>
             </span>
+            {pendingLasnaWeth > 0 && (
+              <span className="px-2 py-0.5 rounded bg-[#1c1922] border border-[#FAEB92]/40 text-[#FAEB92]">
+                Queued: {pendingLasnaWeth.toFixed(2)} WETH
+              </span>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-4 tabular-nums">
@@ -610,15 +628,33 @@ export default function DashboardPage({
                 </div>
               )}
 
-            {walletAddress && vaultWeth <= 0 && (
+            {walletAddress && vaultWeth <= 0 && !isAutoSplitEnabled && (
               <div className="p-3 rounded-lg bg-black border border-[#FAEB92]/40 text-xs text-[#a8a4b3]">
-                New wallet step 1: Mint 5 Base WETH and click <span className="font-mono text-[#FAEB92]">&quot;Deposit 2 WETH to vault&quot;</span> on Base Sepolia first so PaycheckVault has a WETH balance to split when your Sepolia inflow arrives.
+                New wallet step 1: Click <span className="font-mono text-[#FAEB92]">&quot;Enable Auto-Split&quot;</span> (1-time Base WETH approval) or deposit Base WETH below so PaycheckVault can split incoming paychecks automatically.
               </div>
             )}
 
             {/* Public Testnet Faucet & Deposit Actions */}
             <div className="pt-3 border-t border-white/[0.08] flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={onEnableAutoSplit}
+                  disabled={isWalletActionBusy !== null || isAutoSplitEnabled}
+                  className={`h-8 px-3 rounded-lg border text-xs font-mono inline-flex items-center gap-1.5 transition-[background-color] duration-150 ${
+                    isAutoSplitEnabled
+                      ? 'bg-[#1c1922] border-[#FAEB92]/40 text-[#FAEB92] cursor-default'
+                      : 'bg-[#FAEB92] hover:bg-[#fdf2b0] border-[#FAEB92] text-black font-medium cursor-pointer disabled:opacity-50'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  <span>
+                    {isWalletActionBusy === 'enable-autosplit'
+                      ? 'Approving'
+                      : isAutoSplitEnabled
+                      ? 'Auto-Split active'
+                      : 'Enable Auto-Split'}
+                  </span>
+                </button>
                 <button
                   onClick={() => onMintTestWeth('sepolia', 5)}
                   disabled={isWalletActionBusy !== null}

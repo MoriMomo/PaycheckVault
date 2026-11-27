@@ -42,9 +42,9 @@ const CARD_FOLD_PROPS = {
 };
 
 const VERIFIED_PROOFS = {
-  sepoliaTx: '0x043025677f893c2367986950c26c1cd0017bda08422adc26cc13d8f69359fc68',
-  lasnaTx: '0x8fce8c56ed954acc43f12c8ae2fce2d599322a79d42baba890853de841057631',
-  baseTx: '0x3a2ad37d975ca1fae92b412f2ebed8c4c00f146a9d1a60fda2aa9a8f7416d9c6',
+  sepoliaTx: '0x60c423124030d83e8d8947c4553050e09223d852c09f39664e5df2613fb7a48c',
+  lasnaTx: '0x6c7b7167826d8569a8f2cb5f9933568ea5d73b855d56f50004f01a04b20be0c6',
+  baseTx: '0xa9852b7fa4cfa8474f99891fb9940ec0780ddc6d414ddebd9db4cf2576525220',
 };
 
 export default function LandingPage({
@@ -107,7 +107,7 @@ export default function LandingPage({
               </h1>
 
               <p className="text-base sm:text-lg text-[#a8a4b3] leading-relaxed max-w-[36rem]">
-                When WETH hits your Ethereum Sepolia address, PaycheckReactive enforces dust and cooldown limits on Lasna and triggers PaycheckVault on Base Sepolia to split your pre-funded Base treasury into USDC, sUSDC yield, and operating WETH, with zero keepers or backend cron servers.
+                When WETH hits your Ethereum Sepolia or Base Sepolia wallet, PaycheckReactive enforces dust and cooldown queueing on Lasna and triggers PaycheckVault on Base Sepolia to auto-split your approved Base WETH into USDC, sUSDC yield, and operating WETH — with zero keepers or backend servers.
               </p>
             </div>
 

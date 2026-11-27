@@ -148,6 +148,9 @@ export default function App() {
               userSepoliaEth={vault.userSepoliaEth}
               userBaseEth={vault.userBaseEth}
               isWalletActionBusy={vault.isWalletActionBusy}
+              isAutoSplitEnabled={vault.isAutoSplitEnabled}
+              pendingLasnaWeth={vault.pendingLasnaWeth}
+              onEnableAutoSplit={vault.enableAutoSplit}
               onMintTestWeth={vault.mintTestWeth}
               onDepositToVault={vault.depositToVault}
               onWithdrawBucket={vault.withdrawFromVault}

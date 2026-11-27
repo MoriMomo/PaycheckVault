@@ -1,0 +1,15 @@
+{
+  "sepolia": {
+    "token": "0xC56bffDC6d87222128e60D617221AeC584e9F643"
+  },
+  "lasna": {
+    "reactive": "0x58aB359b4aA491C45dd013B580aE0be50Bf4fE14"
+  },
+  "baseSepolia": {
+    "vault": "0xed18bC00a1FCa7c227A8575219d0da2B31bef0b3",
+    "usdc": "0x30A2A3AcD2E5118F50E34A0Ee2e464C5EF8614B0",
+    "susdc": "0x58aB359b4aA491C45dd013B580aE0be50Bf4fE14",
+    "weth": "0xbBAD7e94D7E3950da3F365Cc9E715f834A59C35f",
+    "dex": "0xE4BF9404aA3A6aE552EaD8F91CCC8b68269c4841"
+  }
+}

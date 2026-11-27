@@ -17,10 +17,11 @@ async function main() {
     throw new Error("Missing LASNA_REACTIVE_ADDRESS in .env — deploy PaycheckReactive on Lasna first.");
   }
 
-  let wethAddress = process.env.BASE_WETH_ADDRESS;
-  let usdcAddress = process.env.BASE_USDC_ADDRESS;
-  let susdcAddress = process.env.BASE_SUSDC_ADDRESS;
-  let dexAddress = process.env.BASE_DEX_ADDRESS;
+  const deployment = (await import("../frontend/src/config/deployment.json", { with: { type: "json" } })).default;
+  let wethAddress = process.env.BASE_WETH_ADDRESS || deployment.baseSepolia.weth;
+  let usdcAddress = process.env.BASE_USDC_ADDRESS || deployment.baseSepolia.usdc;
+  let susdcAddress = process.env.BASE_SUSDC_ADDRESS || deployment.baseSepolia.susdc;
+  let dexAddress = process.env.BASE_DEX_ADDRESS || deployment.baseSepolia.dex;
 
   const MockERC20 = await ethers.getContractFactory("MockERC20");
   if (!wethAddress || !usdcAddress || !susdcAddress || !dexAddress) {
@@ -61,7 +62,7 @@ async function main() {
     });
   }
 
-  let vaultFundValue = ethers.parseEther("0.004");
+  let vaultFundValue = ethers.parseEther("0.006");
   if (deployerBalance < ethers.parseEther("0.008")) {
     vaultFundValue = ethers.parseEther("0.0005");
   }
@@ -90,9 +91,9 @@ async function main() {
 
   const wethToken = await ethers.getContractAt("MockERC20", wethAddress);
   await (await wethToken.mint(deployer.address, ethers.parseUnits("10", 18))).wait();
-  await (await wethToken.approve(vaultAddress, ethers.parseUnits("10", 18))).wait();
+  await (await wethToken.approve(vaultAddress, ethers.MaxUint256)).wait();
   await (await vault.deposit(ethers.parseUnits("10", 18))).wait();
-  console.log("Deposited 10 WETH into deployer vault slice:", deployer.address);
+  console.log("Deposited 10 WETH & enabled Auto-Split allowance for:", deployer.address);
 
   console.log("\n========================================================");
   console.log("NEXT STEPS:");

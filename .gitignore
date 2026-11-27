@@ -5,4 +5,5 @@ node_modules
 cache
 artifacts
 notes.txt
+graphify-out/
 .vibe-wise/

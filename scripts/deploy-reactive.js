@@ -8,7 +8,8 @@ async function main() {
   console.log("Deploying PaycheckReactive on Lasna Omni (Chain ID: 5318007)");
   console.log("Deployer Address:", deployer.address);
 
-  const SEPOLIA_TOKEN_ADDRESS = process.env.SEPOLIA_TOKEN_ADDRESS;
+  const deployment = (await import("../frontend/src/config/deployment.json", { with: { type: "json" } })).default;
+  const SEPOLIA_TOKEN_ADDRESS = process.env.SEPOLIA_TOKEN_ADDRESS || deployment.sepolia.token;
   const SEPOLIA_MONITORED_RECIPIENT =
     process.env.WILDCARD_MODE === "false" && process.env.SEPOLIA_MONITORED_RECIPIENT
       ? process.env.SEPOLIA_MONITORED_RECIPIENT
@@ -34,7 +35,7 @@ async function main() {
     BASE_VAULT_ADDRESS,
     MIN_THRESHOLD,
     COOLDOWN_SECONDS,
-    { value: ethers.parseEther("0.15") }
+    { value: ethers.parseEther("0.20") }
   );
 
   await reactiveContract.waitForDeployment();
