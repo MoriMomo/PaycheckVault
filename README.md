@@ -12,17 +12,28 @@ When the Lasna callback lands, `PaycheckVault` executes **real on-chain financia
 
 Each slice is a token movement through a DEX swap with a per-user slippage floor and max-allocation cap — a ledger that only moves numbers between sub-balances cannot claim this.
 
-## Measured Cross-Chain Loop Telemetry (3/3 live loops)
+## Measured Dual-Chain Loop Telemetry (5/5 live loops)
 
-End-to-end latency is measured from `block.timestamp` (Sepolia inflow block → Base settlement block), **not** block counts — Base Sepolia mines ~200ms blocks, so block-delta timing is meaningless (per the buildathon's Base Sepolia timing rule).
+End-to-end latency is measured from `block.timestamp` (Origin inflow block → Base settlement block), **not** block counts — Base Sepolia mines ~200ms blocks, so block-delta timing is meaningless (per the buildathon's Base Sepolia timing rule).
 
-**Median end-to-end latency: 2s** · min 2s · max 2s · avg Sepolia inflow gas `0.000017 ETH` · avg Base callback gas `0.000001 ETH`. Reproduce with `npx hardhat run scripts/measure-loop.js --network sepolia`.
+**Median end-to-end latency: 2s** (1s–2s) · avg Sepolia gas `0.000017 ETH` · avg Lasna `0.01210 lREACT` · avg Base callback gas `0.000001 ETH`. Reproduce with `npx hardhat run scripts/measure-loop.js --network sepolia` or `--network baseSepolia`.
 
-| # | Origin Inflow (Sepolia) | Reactive (Lasna) | Callback (Base Sepolia) | Latency |
-| :-- | :-- | :-- | :-- | :-- |
-| 1 | [`0x60c423…b7a48c`](https://sepolia.etherscan.io/tx/0x60c423124030d83e8d8947c4553050e09223d852c09f39664e5df2613fb7a48c) | [`0x6c7b71…0be0c6`](https://lasna.reactscan.net/tx/0x6c7b7167826d8569a8f2cb5f9933568ea5d73b855d56f50004f01a04b20be0c6) | [`0xa9852b…525220`](https://sepolia.basescan.org/tx/0xa9852b7fa4cfa8474f99891fb9940ec0780ddc6d414ddebd9db4cf2576525220) | 2s |
-| 2 | [`0x52328f…3ed672`](https://sepolia.etherscan.io/tx/0x52328f437e93ebd72931801290dd34a746007a0704782376402a576b303ed672) | [`0x2285ff…fc9c16`](https://lasna.reactscan.net/tx/0x2285ff95e843e1fca3163941821d100ecc4880ef87698e3fbf06c537c0fc9c16) | [`0xfa9455…9810ce`](https://sepolia.basescan.org/tx/0xfa94551f0e0cdc017617b32b126ebceb36abcc05aa21cb0ce2eb7cc61f9810ce) | 2s |
-| 3 | [`0xd72fe0…9b4bbe`](https://sepolia.etherscan.io/tx/0xd72fe0a4f99ecb7968166c992d9be54fd27acec9c78a8ddcc8348dcca69b4bbe) | [`0x213c09…7c5abf`](https://lasna.reactscan.net/tx/0x213c09f11cc9181e68dbe7737c41bd42e09fbd20384a055592b4a413497c5abf) | [`0xef0a17…574d52`](https://sepolia.basescan.org/tx/0xef0a1700832e47f12460ee07c264abe594aaccf1866b596533060cc8b8574d52) | 2s |
+| # | Origin Chain | Origin Inflow | Reactive (Lasna) | Callback (Base Sepolia) | lREACT | Latency |
+| :-- | :-- | :-- | :-- | :-- | :-- | :-- |
+| 1 | Sepolia (`11155111`) | [`0x60c423…b7a48c`](https://sepolia.etherscan.io/tx/0x60c423124030d83e8d8947c4553050e09223d852c09f39664e5df2613fb7a48c) | [`0x6c7b71…0be0c6`](https://lasna.reactscan.net/tx/0x6c7b7167826d8569a8f2cb5f9933568ea5d73b855d56f50004f01a04b20be0c6) | [`0xa9852b…525220`](https://sepolia.basescan.org/tx/0xa9852b7fa4cfa8474f99891fb9940ec0780ddc6d414ddebd9db4cf2576525220) | 0.01479 | 2s |
+| 2 | Sepolia (`11155111`) | [`0x52328f…3ed672`](https://sepolia.etherscan.io/tx/0x52328f437e93ebd72931801290dd34a746007a0704782376402a576b303ed672) | [`0x2285ff…fc9c16`](https://lasna.reactscan.net/tx/0x2285ff95e843e1fca3163941821d100ecc4880ef87698e3fbf06c537c0fc9c16) | [`0xfa9455…9810ce`](https://sepolia.basescan.org/tx/0xfa94551f0e0cdc017617b32b126ebceb36abcc05aa21cb0ce2eb7cc61f9810ce) | 0.01139 | 2s |
+| 3 | Sepolia (`11155111`) | [`0xd72fe0…9b4bbe`](https://sepolia.etherscan.io/tx/0xd72fe0a4f99ecb7968166c992d9be54fd27acec9c78a8ddcc8348dcca69b4bbe) | [`0x213c09…7c5abf`](https://lasna.reactscan.net/tx/0x213c09f11cc9181e68dbe7737c41bd42e09fbd20384a055592b4a413497c5abf) | [`0xef0a17…574d52`](https://sepolia.basescan.org/tx/0xef0a1700832e47f12460ee07c264abe594aaccf1866b596533060cc8b8574d52) | 0.01139 | 2s |
+| 4 | Base Sepolia (`84532` Auto-Pull) | [`0x3e9320…4f6e84`](https://sepolia.basescan.org/tx/0x3e932026c3962db288003f5e0ddfe9069c64ccf36c7c66e3f7e3fa21f94f6e84) | [`0x770f4b…d86f87`](https://lasna.reactscan.net/tx/0x770f4bc7b0e00168cb942a57db3edd77a4e39df088f36825086467ee18d86f87) | [`0x40c375…043624`](https://sepolia.basescan.org/tx/0x40c375da9cb3320e45405b98236aaa052443f9ae4f5e73454d4f51daab043624) | 0.01147 | 1s |
+| 5 | Base Sepolia (`84532` Auto-Pull) | [`0x6f1f50…19ad2b`](https://sepolia.basescan.org/tx/0x6f1f50751d26e0f9bee59f0948745cc331afc2fafc0d64aa1380538efe19ad2b) | [`0x0a1566…81bf66`](https://lasna.reactscan.net/tx/0x0a156631482ea2eaf26997cef8c2be134dcc1e8f1f3ab5d3ddafa2381781bf66) | [`0x3ab35f…f9deaf`](https://sepolia.basescan.org/tx/0x3ab35f9836b4de9b1d692347bea0093b0ebe0734b6c99a7f67aec72b6cf9deaf) | 0.01147 | 2s |
+
+### How PaycheckVault Compares
+
+| Capability | Sub-Ledger Splitters | CRON Bill Payers | PaycheckVault v4 |
+| :--- | :--- | :--- | :--- |
+| **Execution Trigger** | Single-chain deposit | Time-based CRON | **Dual-chain ERC-20 `Transfer` (Sepolia + Base)** |
+| **Wallet Auto-Pull** | Requires manual deposit | Pre-funded balance only | **1-time `approve()` auto-pulls shortfall from wallet** |
+| **On-Chain Actions** | Internal ledger math | Outbound payee transfers | **Atomic `MockDEX` swaps (USDC + sUSDC + WETH)** |
+| **Guardrails & Idempotency** | None / basic | Fixed schedule | **Dust filter, Lasna cooldown queue, `paycheckId` replay guard, slippage/cap breakers** |
 
 ### Why Reactive? (Zero Keepers, Zero Backend)
 - **ERC-20 `Transfer` cannot self-trigger a vault.** A `Transfer(from, to, amount)` call only mutates balances inside the **token** contract — it never invokes code on the recipient. Without `PaycheckReactive` on Lasna subscribing to Sepolia `Transfer` logs (topic0 = `keccak256("Transfer(address,address,uint256)")`, topic2 = recipient), `PaycheckVault` has no way to know an employer or client sent WETH. The reactive contract is load-bearing, not bolted on.

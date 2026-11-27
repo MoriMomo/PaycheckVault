@@ -19,6 +19,29 @@ const STRATEGY_PRESETS = [
   { id: 'yield', label: 'Yield focus', sub: '20 / 70 / 10', stable: 20, yieldVal: 70 },
 ];
 
+function parsePlainEnglishRule(text, currentStable, currentYield) {
+  const lower = text.toLowerCase();
+  const pickPct = (re) => {
+    const m = lower.match(re);
+    return m ? Math.min(100, Math.max(0, Math.round(Number(m[1])))) : null;
+  };
+  let nextStable = pickPct(/(\d{1,3})\s*%?\s*(?:in\s+|to\s+)?(?:core\s+)?(?:usdc|stable|reserve)/);
+  let nextYield = pickPct(/(\d{1,3})\s*%?\s*(?:in\s+|to\s+)?(?:susdc|yield|savings)/);
+  const nextWeth = pickPct(/(\d{1,3})\s*%?\s*(?:in\s+|to\s+)?(?:weth|eth|operating)/);
+
+  if (nextStable === null && nextYield === null && nextWeth === null) return null;
+  nextStable = nextStable ?? currentStable;
+  nextYield = nextYield ?? (nextWeth !== null ? Math.max(0, 100 - nextStable - nextWeth) : currentYield);
+  if (nextStable + nextYield > 100) nextYield = Math.max(0, 100 - nextStable);
+
+  const capMatch = lower.match(/(?:max|cap)\s*(\d+(?:\.\d+)?)\s*weth/);
+  const capVal = capMatch ? [2, 5, 10].reduce((a, b) => (Math.abs(b - Number(capMatch[1])) < Math.abs(a - Number(capMatch[1])) ? b : a)) : null;
+  const floorMatch = lower.match(/(?:floor|slippage)\s*\$?(\d{3,4})/);
+  const floorVal = floorMatch ? [1800, 2000, 2250].reduce((a, b) => (Math.abs(b - Number(floorMatch[1])) < Math.abs(a - Number(floorMatch[1])) ? b : a)) : null;
+
+  return { stable: nextStable, yieldVal: nextYield, capVal, floorVal };
+}
+
 export default function DashboardPage({
   walletAddress,
   onConnectWallet,
@@ -70,6 +93,8 @@ export default function DashboardPage({
   activities,
 }) {
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [ruleText, setRuleText] = useState('');
+  const [rulePreview, setRulePreview] = useState('');
   useEffect(() => {
     const timer = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
@@ -815,6 +840,43 @@ export default function DashboardPage({
               </span>
             </div>
 
+            {/* Plain-English Rule Input */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const parsed = parsePlainEnglishRule(ruleText, stablePct, yieldPct);
+                if (!parsed) {
+                  setRulePreview('Try: "40% USDC reserve, 35% sUSDC yield, max 2 WETH"');
+                  return;
+                }
+                setStablePct(parsed.stable);
+                setYieldPct(parsed.yieldVal);
+                if (parsed.capVal !== null) setMaxCapWeth(parsed.capVal);
+                if (parsed.floorVal !== null) setSlippageFloorUsd(parsed.floorVal);
+                const wethLeft = Math.max(0, 100 - parsed.stable - parsed.yieldVal);
+                setRulePreview(`Parsed: ${parsed.stable}% USDC · ${parsed.yieldVal}% sUSDC · ${wethLeft}% WETH — click Save policy to commit`);
+              }}
+              className="space-y-1.5"
+            >
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={ruleText}
+                  onChange={(e) => setRuleText(e.target.value)}
+                  placeholder='Plain-English rule: "40% USDC, 35% sUSDC, max 2 WETH"'
+                  aria-label="Plain-English allocation rule"
+                  className="flex-1 h-9 px-3 rounded-lg bg-black border border-white/[0.08] text-xs text-[#ededed] placeholder:text-[#8e8999] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92]"
+                />
+                <button
+                  type="submit"
+                  className="h-9 px-3 rounded-lg bg-[#1c1922] hover:bg-[#25212d] border border-white/[0.08] text-xs font-mono text-[#FAEB92] cursor-pointer shrink-0"
+                >
+                  Apply
+                </button>
+              </div>
+              {rulePreview && <div className="text-xs font-mono text-[#a8a4b3]">{rulePreview}</div>}
+            </form>
+
             {/* 3 Runway Strategy Presets */}
             <div className="grid grid-cols-3 gap-3">
               {STRATEGY_PRESETS.map((preset) => {
@@ -864,7 +926,7 @@ export default function DashboardPage({
                     type="range"
                     min="0"
                     max="100"
-                    step="5"
+                    step="1"
                     value={stablePct}
                     onChange={(e) => handleStableChange(Number(e.target.value))}
                     className="w-full unslop-range"
@@ -881,7 +943,7 @@ export default function DashboardPage({
                     type="range"
                     min="0"
                     max="100"
-                    step="5"
+                    step="1"
                     value={yieldPct}
                     onChange={(e) => handleYieldChange(Number(e.target.value))}
                     className="w-full unslop-range"

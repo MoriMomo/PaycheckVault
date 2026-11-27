@@ -39,6 +39,7 @@ const COOLDOWN_BUFFER_MS = 32000; // reactive contract enforces 30s/recipient
 const ERC20_ABI = [
   "function transfer(address to, uint256 amount) returns (bool)",
   "function balanceOf(address) view returns (uint256)",
+  "function mint(address to, uint256 amount) external",
 ];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const short = (h) => `${h.slice(0, 8)}…${h.slice(-6)}`;
@@ -76,19 +77,25 @@ async function main() {
   if (!signers || signers.length === 0) {
     throw new Error("No PRIVATE_KEY in .env — fund a deployer wallet first.");
   }
-  const sepoliaSigner = signers[0];
-  const me = sepoliaSigner.address;
+  const originSigner = signers[0];
+  const me = originSigner.address;
+  const isBaseOrigin = hardhat.network.name === "baseSepolia";
+  const originChainId = isBaseOrigin ? ADDRESSES.baseSepolia.chainId : ADDRESSES.sepolia.chainId;
+  const originTokenAddr = isBaseOrigin ? ADDRESSES.baseSepolia.weth : ADDRESSES.sepolia.token;
+  const originExplorer = isBaseOrigin ? ADDRESSES.baseSepolia.explorer : ADDRESSES.sepolia.explorer;
+  const originLabel = isBaseOrigin ? "Base Sepolia" : "Sepolia";
 
-  const sepoliaProvider = sepoliaSigner.provider;
+  const originProvider = originSigner.provider;
   const lasnaProvider = new ethers.JsonRpcProvider(ADDRESSES.lasna.rpcUrl);
   const baseProvider = new ethers.JsonRpcProvider(ADDRESSES.baseSepolia.rpcUrl);
 
-  const originToken = new ethers.Contract(ADDRESSES.sepolia.token, ERC20_ABI, sepoliaSigner);
+  const originToken = new ethers.Contract(originTokenAddr, ERC20_ABI, originSigner);
   const reactive = new ethers.Contract(ADDRESSES.lasna.reactive, REACTIVE_ABI, lasnaProvider);
   const vault = new ethers.Contract(ADDRESSES.baseSepolia.vault, VAULT_ABI, baseProvider);
 
   console.log("========================================================");
   console.log("PaycheckVault — Cross-Chain Loop Telemetry");
+  console.log(`Origin:   ${originLabel} (${originChainId})`);
   console.log(`Wallet:   ${me}`);
   console.log(`Loops:    ${LOOP_COUNT} x ${PAYCHECK_AMOUNT} WETH`);
   console.log(`Vault:    ${ADDRESSES.baseSepolia.vault}`);
@@ -100,9 +107,8 @@ async function main() {
   const bal = await originToken.balanceOf(me);
   const need = ethers.parseUnits(PAYCHECK_AMOUNT, 18) * BigInt(LOOP_COUNT);
   if (bal < need) {
-    throw new Error(
-      `Insufficient origin WETH: have ${ethers.formatEther(bal)}, need ${ethers.formatEther(need)}. Mint more on Sepolia first.`
-    );
+    console.log(`Minting ${ethers.formatEther(need - bal)} WETH on ${originLabel} for telemetry...`);
+    await (await originToken.mint(me, need - bal)).wait();
   }
 
   const results = [];
@@ -114,12 +120,12 @@ async function main() {
     const lasnaFrom = await lasnaProvider.getBlockNumber().catch(() => 0);
     const baseFrom = await baseProvider.getBlockNumber().catch(() => 0);
 
-    // 1. Origin inflow on Sepolia
+    // 1. Origin inflow (Sepolia or Base Sepolia)
     const tx = await originToken.transfer(me, amount);
     console.log(`  origin tx:   ${short(tx.hash)}  (waiting…)`);
     const originReceipt = await tx.wait();
-    const paycheckId = originPaycheckId(originReceipt, ADDRESSES.sepolia.chainId, ADDRESSES.sepolia.token, me, amount);
-    const originTs = await blockTs(sepoliaProvider, originReceipt.blockNumber);
+    const paycheckId = originPaycheckId(originReceipt, originChainId, originTokenAddr, me, amount);
+    const originTs = await blockTs(originProvider, originReceipt.blockNumber);
     const originGasEth = Number(
       ethers.formatEther(originReceipt.gasUsed * originReceipt.gasPrice)
     );
@@ -146,7 +152,12 @@ async function main() {
       continue;
     }
     const lasnaTx = triggered.log.transactionHash;
-    console.log(`  lasna tx:    ${short(lasnaTx)}  @ts ${triggered.blockTimestamp}`);
+    const lasnaReceipt = await lasnaProvider.getTransactionReceipt(lasnaTx).catch(() => null);
+    const lasnaReactCost =
+      lasnaReceipt && lasnaReceipt.gasUsed
+        ? Number(ethers.formatEther(lasnaReceipt.gasUsed * (lasnaReceipt.gasPrice || lasnaReceipt.effectiveGasPrice || 0n)))
+        : null;
+    console.log(`  lasna tx:    ${short(lasnaTx)}  @ts ${triggered.blockTimestamp} (${lasnaReactCost != null ? lasnaReactCost.toFixed(6) : '?'} lREACT)`);
 
     // 3. Base callback — MultiBucketAllocated
     const settled = await waitForEvent(
@@ -184,6 +195,7 @@ async function main() {
       baseTs: settled.blockTimestamp,
       latencyS,
       originGasEth,
+      lasnaReactCost,
       baseGasEth,
     });
 
@@ -202,12 +214,16 @@ async function main() {
   const avgOriginGas = ok.length
     ? ok.reduce((s, r) => s + r.originGasEth, 0) / ok.length
     : null;
+  const avgLasnaReact = ok.filter((r) => r.lasnaReactCost != null).length
+    ? ok.reduce((s, r) => s + (r.lasnaReactCost || 0), 0) /
+      ok.filter((r) => r.lasnaReactCost != null).length
+    : null;
   const avgBaseGas = ok.filter((r) => r.baseGasEth != null).length
     ? ok.reduce((s, r) => s + (r.baseGasEth || 0), 0) /
       ok.filter((r) => r.baseGasEth != null).length
     : null;
 
-  const sx = ADDRESSES.sepolia.explorer;
+  const ox = originExplorer;
   const lx = ADDRESSES.lasna.explorer;
   const bx = ADDRESSES.baseSepolia.explorer;
 
@@ -217,25 +233,26 @@ async function main() {
 
   console.log(`## Measured Cross-Chain Loop Telemetry (${ok.length}/${LOOP_COUNT} live loops)\n`);
   console.log(
-    `End-to-end latency is measured from \`block.timestamp\` (Sepolia inflow block -> Base settlement block), not block counts, per the Base Sepolia ~200ms timing rule.\n`
+    `End-to-end latency is measured from \`block.timestamp\` (${originLabel} inflow block -> Base settlement block), not block counts, per the Base Sepolia ~200ms timing rule.\n`
   );
   if (median != null) {
     console.log(
       `**Median end-to-end latency: ${median}s** · min ${latencies[0]}s · max ${latencies[latencies.length - 1]}s` +
-        (avgOriginGas != null ? ` · avg Sepolia gas ${avgOriginGas.toFixed(6)} ETH` : "") +
+        (avgOriginGas != null ? ` · avg ${originLabel} gas ${avgOriginGas.toFixed(6)} ETH` : "") +
+        (avgLasnaReact != null ? ` · avg Lasna ${avgLasnaReact.toFixed(5)} lREACT` : "") +
         (avgBaseGas != null ? ` · avg Base callback gas ${avgBaseGas.toFixed(6)} ETH` : "") +
         "\n"
     );
   }
-  console.log(`| # | Origin Inflow (Sepolia) | Reactive (Lasna) | Callback (Base Sepolia) | Latency |`);
-  console.log(`| :-- | :-- | :-- | :-- | :-- |`);
+  console.log(`| # | Origin Inflow (${originLabel}) | Reactive (Lasna) | Callback (Base Sepolia) | lREACT | Latency |`);
+  console.log(`| :-- | :-- | :-- | :-- | :-- | :-- |`);
   for (const r of results) {
     if (r.status === "ok") {
       console.log(
-        `| ${r.i} | [\`${short(r.originTx)}\`](${sx}/tx/${r.originTx}) | [\`${short(r.lasnaTx)}\`](${lx}/tx/${r.lasnaTx}) | [\`${short(r.baseTx)}\`](${bx}/tx/${r.baseTx}) | ${r.latencyS}s |`
+        `| ${r.i} | [\`${short(r.originTx)}\`](${ox}/tx/${r.originTx}) | [\`${short(r.lasnaTx)}\`](${lx}/tx/${r.lasnaTx}) | [\`${short(r.baseTx)}\`](${bx}/tx/${r.baseTx}) | ${r.lasnaReactCost != null ? r.lasnaReactCost.toFixed(5) : '-'} | ${r.latencyS}s |`
       );
     } else {
-      console.log(`| ${r.i} | ${r.originTx ? short(r.originTx) : "-"} | ${r.status} | - | - |`);
+      console.log(`| ${r.i} | ${r.originTx ? short(r.originTx) : "-"} | ${r.status} | - | - | - |`);
     }
   }
 
