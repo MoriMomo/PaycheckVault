@@ -129,7 +129,7 @@ function mapLasnaSuppressedLog(log, idx) {
 
 /**
  * Manages live cross-chain Sepolia + Base Sepolia telemetry, user bucket policies,
- * transaction execution (faucet, deposit, withdraw, paycheck trigger), and demo simulations.
+ * transaction execution (faucet, deposit, withdraw, paycheck trigger), and live cross-chain telemetry.
  */
 export function useVault({ walletAddress, currentChainId, getEip1193, switchNetwork, openWalletModal, showToast }) {
   const [vaultUsdc, setVaultUsdc] = useState(0);

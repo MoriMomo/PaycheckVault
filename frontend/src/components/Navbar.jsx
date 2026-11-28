@@ -10,12 +10,12 @@ import {
   LayoutDashboard,
   Menu,
   Radar,
-  Trophy,
   Wallet,
   Workflow,
   X,
 } from 'lucide-react';
 import { CONFIG, DEPLOYED_CONTRACTS } from '../config/contracts';
+import BagiLogo from './ui/BagiLogo';
 
 export default function Navbar({
   activePage,
@@ -36,7 +36,6 @@ export default function Navbar({
     { label: 'Contracts', href: '#contracts', isInternal: true, icon: FileCode2 },
     { label: 'Lasna Scan', href: 'https://lasna.reactscan.net/', isExternal: true, icon: Radar },
     { label: 'Docs', href: 'https://dev.reactive.network/', isExternal: true, icon: BookOpen },
-    { label: 'Buildathon', href: 'https://dorahacks.io/hackathon/reactive-omni-buildathon', isExternal: true, icon: Trophy },
     { label: 'GitHub', href: 'https://github.com/MoriMomo/PaycheckVault', isExternal: true, icon: GitBranch },
   ];
 
@@ -67,21 +66,13 @@ export default function Navbar({
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }}
       className="flex items-center gap-3 cursor-pointer select-none group focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FAEB92] rounded-lg"
-      title="PaycheckVault home"
+      title="Bagi-Bagi home"
     >
       <div className="h-6 w-6 shrink-0">
-        <svg className="h-full w-full" viewBox="0 0 84 84" fill="none" aria-hidden="true">
-          <path
-            fillRule="evenodd"
-            clipRule="evenodd"
-            d="M42.0759 84C65.2719 84 84.0759 65.196 84.0759 42C84.0759 18.804 65.2719 0 42.0759 0C18.88 0 0.0759277 18.804 0.0759277 42C0.0759277 65.196 18.88 84 42.0759 84ZM42.076 73.5C59.473 73.5 73.576 59.397 73.576 42C73.576 24.603 59.473 10.5 42.076 10.5C24.679 10.5 10.576 24.603 10.576 42C10.576 59.397 24.679 73.5 42.076 73.5Z"
-            fill="#9929EA"
-          />
-          <path d="M18.4509 44.625L44.7009 18.375V39.375H65.7009L39.4509 65.625V44.625H18.4509Z" fill="#FAEB92" />
-        </svg>
+        <BagiLogo className="h-full w-full" />
       </div>
       <span className="font-display font-medium text-base tracking-tight text-[#ededed] group-hover:text-[#FAEB92] transition-colors duration-150 leading-none">
-        PaycheckVault
+        Bagi-Bagi
       </span>
     </a>
   );

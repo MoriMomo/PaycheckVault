@@ -1,6 +1,6 @@
-# PaycheckVault v4 — Signal-Driven Cross-Chain & Auto-Split Treasury Vault
+# Bagi-Bagi (PaycheckVault v4) — Autonomous Cross-Chain Treasury Protocol
 
-**Set It and Forget It · Powered by Reactive Network Omni (`5318007`)**
+**Autonomous Treasury Routing · Powered by Reactive Network Omni (`5318007`)**
 
 PaycheckVault turns incoming **Ethereum Sepolia WETH** or **direct Base Sepolia WETH** transfers into autonomous treasury splits on **Base Sepolia**: `PaycheckReactive` filters dust (`< 0.01 WETH`), queues rapid inflows during the 30-second per-user cooldown on **Reactive Lasna Omni**, and dispatches deterministic `paycheckId` callbacks to **PaycheckVault** on Base Sepolia — pulling approved Base wallet WETH (or pre-funded vault slices) and swapping atomically into **USDC** reserve, **sUSDC** yield, and retained operating **WETH**.
 
@@ -14,7 +14,7 @@ Each slice is a token movement through a DEX swap with a per-user slippage floor
 
 ## Measured Dual-Chain Loop Telemetry (5/5 live loops)
 
-End-to-end latency is measured from `block.timestamp` (Origin inflow block → Base settlement block), **not** block counts — Base Sepolia mines ~200ms blocks, so block-delta timing is meaningless (per the buildathon's Base Sepolia timing rule).
+End-to-end latency is measured from `block.timestamp` (Origin inflow block → Base settlement block), **not** block counts — Base Sepolia mines ~200ms blocks, so block-delta timing is meaningless (since Base Sepolia mines ~200ms blocks).
 
 **Median end-to-end latency: 2s** (1s–2s) · avg Sepolia gas `0.000017 ETH` · avg Lasna `0.01210 lREACT` · avg Base callback gas `0.000001 ETH`. Reproduce with `npx hardhat run scripts/measure-loop.js --network sepolia` or `--network baseSepolia`.
 
@@ -26,7 +26,7 @@ End-to-end latency is measured from `block.timestamp` (Origin inflow block → B
 | 4 | Base Sepolia (`84532` Auto-Pull) | [`0x3e9320…4f6e84`](https://sepolia.basescan.org/tx/0x3e932026c3962db288003f5e0ddfe9069c64ccf36c7c66e3f7e3fa21f94f6e84) | [`0x770f4b…d86f87`](https://lasna.reactscan.net/tx/0x770f4bc7b0e00168cb942a57db3edd77a4e39df088f36825086467ee18d86f87) | [`0x40c375…043624`](https://sepolia.basescan.org/tx/0x40c375da9cb3320e45405b98236aaa052443f9ae4f5e73454d4f51daab043624) | 0.01147 | 1s |
 | 5 | Base Sepolia (`84532` Auto-Pull) | [`0x6f1f50…19ad2b`](https://sepolia.basescan.org/tx/0x6f1f50751d26e0f9bee59f0948745cc331afc2fafc0d64aa1380538efe19ad2b) | [`0x0a1566…81bf66`](https://lasna.reactscan.net/tx/0x0a156631482ea2eaf26997cef8c2be134dcc1e8f1f3ab5d3ddafa2381781bf66) | [`0x3ab35f…f9deaf`](https://sepolia.basescan.org/tx/0x3ab35f9836b4de9b1d692347bea0093b0ebe0734b6c99a7f67aec72b6cf9deaf) | 0.01147 | 2s |
 
-### How PaycheckVault Compares
+### How Bagi-Bagi Compares
 
 | Capability | Sub-Ledger Splitters | CRON Bill Payers | PaycheckVault v4 |
 | :--- | :--- | :--- | :--- |
@@ -39,7 +39,7 @@ End-to-end latency is measured from `block.timestamp` (Origin inflow block → B
 - **ERC-20 `Transfer` cannot self-trigger a vault.** A `Transfer(from, to, amount)` call only mutates balances inside the **token** contract — it never invokes code on the recipient. Without `PaycheckReactive` on Lasna subscribing to Sepolia `Transfer` logs (topic0 = `keccak256("Transfer(address,address,uint256)")`, topic2 = recipient), `PaycheckVault` has no way to know an employer or client sent WETH. The reactive contract is load-bearing, not bolted on.
 - **Cross-chain observation, not same-chain polling.** The inflow is observed on **Ethereum Sepolia** and execution fires on **Base Sepolia**. A same-chain vault could use a hook or keeper; a vault on Base physically cannot see an event on Sepolia without an external watcher — which is exactly what Reactive Omni provides.
 - **No Gelato, no Chainlink Automation, no off-chain server:** the subscription lives natively inside `PaycheckReactive` (`SYSTEM.subscribe` + `onlySystem`).
-- **Distinct from the other paycheck entries:** builds that "split a deposit" move numbers between internal sub-ledgers. PaycheckVault performs DEX swaps into USDC/sUSDC/WETH with per-user slippage and cap guardrails — on-chain financial actions, not bookkeeping.
+- **On-chain DeFi execution, not bookkeeping:** vaults that only "split a deposit" move numbers between internal sub-ledgers. Bagi-Bagi performs DEX swaps into USDC/sUSDC/WETH with per-user slippage and cap guardrails — on-chain financial actions, not bookkeeping.
 
 ### Production Roadmap (Next Steps)
 - **Self-Refueling Gas Loop:** Auto-route a small bps slice of settled inflows/yield into Lasna `REACT` and Base callback `ETH` so contracts never run dry.

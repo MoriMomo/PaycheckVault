@@ -8,6 +8,7 @@ import DashboardPage from './components/DashboardPage';
 import WalletModal from './components/WalletModal';
 import LegalModal from './components/LegalModal';
 import MeadowRiseFooter from '@/components/ui/meadow-rise-footer';
+import BagiLogo from './components/ui/BagiLogo';
 
 const FOOTER_PALETTE = {
   sky: ['#000000', '#000000'],
@@ -182,7 +183,8 @@ export default function App() {
         {activePage === 'landing' && (
           <div className="relative w-full mt-12 bg-black">
             <MeadowRiseFooter
-              name="PaycheckVault"
+              name="Bagi-Bagi"
+              logo={<BagiLogo className="h-5 w-5" />}
               brandHref="#"
               heading="Send crypto paychecks where they need to go"
               subheading="Sepolia WETH inflows filtered on Reactive Lasna and split across Base Sepolia buckets"
@@ -195,7 +197,7 @@ export default function App() {
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 },
               }}
-              tagline="Built for the Reactive Omni Buildathon"
+              tagline="Autonomous cross-chain treasury routing on Reactive Network"
               newsletter={false}
               palette={FOOTER_PALETTE}
               columns={[
@@ -213,19 +215,19 @@ export default function App() {
                     { label: 'Documentation', href: 'https://dev.reactive.network/' },
                     { label: 'Lasna ReactScan', href: 'https://lasna.reactscan.net/' },
                     { label: 'Ecosystem', href: 'https://reactive.network' },
-                    { label: 'PaycheckVault Repo', href: 'https://github.com/MoriMomo/PaycheckVault' },
+                    { label: 'Bagi-Bagi Repo', href: 'https://github.com/MoriMomo/PaycheckVault' },
                   ],
                 },
                 {
-                  title: 'Omni Buildathon',
+                  title: 'Verified Contracts',
                   links: [
-                    { label: 'DoraHacks Buildathon', href: 'https://dorahacks.io/hackathon/reactive-omni-buildathon' },
-                    { label: 'Set It & Forget It Track', href: 'https://dorahacks.io/hackathon/reactive-omni-buildathon' },
-                    { label: 'PaycheckReactive RSC', href: `${CONFIG.lasna.explorer}/address/${CONFIG.lasna.reactiveAddress}` },
+                    { label: 'PaycheckReactive (Lasna)', href: `${CONFIG.lasna.explorer}/address/${CONFIG.lasna.reactiveAddress}` },
+                    { label: 'PaycheckVault (Base)', href: `${CONFIG.baseSepolia.explorer}/address/${CONFIG.baseSepolia.vaultAddress}` },
+                    { label: 'Origin WETH (Sepolia)', href: `${CONFIG.sepolia.explorer}/address/${CONFIG.sepolia.wethAddress}` },
                   ],
                 },
               ]}
-              copyright="2026 PaycheckVault, Reactive Omni Buildathon"
+              copyright="© 2026 Bagi-Bagi Protocol. All rights reserved."
               legal={[
                 { label: 'Terms of Service', href: '#terms', onClick: (e) => { e.preventDefault(); setLegalModal('terms'); } },
                 { label: 'Privacy Policy', href: '#privacy', onClick: (e) => { e.preventDefault(); setLegalModal('privacy'); } },

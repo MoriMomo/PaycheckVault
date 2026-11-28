@@ -215,7 +215,7 @@ export default function DashboardPage({
               Treasury
             </h1>
             <span className="font-mono text-xs px-2.5 py-0.5 rounded bg-[#121016] border border-white/[0.08] text-[#a8a4b3]">
-              Testnet Simulation · $2,500/ETH Mock DEX
+              Reactive Omni · Base Sepolia Treasury
             </span>
           </div>
           <p className="text-sm text-[#a8a4b3] max-w-2xl">

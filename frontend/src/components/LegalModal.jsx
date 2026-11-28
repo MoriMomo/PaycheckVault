@@ -39,7 +39,7 @@ export default function LegalModal({ legalModal, onSelectLegal, onClose }) {
         {legalModal === 'terms' && (
           <div className="space-y-3 text-xs text-[#a8a4b3] leading-relaxed">
             <p>
-              PaycheckVault is an experimental open-source reactive smart contract prototype deployed on Ethereum Sepolia, Reactive Lasna Testnet, and Base Sepolia Testnet.
+              Bagi-Bagi is an experimental open-source reactive smart contract prototype deployed on Ethereum Sepolia, Reactive Lasna Testnet, and Base Sepolia Testnet.
             </p>
             <p>
               All cross-chain event subscriptions, anti-dust thresholds (&ge; 0.01 WETH), and multi-bucket allocations operate autonomously via public on-chain transactions. Do not send mainnet funds to testnet contract addresses.
@@ -53,7 +53,7 @@ export default function LegalModal({ legalModal, onSelectLegal, onClose }) {
         {legalModal === 'privacy' && (
           <div className="space-y-3 text-xs text-[#a8a4b3] leading-relaxed">
             <p>
-              PaycheckVault does not collect, store, or sell personal telemetry, IP logs, cookies, or off-chain user profiles.
+              Bagi-Bagi does not collect, store, or sell personal telemetry, IP logs, cookies, or off-chain user profiles.
             </p>
             <p>
               Wallet addresses connected via MetaMask, Phantom, or injected EIP-1193 providers are read strictly in client memory to query public RPC endpoints (Sepolia, Lasna, Base Sepolia).
@@ -66,7 +66,7 @@ export default function LegalModal({ legalModal, onSelectLegal, onClose }) {
 
         {legalModal === 'license' && (
           <div className="space-y-3 text-xs text-[#a8a4b3] leading-relaxed font-mono">
-            <p>Copyright (c) 2026 PaycheckVault Contributors</p>
+            <p>Copyright (c) 2026 Bagi-Bagi Contributors</p>
             <p className="font-sans text-[#8e8999]">
               Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated smart contract files, to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, subject to standard MIT terms.
             </p>
@@ -74,7 +74,7 @@ export default function LegalModal({ legalModal, onSelectLegal, onClose }) {
         )}
 
         <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between text-xs font-mono text-[#8e8999]">
-          <span>PaycheckVault · Reactive Lasna / Base Sepolia</span>
+          <span>Bagi-Bagi · Reactive Lasna / Base Sepolia</span>
           <div className="flex gap-3">
             <button
               onClick={() => onSelectLegal('terms')}
