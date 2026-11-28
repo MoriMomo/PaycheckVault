@@ -438,4 +438,58 @@ describe("PaycheckVault Multi-User Stablecoin & Omni Guardrail Suite", function 
       .withArgs(user.address, queuedAmt + flushAmt, await paycheckVault_Base.getAddress(), (v) => v > 0);
     expect(await paycheckReactive_Lasna.pendingInflow(user.address)).to.equal(0n);
   });
+
+  it("maintains exact basis-point accounting with zero rounding dust across 50 randomized allocations", async function () {
+    const reactiveAddr = await paycheckReactive_Lasna.getAddress();
+    const vaultAddr = await paycheckVault_Base.getAddress();
+    await mockWETH_Base.mint(user2.address, ethers.parseUnits("500", 18));
+    await mockWETH_Base.connect(user2).approve(vaultAddr, ethers.MaxUint256);
+
+    let seed = 1337;
+    const nextRand = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed;
+    };
+
+    for (let i = 0; i < 50; i++) {
+      const stableBps = nextRand() % 10001;
+      const yieldBps = nextRand() % (10001 - stableBps);
+      const wethNum = 10 + (nextRand() % 490); // 0.010 .. 0.499 WETH
+      const inflow = ethers.parseUnits((wethNum / 1000).toFixed(3), 18);
+
+      await paycheckVault_Base.connect(user2).setMyPolicy(stableBps, yieldBps, 0, 0);
+      const before = await paycheckVault_Base.balances(user2.address);
+      const paycheckId = ethers.keccak256(ethers.toUtf8Bytes(`fuzz-${i}`));
+
+      await paycheckVault_Base.connect(relayer).allocatePaycheck(reactiveAddr, user2.address, inflow, paycheckId);
+      const after = await paycheckVault_Base.balances(user2.address);
+
+      const dUsdc = after.usdc - before.usdc;
+      const dSusdc = after.sUsdc - before.sUsdc;
+      const pullAmt = inflow > before.weth ? inflow - before.weth : 0n;
+
+      // Exact value conservation at 2500 USDC/WETH with zero rounding dust loss
+      const reconstructedTotalWeth = dUsdc / 2500n + dSusdc / 2500n + after.weth;
+      expect(reconstructedTotalWeth).to.equal(before.weth + pullAmt);
+    }
+  });
+
+  it("rejects all out-of-range basis-point splits and dust spam bursts", async function () {
+    await expect(paycheckVault_Base.connect(user2).setMyPolicy(6000, 4001, 0, 0)).to.be.revertedWith("Invalid bps");
+    await expect(paycheckVault_Base.connect(user2).setMyPolicy(10001, 0, 0, 0)).to.be.revertedWith("Invalid bps");
+
+    const tokenAddr = await mockWETH_Sepolia.getAddress();
+    const beforeDust = await paycheckReactive_Lasna.totalDustBlocked();
+
+    for (let i = 0; i < 10; i++) {
+      const microDust = ethers.parseUnits(`0.00${(i % 9) + 1}`, 18);
+      const tx = paycheckReactive_Lasna
+        .connect(systemSigner)
+        .react(buildTransferLog(tokenAddr, employer.address, user2.address, microDust, BigInt(500 + i)));
+      await expect(tx).to.not.emit(systemContract, "CallbackRequest");
+      await expect(tx).to.emit(paycheckReactive_Lasna, "InflowSuppressed");
+    }
+
+    expect(await paycheckReactive_Lasna.totalDustBlocked()).to.equal(beforeDust + 10n);
+  });
 });

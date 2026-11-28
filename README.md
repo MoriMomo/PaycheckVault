@@ -1,6 +1,8 @@
 # Bagi-Bagi (PaycheckVault v4) — Autonomous Cross-Chain Treasury Protocol
 
-**Autonomous Treasury Routing · Powered by Reactive Network Omni (`5318007`)**
+**Autonomous Treasury Routing · Powered by Reactive Network Omni (`5318007`)** · **[60-Second Judge Verification (`VERIFY.md`)](./VERIFY.md)**
+
+> Other payday splitters only park stablecoins in passive sub-ledgers; other DCA vaults only fire on clocks or price dips. **Bagi-Bagi (`PaycheckVault v4`)** is the only inflow-triggered DeFi portfolio router that atomically splits plain ERC-20 `WETH` arrivals into liquid `USDC`, yield-bearing `sUSDC`, and retained `WETH` via real on-chain DEX swaps in **~2 seconds (p50)** — zero keepers, zero off-chain servers.
 
 PaycheckVault turns incoming **Ethereum Sepolia WETH** or **direct Base Sepolia WETH** transfers into autonomous treasury splits on **Base Sepolia**: `PaycheckReactive` filters dust (`< 0.01 WETH`), queues rapid inflows during the 30-second per-user cooldown on **Reactive Lasna Omni**, and dispatches deterministic `paycheckId` callbacks to **PaycheckVault** on Base Sepolia — pulling approved Base wallet WETH (or pre-funded vault slices) and swapping atomically into **USDC** reserve, **sUSDC** yield, and retained operating **WETH**.
 
@@ -12,11 +14,11 @@ When the Lasna callback lands, `PaycheckVault` executes **real on-chain financia
 
 Each slice is a token movement through a DEX swap with a per-user slippage floor and max-allocation cap — a ledger that only moves numbers between sub-balances cannot claim this.
 
-## Measured Dual-Chain Loop Telemetry (5/5 live loops)
+## Measured Dual-Chain Loop Telemetry (15/15 live loops)
 
-End-to-end latency is measured from `block.timestamp` (Origin inflow block → Base settlement block), **not** block counts — Base Sepolia mines ~200ms blocks, so block-delta timing is meaningless (since Base Sepolia mines ~200ms blocks).
+End-to-end latency is measured from `block.timestamp` (Origin inflow block → Base settlement block), **not** block counts — Base Sepolia mines ~200ms blocks, so block-delta timing is meaningless.
 
-**Median end-to-end latency: 2s** (1s–2s) · avg Sepolia gas `0.000017 ETH` · avg Lasna `0.01210 lREACT` · avg Base callback gas `0.000001 ETH`. Reproduce with `npx hardhat run scripts/measure-loop.js --network sepolia` or `--network baseSepolia`.
+**Median end-to-end latency (`p50`): `2s`** (`1s–2s` across `15/15` loops vs. `8–12s` simulated polling keeper) · avg Lasna `0.01164 lREACT` · avg Base callback gas `0.000001 ETH`. Full 15-loop table + live dust-suppression (`0.002 WETH -> PaycheckSuppressed`) & cooldown proofs in **[VERIFY.md](./VERIFY.md)**. Reproduce with `npx hardhat run scripts/measure-loop.js --network sepolia` or `--network baseSepolia`.
 
 | # | Origin Chain | Origin Inflow | Reactive (Lasna) | Callback (Base Sepolia) | lREACT | Latency |
 | :-- | :-- | :-- | :-- | :-- | :-- | :-- |

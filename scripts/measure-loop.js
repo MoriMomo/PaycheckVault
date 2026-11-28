@@ -146,8 +146,9 @@ async function main() {
         .queryFilter(reactive.filters.PaycheckSuppressed(paycheckId, me), lasnaFrom, await lasnaProvider.getBlockNumber())
         .catch(() => []);
       const reason = supp.length ? supp[supp.length - 1].args.reason : "timeout";
-      console.log(`  ${"\x1b[33m"}lasna:       no PaycheckTriggered (${reason})\x1b[0m`);
-      results.push({ i, status: `skipped (${reason})`, originTx: tx.hash });
+      const suppTx = supp.length ? supp[supp.length - 1].transactionHash : null;
+      console.log(`  ${"\x1b[33m"}lasna:       no PaycheckTriggered (${reason})${suppTx ? ` [${suppTx}]` : ""}\x1b[0m`);
+      results.push({ i, status: `skipped (${reason})`, originTx: tx.hash, lasnaTx: suppTx });
       if (i < LOOP_COUNT) await sleep(COOLDOWN_BUFFER_MS);
       continue;
     }
